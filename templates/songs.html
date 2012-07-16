@@ -1,0 +1,10 @@
+<ul>
+{% for song in songs %}
+<li>
+    {{ song.artist }} - {{ song.title }}
+    <!--<a href="play/{{ song.id }}" id="btn_play_song_{{ song.id }}" class="btn_play_song">play</a>-->
+    <a href="#" id="btn_play_song_{{ song.id }}" class="btn_play_song">play</a>
+    <a href="#" id="btn_append_song_{{ song.id }}" class="btn_append_song">append</a>
+</li>
+{% endfor %}
+</ul>

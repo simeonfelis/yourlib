@@ -1,14 +1,19 @@
-<html>
-    <body>
-        <p>Hi</p>
-        <h1>Songs</h1>
-        <ul>
-            {% for s in songs %} <li>{{ s }}</li> {% endfor %}
-        </ul>
-        <h1>Playlists</h1>
-        <ul>
-        {% for pl in playlists %} <li>pl</li> {% endfor %}
-        </ul>
+{% extends "base.html" %}
 
-    </body>
-</html>
+{% block content %}
+<h1>Hi {{ request.user.username }}</h1>
+
+<h1>Player</h1>
+
+<audio id="player1" controls="controls" preload="auto" >
+<source id="player1_ogg_source" type="audio/ogg" src=""></source>
+</audio>
+
+<h1>Deine Songs</h1>
+{% include "songs.html" %}
+
+<h1>Deine Playlists</h1>
+{% include "playlists.html" %}
+
+{% endblock %}
+

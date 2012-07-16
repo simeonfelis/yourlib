@@ -7,6 +7,8 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # Examples:
     url(r'^$', 'music.views.home', name='home'),
+    url(r'^song/play/(?P<song_id>\d+)$', 'music.views.play_song'),
+    url(r'^playlist/append/default/(?P<song_id>\d+)$', 'music.views.playlist_append'),
     url(r'rescan$', 'music.views.rescan'),
 
     url(r'^accounts/login/.*$', 'django.contrib.auth.views.login'),
