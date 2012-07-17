@@ -1,0 +1,10 @@
+
+<li id="playlist_{{ playlist.id }}"> {{ playlist.name }} <a href="#" data-playlist_id="{{ playlist.id }}" class="btn_playlist_play_all" id="btn_playlist_play_all_{{ playlist.id }}">play all</a>
+    {% if playlist.items.all|length > 0 %}
+    <ul>
+        {% for item in playlist.items.all %}
+        <li>{{ item }} <a href="#" class="btn_playlist_item_remove" data-playlist_id="{{ playlist.id }}" data-item_id="{{ item.id }}" data-playlist_song_id=0>remove</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</li>

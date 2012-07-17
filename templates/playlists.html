@@ -1,12 +1,6 @@
-<ul id="playlist">
-    {% for pl in playlists %}
-    <li> {{ pl.name }} <a id="btn_playlist_start_{{ pl.id }}" href="play/playlist/{{ pl.id }}">play</a>
-    {% if pl.items.all|length > 0 %}
-    <ul>
-        {% for item in pl.items.all %}<li>{{ item.position }} {{ item.song }} <a href="#" playlist_id="{{ pl.id }}" playlist_item_id={{ pl.item.id }} playlist_song_id={{ pl.>remove</a></li> {% endfor %}
-    </ul>
-    {% endif %}
-    </li>
+<ul id="playlists">
+    {% for playlist in playlists %}
+        {% include "playlist.html" %}
     {% endfor %}
 </ul>
 

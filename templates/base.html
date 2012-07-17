@@ -8,34 +8,52 @@
         <script type="text/javascript">
 $(document).ready(function () {
 
+        function play_song(song_id) {
+            $( "#player1" ).remove();
+            $('<audio id="player1" controls="controls" preload="auto"></audio>').appendTo("#player1_container");
+            var $song_url='/play/song/' + song_id;
+            $('<source id="player1_ogg_source" src="' + $song_url + '" type="audio/ogg"></source>').appendTo("#player1");
+            $( "#player1" ).bind("ended", on_player1_event_ended);
+            $( "#player1" )[0].pause();
+            $( "#player1" )[0].load();
+            $( "#player1" )[0].play();
+        };
+
+        function on_player1_event_ended() {
+            $.post("/play/next", {"csrfmiddlewaretoken": csrf_token}, function(song_id) {
+                play_song(song_id);
+            });
+        };
+
+        $( ".btn_player1_next" ).click(function() {
+            on_player1_event_ended();
+        });
+        $( ".btn_playlist_item_remove" ).click(function() {
+            var $playlist_id = $(this).attr("data-playlist_id");
+            var $item_id = $(this).attr("data-item_id");
+            $.post("/playlist/remove/item/" + $playlist_id + "/" + $item_id, {"csrfmiddlewaretoken": csrf_token}, function(new_playlist) {
+                $( "#playlist_1" ).remove();
+                $( "#playlists" ).append(new_playlist);
+            });
+        });
         $( ".btn_append_song" ).click(function() {
             var $id = parseInt(this.id.substring(16));
-            //alert("append " + $id);
-            $.post("/playlist/append/default/" + $id, {"csrfmiddlewaretoken": csrf_token}, function() {
-                alert("Bla");
-                var pl = $( "#playlist" );
-                //pl.html(new_playlist);
+            $.post("/playlist/append/default/" + $id, {"csrfmiddlewaretoken": csrf_token}, function(new_playlist) {
+                $( "#playlist_1" ).remove();
+                $( "#playlists" ).append(new_playlist);
             });
             return false; // don't do anything anymore
         });
         $( ".btn_play_song" ).click(function() {
-            var $id = parseInt(this.id.substring(14));
-            $( "#player1_ogg_source" ).attr("src", "song/play/" + $id).appendTo("#player1");
-            $( "#player1" )[0].pause();
-            $( "#player1" )[0].load();
-            $( "#player1" )[0].play();
-            //$.get("/song/play/" + $id, function(song_path) {
-            //    alert (song_path);
-            //    //$( "#player1" ).attr("src", song_path);
-            //    //var pl = $( "#playlist" );
-            //    //pl.empty();
-            //    //for (i in songs) {
-            //    //    if (songs[i]) {
-            //    //        pl.append(NewSongItem(songs[i], playlist_item=true));
-            //    //    }
-            //    //}
-            //});
+            var $song_id = parseInt(this.id.substring(14));
+            play_song($song_id);
             return false; // don't do anything anymore
+        });
+        $( ".btn_playlist_play_all" ).click(function() {
+            var $pl_id=parseInt($(this).attr("data-playlist_id"));
+            $.post("/play/playlist/" + $pl_id, {"csrfmiddlewaretoken": csrf_token}, function(song_id) {
+                play_song(song_id);
+            });
         });
 });
 

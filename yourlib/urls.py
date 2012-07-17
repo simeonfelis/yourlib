@@ -7,8 +7,11 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # Examples:
     url(r'^$', 'music.views.home', name='home'),
-    url(r'^song/play/(?P<song_id>\d+)$', 'music.views.play_song'),
+    url(r'^play/song/(?P<song_id>\d+)$', 'music.views.play_song'),
+    url(r'^play/next$', 'music.views.play_next'),
+    url(r'^play/playlist/(?P<playlist_id>\d+)$', 'music.views.play_playlist'),
     url(r'^playlist/append/default/(?P<song_id>\d+)$', 'music.views.playlist_append'),
+    url(r'^playlist/remove/item/(?P<playlist_id>\d+)/(?P<item_id>\d+)$', 'music.views.playlist_remove_item'),
     url(r'rescan$', 'music.views.rescan'),
 
     url(r'^accounts/login/.*$', 'django.contrib.auth.views.login'),
@@ -18,5 +21,5 @@ urlpatterns = patterns('',
     # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
     # Uncomment the next line to enable the admin:
-    # url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', include(admin.site.urls)),
 )
