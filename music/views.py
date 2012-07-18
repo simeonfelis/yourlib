@@ -97,9 +97,9 @@ def search(request, terms):
 
     if request.method == "POST":
         term_list = terms.split(" ")
-        songs = Song.objects.filter(Q(artist__contains=term_list[0]) | Q(title__contains=term_list[0]), user=request.user)
+        songs = Song.objects.filter(Q(artist__contains=term_list[0]) | Q(title__contains=term_list[0] | Q(album__contains=term_list[0]), user=request.user)
         for term in term_list[1:]:
-            songs = songs.filter(Q(artist__contains=term) | Q(title__contains=term), user=request.user)
+            songs = songs.filter(Q(artist__contains=term) | Q(title__contains=term | Q(album__contains=term_list[0]), user=request.user)
 
         print "Found", len(songs), "songs for terms", terms
 

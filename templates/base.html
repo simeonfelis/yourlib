@@ -39,6 +39,7 @@ $(document).ready(function () {
         };
 
         $( "#search_input" ).change(function() {
+            $( "#search_result_container" ).html("Started");
             var $terms = $(this).val();
             var jqxhr = $.post("/search/" + $terms, {"csrfmiddlewaretoken": csrf_token}, function(results) {
                 $( "#search_result_container" ).html(results);
