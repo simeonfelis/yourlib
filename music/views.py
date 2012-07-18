@@ -188,7 +188,7 @@ def playlist_remove_item(request, playlist_id, item_id):
 @login_required
 def play_song(request, song_id):
     song = Song.objects.get(id=song_id)
-    path = song.path_orig[len(settings.BASE_PATH):] # strip /home/simeon/workspace/django/yourlib, leaves /media/music/.....
+    path = "music/" + song.path_orig[len(settings.MUSIC_PATH):] # append "music/", strip prefix
     response = HttpResponse()
     response["Content-Type"] = ""
     response["X-Accel-Redirect"] = path.encode("utf-8")
@@ -218,7 +218,7 @@ def rescan(request):
         song.delete()
     print "Database cleared"
 
-    userdir = os.path.join(settings.MEDIA_ROOT, 'music', request.user.username)
+    userdir = os.path.join(settings.MUSIC_PATH)
 
     print "Checking userdir", userdir
 
