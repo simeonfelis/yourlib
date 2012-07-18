@@ -193,7 +193,7 @@ def play_song(request, song_id):
     print "A song request"
 
     song = Song.objects.get(id=song_id)
-    path = song.path_orig[37:] # strip /home/simeon/workspace/django/yourlib
+    path = song.path_orig[len(settings.BASE_PATH):] # strip /home/simeon/workspace/django/yourlib, leaves /media/music/.....
     response = HttpResponse()
     response["Content-Type"] = ""
     response["X-Accel-Redirect"] = path.encode("utf-8")
