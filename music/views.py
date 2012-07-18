@@ -3,6 +3,7 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 from django.utils import simplejson
+from django.utils.encoding import iri_to_uri
 from django.conf import settings
 from django.db.models import Q
 
@@ -188,7 +189,8 @@ def playlist_remove_item(request, playlist_id, item_id):
 @login_required
 def play_song(request, song_id):
     song = Song.objects.get(id=song_id)
-    path = "music/" + song.path_orig[len(settings.MUSIC_PATH):] # append "music/", strip prefix
+    path = "/music" + song.path_orig[len(settings.MUSIC_PATH):] # append "/music", strip prefix (/media....)
+    #path = iri_to_uri(path)
     response = HttpResponse()
     response["Content-Type"] = ""
     response["X-Accel-Redirect"] = path.encode("utf-8")
@@ -231,6 +233,7 @@ def song_info_response(song):
             'song_id': song.id,
             'title': song.title,
             'artist': song.artist,
+            'mime': song.mime,
             }
     response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
     response['Cache-Control'] = 'no-cache'
@@ -247,23 +250,37 @@ def add_song(user, dirname, files):
             continue
 
         try:
-            tags = tagreader.File(path)
-            print "Error reading tags on file", path
-        except:
+            tags = tagreader.File(path, easy=True)
+        except Exception, e:
+            print "Error reading tags on file", path, e
             continue
 
-        if not type(tags) == tagreader.oggvorbis.OggVorbis:
+        # ignore everything except ogg and mp3
+        if type(tags) == tagreader.oggvorbis.OggVorbis:
+            mime = "audio/ogg"
+        elif type(tags) == tagreader.mp3.EasyMP3:
+            mime = "audio/mp3"
+        elif type(tags) == type(None):
+            # don't even warn
+            continue
+        else:
+            print "Ignoring file", path, "because of mime (", type(tags), ")"
             continue
 
         try:
             song = Song(
                     artist    = tags['artist'][0].encode('utf-8'),
                     title     = tags['title'][0].encode('utf-8'),
+                    mime      = mime,
                     user      = user,
                     path_orig = path
                     )
-        except:
-            print "Error reading tags on file", path
+        except Exception, e:
+            print "Error reading tags on file", path, e
         else:
-            song.save()
+            try:
+                song.save()
+            except Exception, e:
+                print "Database error on file", path, e
+                print "Probably wrong encoded file name or wrong filesystem character set chosen."
 

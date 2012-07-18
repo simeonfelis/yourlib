@@ -21,6 +21,7 @@ class Song(models.Model):
 
     title = models.CharField(max_length=256)
     artist = models.CharField(max_length=256)
+    mime = models.CharField(max_length=32)
     path_orig = models.FilePathField()
     user = models.ForeignKey(User)
 
