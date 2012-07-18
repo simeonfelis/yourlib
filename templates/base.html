@@ -21,9 +21,33 @@ $(document).ready(function () {
 
         function on_player1_event_ended() {
             $.post("/play/next", {"csrfmiddlewaretoken": csrf_token}, function(song_id) {
-                play_song(song_id);
+                if (song_id=="") {
+                    return;
+                }
+                else {
+                    play_song(song_id);
+                }
             });
         };
+
+        $( "#search_input" ).change(function() {
+            var $terms = $(this).val();
+            var jqxhr = $.post("/search/" + $terms, {"csrfmiddlewaretoken": csrf_token}, function(results) {
+                $( "#search_result_container" ).html(results);
+                // bind play.click handler
+                $( ".btn_play_search_result" ).click(function() {
+                    var $result_id = parseInt($(this).attr("data-search_result_id"));
+                    $.post("/play/result/" + $result_id, {"csrfmiddlewaretoken": csrf_token}, function(song_id) {
+                        play_song(song_id);
+                    })
+                    return false; // don't do anything anymore
+                });
+            })
+            .success(function() {/*alert("Second success");*/})
+            .error(function() {/*alert("error");*/})
+            .complete(function() {/*alert("complete");*/});
+            jqxhr.complete(function() {/*alert("second complete");*/});
+        });
 
         $( ".btn_player1_next" ).click(function() {
             on_player1_event_ended();

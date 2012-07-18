@@ -7,6 +7,13 @@ PLAYLIST_STATUS_CHOICES = (
         ('play', 'play'),
 )
 
+CURRENTLY_PLAYING_CHOICES = (
+        ('none', 'Playing nothing'),
+        ('search', 'Playing from search results'),
+        ('playlist', 'Playing from playlist'),
+)
+
+
 class Song(models.Model):
 
     def __unicode__(self):
@@ -35,7 +42,17 @@ class Playlist(models.Model):
     playing = models.IntegerField()
     status = models.CharField(max_length=32, choices=PLAYLIST_STATUS_CHOICES)
 
-#class MusicUser(models.Model):
-#    user = models.ForeignKey(User)
-#    playlist = models.ForeignKey(Playlist)
+class SearchResult(models.Model):
+    song = models.ForeignKey(Song)
+
+class Search(models.Model):
+    user = models.ForeignKey(User)
+    results = models.ManyToManyField(SearchResult, blank=True, null=True)
+    playing = models.ForeignKey(SearchResult, blank=True, null=True, related_name='+')
+
+class MusicSession(models.Model):
+    user = models.ForeignKey(User)
+    currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
+    search = models.ForeignKey(Search, blank=True, null=True)
+    playlist = models.ForeignKey(Playlist, blank=True, null=True)
 

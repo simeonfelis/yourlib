@@ -3,12 +3,13 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.db.models import Q
 
-from music.models import Song, Playlist, PlaylistItem
+from music.models import Song, Playlist, PlaylistItem, Search, SearchResult, MusicSession
 #from music.forms import UserLoginForm
 
 import os
-from hsaudiotag import auto as tagreader
+import mutagen as tagreader
 
 @login_required
 def home(request):
@@ -21,6 +22,13 @@ def home(request):
             pl = Playlist(name="default", user=request.user, playing=0, status="stop")
             pl.save()
             playlists = Playlist.objects.filter(user=request.user)
+
+        music_session = MusicSession.objects.filter(user=request.user)
+        if 0 == len(music_session):
+            print "Creating music session for user", request.user
+            ms = MusicSession(user=request.user, currently_playing='none')
+            ms.save()
+            music_session = MusicSession.objects.filter(user=request.user)
 
     return render_to_response(
             'home.html',
@@ -42,13 +50,88 @@ def play_playlist(request, playlist_id):
 @login_required
 def play_next(request):
     if request.method == "POST":
-        pl = Playlist.objects.get(id=1)
-        playing = pl.playing + 1
-        pl.playing = playing
-        item = PlaylistItem.objects.filter(playlist__id=1, position=playing)[0]
-        response = HttpResponse(str(item.song.id))
+        currently_playing = MusicSession.objects.get(user=request.user).currently_playing
+
+        if "none" == currently_playing:
+            next_id = ""
+
+        elif "search" == currently_playing:
+            search = Search.objects.get(user=request.user)
+            current = search.playing
+            found = False
+            next_id = None
+            for result in search.results.all():
+                #print "play from search: comparing", current.id, current.song, "with", result.id, result.song
+                if found:
+                    next_id = str(result.song.id)
+                    #print "match, returning", result.id, result.song
+                    break
+                elif result.id == current.id:
+                    found = True
+
+            if None == next_id:
+                print "play from search: last item played"
+                next_id = ""
+            else:
+                search.playing = result
+                search.save()
+
+        elif "playlist" == currently_playing:
+            pl = Playlist.objects.get(id=1)
+            playing = pl.playing + 1
+            pl.playing = playing
+            item = PlaylistItem.objects.filter(playlist__id=1, position=playing)[0]
+            next_id = str(item.song.id)
+        else:
+            next_id = ""
+
+        response = HttpResponse(next_id)
         response['Cache-Control'] = 'no-cache'
-        return HttpResponse(str(item.song.id))
+        return HttpResponse(response)
+
+    return HttpResponse("")
+
+#TODO: increase performance
+@login_required
+def search(request, terms):
+    print "Terms:", terms
+    if "" == terms:
+        return HttpResponse("")
+
+    if request.method == "POST":
+        term_list = terms.split(" ")
+        songs = Song.objects.filter(Q(artist__contains=term_list[0]) | Q(title__contains=term_list[0]), user=request.user)
+        for term in term_list[1:]:
+            songs = songs.filter(Q(artist__contains=term) | Q(title__contains=term), user=request.user)
+
+        print "Found", len(songs), "songs for terms", terms
+
+        # Save search results to db
+        search = Search.objects.filter(user=request.user)
+        if 0 == len(search):
+            # if user has no search db entry, create new one
+            search = Search(user=request.user)
+        else:
+            # clear old search results
+            search = search[0]
+            search.results.clear() # performance!
+        search.save()
+
+        for song in songs: # performance
+            result = SearchResult(song=song)
+            result.save()
+            search.results.add(result)
+
+        search.save()
+
+        return render_to_response(
+                'search_results.html',
+                locals(),
+                context_instance=RequestContext(request),
+                )
+
+    # return nothing on GET requests
+    return HttpResponse("")
 
 
 @login_required
@@ -117,7 +200,20 @@ def play_song(request, song_id):
     print response
     return response
 
-    #return HttpResponse("Would give you file " + path)
+@login_required
+def play_result(request, result_id):
+    if request.method == "POST":
+        result=SearchResult.objects.get(id=result_id)
+
+        search = Search.objects.get(user=request.user)
+        search.playing = result
+        search.save()
+        ms = MusicSession.objects.get(user=request.user)
+        ms.currently_playing = "search"
+        ms.save()
+        return HttpResponse(result.song.id)
+
+    return HttpResponse("")
 
 @login_required
 def rescan(request):
@@ -148,9 +244,9 @@ def add_song(user, dirname, files):
 
         tags = tagreader.File(path)
         song = Song(
-                artist = tags.artist,
-                title = tags.title,
-                user = user,
+                artist    = tags['artist'][0].encode('utf-8'),
+                title     = tags['title'][0].encode('utf-8'),
+                user      = user,
                 path_orig = path
                 )
         song.save()
