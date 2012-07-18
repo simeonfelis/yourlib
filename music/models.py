@@ -15,12 +15,16 @@ CURRENTLY_PLAYING_CHOICES = (
 
 
 class Song(models.Model):
+    class Meta:
+        ordering = ['artist', 'album', 'track', 'title', 'path_orig']
 
     def __unicode__(self):
         return self.artist + " - " + self.title
 
     title = models.CharField(max_length=256)
     artist = models.CharField(max_length=256)
+    album = models.CharField(max_length=256)
+    track = models.IntegerField()
     mime = models.CharField(max_length=32)
     path_orig = models.FilePathField()
     user = models.ForeignKey(User)

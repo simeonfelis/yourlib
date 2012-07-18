@@ -1,5 +1,11 @@
-<ul id="search_results">
+{% if search.results.all|length > 0 %}
+<ul id="search_results" class="search_results">
     {% for r in search.results.all %}
-    <li>{{ r.song }}<a href="#" class="btn_play_search_result" data-search_result_id="{{ r.id }}">play</a></li>
+    <li>{{ r.song.artist }} - {{ r.song.title }}  |  {{ r.song.album }} {{ r.song.track }} ({{ r.song.mime }}) <a href="#" class="btn_play_search_result" data-search_result_id="{{ r.id }}">play</a></li>
     {% endfor %}
 </ul>
+{% else %}
+<div id="serch_results" class="search_results">
+    No results
+</div>
+{% endif %}

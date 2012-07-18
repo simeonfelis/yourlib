@@ -3,7 +3,6 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 from django.utils import simplejson
-from django.utils.encoding import iri_to_uri
 from django.conf import settings
 from django.db.models import Q
 
@@ -190,7 +189,6 @@ def playlist_remove_item(request, playlist_id, item_id):
 def play_song(request, song_id):
     song = Song.objects.get(id=song_id)
     path = "/music" + song.path_orig[len(settings.MUSIC_PATH):] # append "/music", strip prefix (/media....)
-    #path = iri_to_uri(path)
     response = HttpResponse()
     response["Content-Type"] = ""
     response["X-Accel-Redirect"] = path.encode("utf-8")
@@ -212,12 +210,12 @@ def play_result(request, result_id):
 
     return HttpResponse("")
 
+# TODO: perfomance!
 @login_required
 def rescan(request):
     print "init of library requested."
     print "Clearing database..."
-    for song in Song.objects.all():
-        song.delete()
+    Song.objects.all().delete()
     print "Database cleared"
 
     userdir = os.path.join(settings.MUSIC_PATH)
@@ -229,10 +227,14 @@ def rescan(request):
     return HttpResponse("Rescan request done")
 
 def song_info_response(song):
+    filename = os.path.split(song.path)[-1]
     song_info = {
             'song_id': song.id,
             'title': song.title,
             'artist': song.artist,
+            'album': song.album,
+            'track': song.track,
+            'name': filename,
             'mime': song.mime,
             }
     response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
@@ -268,19 +270,34 @@ def add_song(user, dirname, files):
             continue
 
         try:
-            song = Song(
-                    artist    = tags['artist'][0].encode('utf-8'),
-                    title     = tags['title'][0].encode('utf-8'),
-                    mime      = mime,
-                    user      = user,
-                    path_orig = path
-                    )
+            artist    = tags['artist'][0].encode('utf-8')
+        except:
+            artist = "Unknown"
+        try:
+            title     = tags['title'][0].encode('utf-8')
+        except:
+            title = "Unknown"
+        try:
+            track     = int(tags['tracknumber'][0].encode('utf-8').split('/')[0])
+        except:
+            track = 0
+        try:
+            album     = tags['album'][0].encode('utf-8')
+        except:
+            album = "Unknown"
+
+        song = Song(
+                artist    = artist,
+                title     = title,
+                album     = album,
+                track     = track,
+                mime      = mime,
+                user      = user,
+                path_orig = path
+                )
+        try:
+            song.save()
         except Exception, e:
-            print "Error reading tags on file", path, e
-        else:
-            try:
-                song.save()
-            except Exception, e:
-                print "Database error on file", path, e
-                print "Probably wrong encoded file name or wrong filesystem character set chosen."
+            print "Database error on file", path, e
+            print "Probably wrong encoded file name or wrong filesystem character set chosen."
 
