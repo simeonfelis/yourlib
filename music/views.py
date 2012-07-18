@@ -243,11 +243,18 @@ def add_song(user, dirname, files):
             continue
 
         tags = tagreader.File(path)
-        song = Song(
-                artist    = tags['artist'][0].encode('utf-8'),
-                title     = tags['title'][0].encode('utf-8'),
-                user      = user,
-                path_orig = path
-                )
-        song.save()
+        if not type(tags) == tagreader.oggvorbis.OggVorbis:
+            continue
+
+        try:
+            song = Song(
+                    artist    = tags['artist'][0].encode('utf-8'),
+                    title     = tags['title'][0].encode('utf-8'),
+                    user      = user,
+                    path_orig = path
+                    )
+        except:
+            print "Error reading tags on file", path
+        else:
+            song.save()
 
