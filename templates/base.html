@@ -20,12 +20,14 @@ $(document).ready(function () {
         };
 
         function on_player1_event_ended() {
-            $.post("/play/next", {"csrfmiddlewaretoken": csrf_token}, function(song_id) {
-                if (song_id=="") {
+            $.post("/play/next", {"csrfmiddlewaretoken": csrf_token}, function(song_info) {
+                if (song_info=="") {
                     return;
                 }
                 else {
-                    play_song(song_id);
+                    $( "#player1_song_info_title" ).html(song_info.title);
+                    $( "#player1_song_info_artist" ).html(song_info.artist);
+                    play_song(song_info.song_id);
                 }
             });
         };
@@ -69,14 +71,16 @@ $(document).ready(function () {
             return false; // don't do anything anymore
         });
         $( ".btn_play_song" ).click(function() {
+            var $artist = $(this).attr("data-artist");
+            var $title = $(this).attr("data-title");
             var $song_id = parseInt(this.id.substring(14));
             play_song($song_id);
             return false; // don't do anything anymore
         });
         $( ".btn_playlist_play_all" ).click(function() {
             var $pl_id=parseInt($(this).attr("data-playlist_id"));
-            $.post("/play/playlist/" + $pl_id, {"csrfmiddlewaretoken": csrf_token}, function(song_id) {
-                play_song(song_id);
+            $.post("/play/playlist/" + $pl_id, {"csrfmiddlewaretoken": csrf_token}, function(song_info) {
+                play_song(song_info.song_id);
             });
         });
 });

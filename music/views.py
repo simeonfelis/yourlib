@@ -2,6 +2,7 @@ from django.http import HttpResponse
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
+from django.utils import simplejson
 from django.conf import settings
 from django.db.models import Q
 
@@ -45,7 +46,7 @@ def play_playlist(request, playlist_id):
         pl.playing = playing
         pl.save()
         item = PlaylistItem.objects.filter(playlist__id=playlist_id, position=playing)[0]
-        return HttpResponse(str(item.song.id))
+        return song_info_response(item.song)
 
 @login_required
 def play_next(request):
@@ -53,26 +54,23 @@ def play_next(request):
         currently_playing = MusicSession.objects.get(user=request.user).currently_playing
 
         if "none" == currently_playing:
-            next_id = ""
+            song = None
 
         elif "search" == currently_playing:
             search = Search.objects.get(user=request.user)
             current = search.playing
             found = False
-            next_id = None
+            song = None
             for result in search.results.all():
                 #print "play from search: comparing", current.id, current.song, "with", result.id, result.song
                 if found:
-                    next_id = str(result.song.id)
+                    song = result.song
                     #print "match, returning", result.id, result.song
                     break
                 elif result.id == current.id:
                     found = True
 
-            if None == next_id:
-                print "play from search: last item played"
-                next_id = ""
-            else:
+            if not None == song:
                 search.playing = result
                 search.save()
 
@@ -81,13 +79,12 @@ def play_next(request):
             playing = pl.playing + 1
             pl.playing = playing
             item = PlaylistItem.objects.filter(playlist__id=1, position=playing)[0]
-            next_id = str(item.song.id)
+            song = item.song
         else:
-            next_id = ""
+            song = None
 
-        response = HttpResponse(next_id)
-        response['Cache-Control'] = 'no-cache'
-        return HttpResponse(response)
+        if not song == None:
+            return song_info_response(song)
 
     return HttpResponse("")
 
@@ -190,8 +187,6 @@ def playlist_remove_item(request, playlist_id, item_id):
 
 @login_required
 def play_song(request, song_id):
-    print "A song request"
-
     song = Song.objects.get(id=song_id)
     path = song.path_orig[len(settings.BASE_PATH):] # strip /home/simeon/workspace/django/yourlib, leaves /media/music/.....
     response = HttpResponse()
@@ -211,7 +206,7 @@ def play_result(request, result_id):
         ms = MusicSession.objects.get(user=request.user)
         ms.currently_playing = "search"
         ms.save()
-        return HttpResponse(result.song.id)
+        return song_info_response(result.song)
 
     return HttpResponse("")
 
@@ -231,6 +226,15 @@ def rescan(request):
 
     return HttpResponse("Rescan request done")
 
+def song_info_response(song):
+    song_info = {
+            'song_id': song.id,
+            'title': song.title,
+            'artist': song.artist,
+            }
+    response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
+    response['Cache-Control'] = 'no-cache'
+    return response
 
 def login(request):
     return HttpResponse("Hi")
@@ -242,7 +246,12 @@ def add_song(user, dirname, files):
         if not os.path.isfile(path):
             continue
 
-        tags = tagreader.File(path)
+        try:
+            tags = tagreader.File(path)
+            print "Error reading tags on file", path
+        except:
+            continue
+
         if not type(tags) == tagreader.oggvorbis.OggVorbis:
             continue
 
