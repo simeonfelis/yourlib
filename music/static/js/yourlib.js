@@ -125,6 +125,15 @@ $(document).ready(function () {
             });
         };
 
+        $( "#btn_rescan_library" ).click(function() {
+            $( "#rescan_status" ).html("Rescan requested. This might take a while....");
+            var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
+            $.post("/rescan", data, function() {
+                $( "#rescan_status" ).html("Rescan done");
+            });
+            return false; // don't do anything else
+        });
+
         $( "#btn_context_collection" ).click(function() {
             var $data = {"csrfmiddlewaretoken": csrf_token};
             $( "#context_content" ).load("/context/collection/", $data, function() {

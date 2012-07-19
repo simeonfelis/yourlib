@@ -267,20 +267,22 @@ def play_next(request):
 # TODO: perfomance!
 @login_required
 def rescan(request):
-    print "init of library requested."
-    print "Clearing database..."
-    for s in Song.objects.all():
-        print "deleting song", s
-        s.delete()
-    print "Database cleared"
+    if request.method == "POST":
+        print "init of library requested."
+        print "Clearing database..."
+        for s in Song.objects.all():
+            s.delete()
+        print "Database cleared"
 
-    userdir = os.path.join(settings.MUSIC_PATH)
+        userdir = os.path.join(settings.MUSIC_PATH)
 
-    print "Checking userdir", userdir
+        print "Checking userdir", userdir
 
-    os.path.walk(userdir, add_song, request.user)
+        os.path.walk(userdir, add_song, request.user)
 
-    return HttpResponse("Rescan request done")
+        return HttpResponse("Rescan request done")
+
+    return HttpResponse("Use POST request! and fuck you, chrome prefetch!")
 
 def song_info_response(song):
 
