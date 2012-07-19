@@ -1,113 +1,16 @@
 
 <html>
     <head>
-<script type="text/javascript" >var csrf_token = "{{ csrf_token }}"</script>
+        <script type="text/javascript" >var csrf_token = "{{ csrf_token }}"</script>
 
         <script type="text/javascript" src="{{ STATIC_URL }}js/jquery-1.7.1.min.js"></script>
         <script type="text/javascript" src="{{ STATIC_URL }}js/jquery-ui-1.8.18.custom.min.js"></script>
-        <script type="text/javascript">
-$(document).ready(function () {
-        function play_song(song_info) {
-            $( "#player1_song_info_title" ).html(song_info.title);
-            $( "#player1_song_info_artist" ).html(song_info.artist);
+        <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/jquery.ui.all.css"></link>
 
-            $( "#player1" ).remove();
-            $('<audio id="player1" controls="controls" preload="auto"></audio>').appendTo("#player1_container");
-            var $song_url='/play/song/' + song_info.song_id;
-            if (song_info.mime == "audio/ogg") {
-                $('<source id="player1_ogg_source" src="' + $song_url + '" type="audio/ogg"></source>').appendTo("#player1");
-            }
-            else if (song_info.mime == "audio/mp3") {
-                $('<source id="player1_mp3_source" src="' + $song_url + '" type="audio/mp3"></source>').appendTo("#player1");
-            }
-            $( "#player1" ).bind("ended", on_player1_event_ended);
-            $( "#player1" )[0].pause();
-            $( "#player1" )[0].load();
-            $( "#player1" )[0].play();
-        };
+        <script type="text/javascript" src="{{ STATIC_URL }}js/yourlib.js"></script>
+        <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/yourlib.css"></link>
 
-        function on_player1_event_ended() {
-            $.post("/play/next", {"csrfmiddlewaretoken": csrf_token}, function(song_info) {
-                if (song_info=="") {
-                    return;
-                }
-                else {
-                    play_song(song_info);
-                }
-            });
-        };
-        $( "#create_new_playlist" ).change(function() {
-            var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
-            $.post("/playlist/create/", data, function(new_playlist) {
-                $( "#playlists" ).add(new_playlist);
-            });
-        });
-        $( "#search_input" ).change(function() {
-            $( "#search_result_container" ).html("Started");
-            var $terms = $(this).val();
-            var jqxhr = $.post("/search/" + $terms, {"csrfmiddlewaretoken": csrf_token}, function(results) {
-                $( "#search_result_container" ).html(results);
-                // bind play.click handler
-                $( ".btn_play_search_result" ).click(function() {
-                    var $result_id = parseInt($(this).attr("data-search_result_id"));
-                    $.post("/play/result/" + $result_id, {"csrfmiddlewaretoken": csrf_token}, function(song_info) {
-                        play_song(song_info);
-                    })
-                    return false; // don't do anything anymore
-                });
-                // bind append_to_playlist handler
-                $( ".btn_append_to_playlist" ).click(function() {
-                    var $playlist_id = $(this).attr("data-playlist_id");
-                    var $song_id = $(this).attr("data-song_id");
-                    var $data = {'playlist_id' : $playlist_id, 'song_id': $song_id, "csrfmiddlewaretoken": csrf_token};
-                    var sel = "#playlist_" + $playlist_id;
-                    $( sel ).load("/playlist/append/", $data, function() {
-                        //alert("New playlist set");
-                    });
-                    return false; // don't do anything else
-                });
-            })
-            .success(function() {/*alert("Second success");*/})
-            .error(function() {/*alert("error");*/})
-            .complete(function() {/*alert("complete");*/});
-            jqxhr.complete(function() {/*alert("second complete");*/});
-        });
-
-        $( ".btn_player1_next" ).click(function() {
-            on_player1_event_ended();
-        });
-        $( ".btn_playlist_item_remove" ).click(function() {
-            var $playlist_id = $(this).attr("data-playlist_id");
-            var $item_id = $(this).attr("data-item_id");
-            $.post("/playlist/remove/item/" + $playlist_id + "/" + $item_id, {"csrfmiddlewaretoken": csrf_token}, function(new_playlist) {
-                $( "#playlist_1" ).remove();
-                $( "#playlists" ).append(new_playlist);
-            });
-        });
-        $( ".btn_play_song" ).click(function() {
-            var $song_id = parseInt(this.id.substring(14));
-            var $artist = $(this).attr("data-artist");
-            var $title = $(this).attr("data-title");
-            var $mime = $(this).attr("data-mime");
-
-            var $song_info = {
-                'song_id' : $song_id,
-                'artist': $artist,
-                'title': $title,
-                'mime': $mime,
-            };
-            play_song($song_info);
-            return false; // don't do anything anymore
-        });
-        $( ".btn_playlist_play_all" ).click(function() {
-            var $pl_id=parseInt($(this).attr("data-playlist_id"));
-            $.post("/play/playlist/" + $pl_id, {"csrfmiddlewaretoken": csrf_token}, function(song_info) {
-                play_song(song_info);
-            });
-        });
-});
-
-        </script>
+        {% block head_title %}{% endblock %}
     </head>
     <body>
         {% block content %}

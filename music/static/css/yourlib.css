@@ -1,0 +1,105 @@
+
+body {
+    font-family: Arial,Helvetica,sans-serif;
+}
+
+.btn {
+    padding: 0.2em;
+}
+
+.btn:hover {
+    background-color: #a4acbf;
+}
+
+.yourlib_header {
+    width: 100%;
+    background-color: #E4ECFF;
+    height: 3em;
+}
+.yourlib_header div {
+    white-space: nowrap;
+    float: left;
+}
+.stop_float {
+    /*float: right;*/
+    clear: both;
+}
+
+.sidebar {
+    width: 20%;
+    float: left;
+    white-space: nowrap;
+    background-color: #d4d4df;
+}
+
+.sidebar h1 {
+    font-size: 1.2em;
+    font-style: normal;
+    font-weight: normal;
+}
+
+.player_song_info div {
+    float: left;
+    white-space: nowrap;
+    font-size: 0.8em;
+    text-overflow: ellipsis;
+}
+
+.collection .search {
+    width: 100%;
+    height: 1.5em;
+    background-color: #c4cCdF;
+}
+
+.collection .search .status {
+    float: left;
+}
+
+.collection .search .input {
+    float: left;
+}
+
+.context_container {
+    width: 80%;
+    background-color: #E4ECFF;
+    float: left;
+}
+
+.context_header {
+    width: 100%;
+    height: 1.5em;
+    background-color: #c4cCdF;
+}
+
+.context_header div {
+    float: left;
+    white-space: nowrap;
+}
+
+.song_items {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.song_item {
+/*    background-color: #dd1111;*/
+/*    height: 1.5em;*/
+    width: 100%;
+}
+.song_item div {
+    float: left;
+}
+
+.song_item .song_info {
+    width: 50%;
+}
+
+.player .controls {
+}
+
+.player .info div {
+    white-space: nowrap;
+    float: left;
+}
+

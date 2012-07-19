@@ -2,14 +2,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-PLAYLIST_STATUS_CHOICES = (
-        ('stop', 'stop'),
-        ('play', 'play'),
-)
-
 CURRENTLY_PLAYING_CHOICES = (
         ('none', 'Playing nothing'),
-        ('search', 'Playing from search results'),
+        ('collection', 'Playing from collection'),
         ('playlist', 'Playing from playlist'),
 )
 
@@ -44,20 +39,12 @@ class Playlist(models.Model):
     name = models.CharField(max_length=256)
     items = models.ManyToManyField(PlaylistItem)
     user = models.ForeignKey(User)
-    playing = models.IntegerField()
-    status = models.CharField(max_length=32, choices=PLAYLIST_STATUS_CHOICES)
-
-class SearchResult(models.Model):
-    song = models.ForeignKey(Song)
-
-class Search(models.Model):
-    user = models.ForeignKey(User)
-    results = models.ManyToManyField(SearchResult, blank=True, null=True)
-    playing = models.ForeignKey(SearchResult, blank=True, null=True, related_name='+')
+    current_position = models.IntegerField()
 
 class MusicSession(models.Model):
     user = models.ForeignKey(User)
+    search_terms      = models.CharField(max_length=255, blank=True, null=True)
     currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
-    search = models.ForeignKey(Search, blank=True, null=True)
-    playlist = models.ForeignKey(Playlist, blank=True, null=True)
+    current_song      = models.ForeignKey(Song, blank=True, null=True)
+    current_playlist  = models.ForeignKey(Playlist, blank=True, null=True)
 
