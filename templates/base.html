@@ -7,7 +7,6 @@
         <script type="text/javascript" src="{{ STATIC_URL }}js/jquery-ui-1.8.18.custom.min.js"></script>
         <script type="text/javascript">
 $(document).ready(function () {
-
         function play_song(song_info) {
             $( "#player1_song_info_title" ).html(song_info.title);
             $( "#player1_song_info_artist" ).html(song_info.artist);
@@ -37,7 +36,12 @@ $(document).ready(function () {
                 }
             });
         };
-
+        $( "#create_new_playlist" ).change(function() {
+            var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
+            $.post("/playlist/create/", data, function(new_playlist) {
+                $( "#playlists" ).add(new_playlist);
+            });
+        });
         $( "#search_input" ).change(function() {
             $( "#search_result_container" ).html("Started");
             var $terms = $(this).val();
@@ -50,6 +54,17 @@ $(document).ready(function () {
                         play_song(song_info);
                     })
                     return false; // don't do anything anymore
+                });
+                // bind append_to_playlist handler
+                $( ".btn_append_to_playlist" ).click(function() {
+                    var $playlist_id = $(this).attr("data-playlist_id");
+                    var $song_id = $(this).attr("data-song_id");
+                    var $data = {'playlist_id' : $playlist_id, 'song_id': $song_id, "csrfmiddlewaretoken": csrf_token};
+                    var sel = "#playlist_" + $playlist_id;
+                    $( sel ).load("/playlist/append/", $data, function() {
+                        //alert("New playlist set");
+                    });
+                    return false; // don't do anything else
                 });
             })
             .success(function() {/*alert("Second success");*/})
@@ -68,14 +83,6 @@ $(document).ready(function () {
                 $( "#playlist_1" ).remove();
                 $( "#playlists" ).append(new_playlist);
             });
-        });
-        $( ".btn_append_song" ).click(function() {
-            var $id = parseInt(this.id.substring(16));
-            $.post("/playlist/append/default/" + $id, {"csrfmiddlewaretoken": csrf_token}, function(new_playlist) {
-                $( "#playlist_1" ).remove();
-                $( "#playlists" ).append(new_playlist);
-            });
-            return false; // don't do anything anymore
         });
         $( ".btn_play_song" ).click(function() {
             var $song_id = parseInt(this.id.substring(14));

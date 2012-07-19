@@ -30,6 +30,7 @@ def home(request):
             ms = MusicSession(user=request.user, currently_playing='none')
             ms.save()
             music_session = MusicSession.objects.filter(user=request.user)
+        # put last saved status here!
 
     return render_to_response(
             'home.html',
@@ -45,6 +46,11 @@ def play_playlist(request, playlist_id):
         playing = 1
         pl.playing = playing
         pl.save()
+
+        ms = MusicSession.objects.get(user=request.user)
+        ms.currently_playing = "playlist"
+        ms.playlist = pl
+        ms.save()
         item = PlaylistItem.objects.filter(playlist__id=playlist_id, position=playing)[0]
         return song_info_response(item.song)
 
@@ -75,10 +81,12 @@ def play_next(request):
                 search.save()
 
         elif "playlist" == currently_playing:
-            pl = Playlist.objects.get(id=1)
+            ms = MusicSession.objects.get(user=request.user)
+            pl = ms.playlist
             playing = pl.playing + 1
             pl.playing = playing
-            item = PlaylistItem.objects.filter(playlist__id=1, position=playing)[0]
+            pl.save()
+            item = PlaylistItem.objects.filter(playlist__id=pl.id, position=playing)[0]
             song = item.song
         else:
             song = None
@@ -120,6 +128,7 @@ def search(request, terms):
             search.results.add(result)
 
         search.save()
+        playlists = Playlist.objects.filter(user=request.user)
 
         return render_to_response(
                 'search_results.html',
@@ -130,20 +139,35 @@ def search(request, terms):
     # return nothing on GET requests
     return HttpResponse("")
 
+@login_required
+def playlist_create(request):
+    if request.method == "POST":
+        name = request.POST.get('playlist_name')
+        playlist = Playlist(name=name, user=request.user, playing=0, status="stop")
+        playlist.save()
+        return render_to_response(
+                "playlist.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+    return HttpResponse("")
 
 @login_required
-def playlist_append(request, song_id):
-
+def playlist_append(request):
     if request.method == "POST":
+        playlist_id = request.POST.get('playlist_id')
+        song_id = request.POST.get('song_id')
+
         song = Song.objects.get(id=song_id)
-        pl = Playlist.objects.get(name="default", user=request.user)
+        playlist = Playlist.objects.get(id=playlist_id)
+
         item = PlaylistItem(
 #                playlist = pl,
                 song = song,
-                position = 1 + len(pl.items.all())
+                position = 1 + len(playlist.items.all())
                 )
+
         item.save()
-        playlist = Playlist.objects.get(id=1)
         playlist.items.add(item)
         playlist.save()
         return render_to_response(
