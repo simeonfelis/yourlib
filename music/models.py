@@ -21,7 +21,8 @@ class Song(models.Model):
     album = models.CharField(max_length=256)
     track = models.IntegerField()
     mime = models.CharField(max_length=32)
-    path_orig = models.FilePathField()
+    path_orig = models.FilePathField(unique=True)
+    timestamp_orig = models.DateTimeField()
     user = models.ForeignKey(User)
 
 class PlaylistItem(models.Model):

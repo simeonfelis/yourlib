@@ -3,13 +3,14 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 from django.utils import simplejson
+from django.utils.timezone import utc
 from django.conf import settings
 from django.db.models import Q
 
 from music.models import Song, Playlist, PlaylistItem, MusicSession
 #from music.forms import UserLoginForm
 
-import os
+import os, datetime
 import mutagen as tagreader
 
 @login_required
@@ -268,17 +269,17 @@ def play_next(request):
 @login_required
 def rescan(request):
     if request.method == "POST":
-        print "init of library requested."
-        print "Clearing database..."
-        for s in Song.objects.all():
-            s.delete()
-        print "Database cleared"
+        print "rescan of library requested."
+        print "check for orphans"
+        for s in Song.objects.filter(user=request.user):
+            if not os.path.isfile(s.path_orig):
+                print "Deleting orphan file", s.path_orig
+                s.delete()
 
         userdir = os.path.join(settings.MUSIC_PATH)
-
-        print "Checking userdir", userdir
-
-        os.path.walk(userdir, add_song, request.user)
+        print "scan music folder", userdir
+        for root, dirs, files in os.walk(userdir):
+            add_song(root, files, request.user)
 
         return HttpResponse("Rescan request done")
 
@@ -306,12 +307,27 @@ def song_info_response(song):
 def login(request):
     return HttpResponse("Hi")
 
-def add_song(user, dirname, files):
+def add_song(dirname, files, user):
     for filename in files:
         path = os.path.join(dirname, filename)
 
         if not os.path.isfile(path):
             continue
+
+        timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(path)).replace(tzinfo=utc)
+        # check for duplicates resp. file change. if timestamp has change, re-read tags
+        song = None
+        try:
+            song = Song.objects.get(path_orig=path)
+        except Song.DoesNotExist:
+            pass
+        else:
+            # file already in database
+            if song.timestamp_orig == timestamp:
+                continue
+            else:
+                # reread tags and store it to song. Therefore, leave variable song != None
+                pass
 
         try:
             tags = tagreader.File(path, easy=True)
@@ -348,20 +364,35 @@ def add_song(user, dirname, files):
         except:
             album = "Unknown"
 
-        song = Song(
-                artist    = artist,
-                title     = title,
-                album     = album,
-                track     = track,
-                mime      = mime,
-                user      = user,
-                path_orig = path
-                )
+        if song == None:
+            # new song item
+            print "Adding file", path
+            song = Song(
+                    artist    = artist,
+                    title     = title,
+                    album     = album,
+                    track     = track,
+                    mime      = mime,
+                    user      = user,
+                    path_orig = path,
+                    timestamp_orig = timestamp,
+                    )
+        else:
+            # overwrite old song item
+            print "Updating file", path
+            song.artist    = artist
+            song.title     = title
+            song.album     = album
+            song.track     = track
+            song.mime      = mime
+            song.user      = user
+            song.path_orig = path
+            song.timestamp_orig = timestamp
+
         try:
             song.save()
         except Exception, e:
             print "Database error on file", path, e
-            print "Probably wrong encoded file name or wrong filesystem character set chosen. or the database is locked."
 
 def filter_songs(request, terms):
     term_list = terms.split(" ")

@@ -129,8 +129,9 @@ $(document).ready(function () {
             $( "#rescan_status" ).html("Rescan requested. This might take a while....");
             var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
             $.post("/rescan", data, function() {
-                $( "#rescan_status" ).html("Rescan done");
-            });
+            })
+            .success(function() { $( "#rescan_status" ).html("Rescan done"); })
+            .error(function() { $( "#rescan_status" ).html("Error during rescan"); });
             return false; // don't do anything else
         });
 
