@@ -27,7 +27,7 @@ def home(request):
         # current status
         try:
             music_session = MusicSession.objects.get(user=request.user)
-        except MusicSession.DoesNotExcist:
+        except MusicSession.DoesNotExist:
             print "Creating music session for user", request.user
             music_session = MusicSession(user=request.user, currently_playing='none')
             music_session.save()
@@ -214,16 +214,24 @@ def playlist_remove_item(request, playlist_id, item_id):
 ###############################    player    ##################################
 @login_required
 def play_song(request, song_id):
+    """
+    deliver a song. better to say: "let nginx deliver the song"
+    """
+
     song = Song.objects.get(id=song_id)
-    path = "/music" + song.path_orig[len(settings.MUSIC_PATH):] # append "/music", strip prefix (/media....)
+    # append "/music" , strip filesystem prefix (/media....)
+    path = "/music" + song.path_orig[len(settings.MUSIC_PATH):]
     response = HttpResponse()
     response["Content-Type"] = ""
     response["X-Accel-Redirect"] = path.encode("utf-8")
-    print response
+
     return response
 
 @login_required
 def play(request):
+    """
+    administrate song request. returns urls for audio player <source> tag and song info
+    """
     song = None
     print "New song play request"
     if request.method == "POST":
@@ -284,42 +292,10 @@ def play_next(request):
 
     return song_info_response(song)
 
-#@login_required
-#def play_playlist(request, playlist_id):
-#    if request.method == "POST":
-#        pl = Playlist.objects.get(id=playlist_id)
-#        pl.status = "play"
-#        playing = 1
-#        pl.playing = playing
-#        pl.save()
-#
-#        ms = MusicSession.objects.get(user=request.user)
-#        ms.currently_playing = "playlist"
-#        ms.playlist = pl
-#        ms.save()
-#        item = PlaylistItem.objects.filter(playlist__id=playlist_id, position=playing)[0]
-#        return song_info_response(item.song)
-
-#@login_required
-#def play_result(request, result_id):
-#    if request.method == "POST":
-#        result=SearchResult.objects.get(id=result_id)
-#
-#        search = Search.objects.get(user=request.user)
-#        search.playing = result
-#        search.save()
-#        ms = MusicSession.objects.get(user=request.user)
-#        ms.currently_playing = "search"
-#        ms.save()
-#        return song_info_response(result.song)
-#
-#    return HttpResponse("")
-
-
-
 
 
 #######################      internals     ##################################
+
 @login_required
 def rescan(request):
     if request.method == "POST":
@@ -338,28 +314,6 @@ def rescan(request):
         return HttpResponse("Rescan request done")
 
     return HttpResponse("Use POST request! and fuck you, chrome prefetch!")
-
-def song_info_response(song):
-
-    if song == None:
-        return HttpResponse("")
-
-    filename = os.path.split(song.path_orig)[-1]
-    song_info = {
-            'song_id': song.id,
-            'title': song.title,
-            'artist': song.artist,
-            'album': song.album,
-            'track': song.track,
-            'name': filename,
-            'mime': song.mime,
-            }
-    response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
-    response['Cache-Control'] = 'no-cache'
-    return response
-
-def login(request):
-    return HttpResponse("Hi")
 
 def add_song(dirname, files, user):
     for filename in files:
@@ -447,6 +401,28 @@ def add_song(dirname, files, user):
             song.save()
         except Exception, e:
             print "Database error on file", path, e
+
+def song_info_response(song):
+
+    if song == None:
+        return HttpResponse("")
+
+    filename = os.path.split(song.path_orig)[-1]
+    song_info = {
+            'song_id': song.id,
+            'title': song.title,
+            'artist': song.artist,
+            'album': song.album,
+            'track': song.track,
+            'name': filename,
+            'mime': song.mime,
+            }
+    response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+def login(request):
+    return HttpResponse("Hi")
 
 def filter_songs(request, terms):
     if not type(terms) == unicode:

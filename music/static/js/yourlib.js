@@ -177,9 +177,10 @@ $(document).ready(function () {
         $( "#btn_rescan_library" ).click(function() {
             $( "#rescan_status" ).html("Rescan requested. This might take a while....");
             var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
-            $.post("/rescan", data, function() {
+            $.post("/rescan", data, function(answer) {
+                $( "#rescan_status" ).html(answer);
             })
-            .success(function() { $( "#rescan_status" ).html("Rescan done"); })
+            .success(function() {  })
             .error(function() { $( "#rescan_status" ).html("Error during rescan"); });
             return false; // don't do anything else
         });
