@@ -2,8 +2,10 @@
     <div class="context_header">
         <div class="name">Playlist: {{ playlist.name }}</div>
         <div class="btn_playlist_play btn" data-playlist_id="{{ playlist.id }}">play</div>
-        <div class="btn_delete_playlist btn">delete</div>
+        <div class="btn_playlist_delete btn" data-playlist_id="{{ playlist.id }}">delete</div>
         <div class="stop_float"></div>
     </div>
-    {% include "playlist.html" %}
+    <div id="playlist_content">
+        {% include "playlist.html" %}
+    </div>
 </div>

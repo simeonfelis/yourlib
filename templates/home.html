@@ -20,13 +20,16 @@
             <h1 class="btn" id="btn_context_collection">Collection</h1>
             <div>
                 <h1>Playlists</h1>
-                {% include "playlists.html" %}
+                <div id="sidebar_playlists_content">
+                    {% include "playlists.html" %}
+                </div>
+                <div>Create: <form id="playlist_create"><input id="playlist_create_name" name="playlist_name" type="text" size="10" maxlength="32"></form></div>
             </div>
         </div>
     </div>
 
     <div class="context_container">
-        {% if music_session.currently_playing == "search" %}
+        {% if music_session.currently_playing == "collection" %}
             {% include "context_collection.html" %}
         {% else %}
             <div id="context_content">

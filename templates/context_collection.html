@@ -1,8 +1,8 @@
-<div class="context_content">
+<div class="context_content" id="context_content">
     <div class="collection">
 
         <div class="search">
-            <div class="input">Search <input id="context_collection_search" type="text"></div>
+            <div class="input">Search <input id="context_collection_search" type="text" value="{{ music_session.search_terms }}"></div>
             <div class="status" id="context_collection_search_status"></div>
             <div class="stop_float"></div>
         </div>
@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="songs" id="context_collection_songs">
-            <!-- will be filled with search or artist/album selection -->
+            {% include "collection.html" %}
         </div>
     </div>
 </div>

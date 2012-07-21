@@ -1,7 +1,7 @@
-<ul id="playlists">
+<div id="sidebar_playlists" class="playlists">
     {% for playlist in playlists %}
-    <div class="btn_context_playlist btn" data-playlist_id="{{ playlist.id }}">{{ playlist.name }} ({{ playlist.items.all|length }})</div><br />
+    <div id="sidebar_playlist_{{ playlist.id }}" class="btn_sidebar_playlist btn" data-playlist_id="{{ playlist.id }}">{{ playlist.name }} ({{ playlist.items.all|length }})</div><br />
     {% endfor %}
     <!-- <p>Neue: <input id="create_new_playlist" type="text"></p> -->
-</ul>
+</div>
 

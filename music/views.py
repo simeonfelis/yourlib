@@ -17,7 +17,6 @@ import mutagen as tagreader
 def home(request):
 
     if request.user.is_authenticated():
-        songs = Song.objects.filter(user=request.user)
         playlists = Playlist.objects.filter(user=request.user)
         if 0 == len(playlists):
             print "Creating default playlist for user", request.user
@@ -25,16 +24,18 @@ def home(request):
             pl.save()
             playlists = Playlist.objects.filter(user=request.user)
 
-        music_session = MusicSession.objects.filter(user=request.user)
-        if 0 == len(music_session):
+        # current status
+        try:
+            music_session = MusicSession.objects.get(user=request.user)
+        except MusicSession.DoesNotExcist:
             print "Creating music session for user", request.user
-            ms = MusicSession(user=request.user, currently_playing='none')
-            ms.save()
-            music_session = MusicSession.objects.filter(user=request.user)
-        music_session = music_session[0]
-        print "music_session", music_session.currently_playing
-        # put last saved status here!
+            music_session = MusicSession(user=request.user, currently_playing='none')
+            music_session.save()
 
+        songs = filter_songs(request, music_session.search_terms)
+
+
+    print music_session.currently_playing
     return render_to_response(
             'home.html',
             locals(),
@@ -95,17 +96,59 @@ def search(request, terms):
     # return nothing on GET requests
     return HttpResponse("")
 
+#############################      playlist stuff     ##################################
+
+@login_required
+def playlists(request):
+    """
+    return all playlists, e.g. for sidebar
+    """
+    playlists = Playlist.objects.filter(user=request.user)
+    return render_to_response(
+            'playlists.html',
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
 @login_required
 def playlist_create(request):
     if request.method == "POST":
         name = request.POST.get('playlist_name')
-        playlist = Playlist(name=name, user=request.user, playing=0, status="stop")
+        if not len(name) > 0:
+            raise "playlist name invalid: " + str(name)
+        playlist = Playlist(name=name, user=request.user, current_position=0)
         playlist.save()
+        playlists = Playlist.objects.filter(user=request.user)
+
+        return render_to_response(
+                "playlists.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+
+    return HttpResponse("")
+
+@login_required
+def playlist_delete(request):
+    if request.method == "POST":
+
+        playlist_id = request.POST.get('playlist_id')
+        playlist = Playlist.objects.get(id=playlist_id)
+
+        if playlist.name == "default":
+            raise "You can't delete the default playlist. it should stay."
+
+        playlist.delete()
+
+        # return the first playlist from user
+        playlist = Playlist.objects.filter(user=request.user)[0]
+
         return render_to_response(
                 "playlist.html",
                 locals(),
                 context_instance=RequestContext(request),
                 )
+
     return HttpResponse("")
 
 @login_required
@@ -165,6 +208,7 @@ def playlist_remove_item(request, playlist_id, item_id):
             context_instance=RequestContext(request),
             )
 
+###############################    player    ##################################
 @login_required
 def play_song(request, song_id):
     song = Song.objects.get(id=song_id)
@@ -178,16 +222,19 @@ def play_song(request, song_id):
 @login_required
 def play(request):
     song = None
+    print "New song play request"
     if request.method == "POST":
         ms = MusicSession.objects.get(user=request.user)
         song_id = request.POST.get('song_id')
         song = Song.objects.get(id=song_id)
 
         if "collection" == request.POST.get('source'):
+            print "Currently song source: collection"
             ms.currently_playing = "collection"
             ms.current_song = song
             ms.save()
         elif "playlist" == request.POST.get('source'):
+            print "Currently song source: playlist"
             playlist = Playlist.objects.get(id=request.POST.get('playlist_id'))
             item = PlaylistItem.objects.get(id=request.POST.get('item_id'))
             playlist.current_position = item.position
@@ -265,7 +312,11 @@ def play_next(request):
 #
 #    return HttpResponse("")
 
-# TODO: perfomance!
+
+
+
+
+#######################      internals     ##################################
 @login_required
 def rescan(request):
     if request.method == "POST":
@@ -395,6 +446,11 @@ def add_song(dirname, files, user):
             print "Database error on file", path, e
 
 def filter_songs(request, terms):
+    if not type(terms) == unicode:
+        return []
+    if len(terms) < 2:
+        return []
+
     term_list = terms.split(" ")
     songs = Song.objects.filter(Q(artist__contains=term_list[0]) | Q(title__contains=term_list[0]) | Q(album__contains=term_list[0]), user=request.user)
     for term in term_list[1:]:

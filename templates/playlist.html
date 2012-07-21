@@ -1,6 +1,6 @@
 {% if playlist.items.all|length > 0 %}
 
-<ul id="playlist_content_{{ playlist_id }}" class="song_items">
+<ul id="playlist_content_{{ playlist.id }}" class="song_items">
     {% for item in playlist.items.all %}
     <li class="song_item">
     <div class="btn_playlist_item_play song_info btn" data-song_id="{{ item.song.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ item.id }}">{{ item }}</div>

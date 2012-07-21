@@ -38,6 +38,11 @@ body {
     font-weight: normal;
 }
 
+.playlists {
+    padding-left: 10px;
+    margin-left: 10px;
+}
+
 .player_song_info div {
     float: left;
     white-space: nowrap;
