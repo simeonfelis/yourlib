@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    bind_sidebar_playlists(); /* persistent */
+    bind_sidebar_playlists(); /* sidebar is persistent */
     bind_collection_search(); /* if context "collection" is loaded */
     bind_collection_songs();  /* if context "collection" is loaded */
 
@@ -187,12 +187,16 @@ $(document).ready(function () {
         $( "#btn_player1_next" ).click(function() {
             on_player1_event_ended();
         });
+
         $( "#btn_context_collection" ).click(function() {
-            var $data = {"csrfmiddlewaretoken": csrf_token};
-            $( "#context_content" ).load("/context/collection/", $data, function() {
+            var $data = {
+                'csrfmiddlewaretoken': csrf_token
+            };
+            $( "#context_container" ).load("/context/collection/", $data, function() {
                 bind_collection_search();
             });
         });
+
         $( "#create_new_playlist" ).change(function() {
             var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
             $.post("/playlist/create/", data, function(new_playlist) {

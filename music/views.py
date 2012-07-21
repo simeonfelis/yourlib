@@ -45,10 +45,14 @@ def home(request):
 @login_required
 def context(request, selection):
     if request.method == "POST":
-        ms = MusicSession.objects.get(user=request.user)
+        music_session = MusicSession.objects.get(user=request.user)
         if selection == "collection":
-            ms.context = "collection"
-            ms.save()
+
+            music_session.context = "collection"
+            music_session.save()
+
+            songs = filter_songs(request, music_session.search_terms)
+
             return render_to_response(
                     "context_collection.html",
                     locals(),
@@ -67,7 +71,6 @@ def context(request, selection):
 
     return HttpResponse("")
 
-#TODO: increase performance
 @login_required
 def search(request, terms):
 
