@@ -158,17 +158,19 @@ $(document).ready(function () {
         };
 
         function bind_collection_search() {
-            $( "#context_collection_search" ).change(function() {
+            $( "#context_collection_search" ).submit(function() {
                 $( "#context_collection_search_status" ).html("Started");
                 var $data = {
                     "csrfmiddlewaretoken": csrf_token,
-                    "terms": $(this).val(),
+                    "terms": $( "#collection_search_terms" ).val(),
                 };
                 $( "#context_collection_container").load("search/", $data, function() {
                     $( "#context_collection_search_status" ).html("Finished");
                     bind_collection_songs();
                     bind_collection_artists();
                 });
+
+                return false; // Don't do anything else
             });
         }
 
@@ -229,15 +231,16 @@ $(document).ready(function () {
             });
         });
 
-        $( "#create_new_playlist" ).change(function() {
-            var $data = {
-                'csrfmiddlewaretoken': csrf_token,
-                'playlist_name': $(this).val(),
-            };
-            $.post("playlist/create/", $data, function(new_playlist) {
-                $( "#playlists" ).add(new_playlist);
-            });
-        });
+        // deprecated
+        //$( "#create_new_playlist" ).change(function() {
+        //    var $data = {
+        //        'csrfmiddlewaretoken': csrf_token,
+        //        'playlist_name': $(this).val(),
+        //    };
+        //    $.post("playlist/create/", $data, function(new_playlist) {
+        //        $( "#playlists" ).add(new_playlist);
+        //    });
+        //});
 
         $( "#logout" ).click(function() {
             var $data = {

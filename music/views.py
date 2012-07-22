@@ -451,6 +451,8 @@ def login(request):
 
 def filter_songs(request, terms=None, artist=None):
 
+    print "search: ", terms
+
     if not terms == None:
         if not (type(terms) == unicode or type(terms) == str):
             print "Invalid type for terms: ", type(terms), terms

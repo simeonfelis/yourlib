@@ -2,7 +2,11 @@
     <div class="collection" id="context_collection">
 
         <div class="header">
-            <div class="input">Search <input id="context_collection_search" type="text" value="{{ music_session.search_terms }}"></div>
+            <div class="input">Search:
+                <form id="context_collection_search">
+                    <input id="collection_search_terms" name="search_terms" type="text" size="20" maxlength="32" value="{{ music_session.search_terms }}">
+                </form>
+            </div>
             <div class="status" id="context_collection_search_status"></div>
         </div>
 
