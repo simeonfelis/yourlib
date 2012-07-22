@@ -450,10 +450,10 @@ def filter_songs(request, terms=None, artist=None):
 
     if not terms == None:
         if not type(terms) == unicode:
-            print "Invalid type for terms: ", type(terms)
-            raise Exception("Invalid type for terms: " + type(terms))
+            print "Invalid type for terms: ", type(terms), terms
+            raise Exception("Invalid type for terms: " + str(type(terms)) + " content: " + str(terms))
 
-        if terms == "":
+        if len(terms) == 0:
             # return all songs
             songs = Song.objects.filter(user=request.user)
 
