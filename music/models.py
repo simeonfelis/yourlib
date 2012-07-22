@@ -24,6 +24,16 @@ class Song(models.Model):
     path_orig = models.FilePathField(unique=True)
     timestamp_orig = models.DateTimeField()
     user = models.ForeignKey(User)
+    # in planning:
+    # converted = models.ManyToManyField('converted')
+    # rename path_orig to path and timestamp_orig to age
+    # path should be 'BASE_PATH/User/origs/
+
+# In planning:
+# class Converted(models.Model):
+#     mime
+#     path should be 'BASE_PATH/User/conv/mime/id
+#     status 'converting' 'ready'
 
 class PlaylistItem(models.Model):
     def __unicode__(self):
@@ -44,7 +54,7 @@ class Playlist(models.Model):
 
 class MusicSession(models.Model):
     user = models.ForeignKey(User)
-    search_terms      = models.CharField(max_length=255, blank=True, null=True)
+    search_terms      = models.CharField(max_length=255)
     currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
     current_song      = models.ForeignKey(Song, blank=True, null=True)
     current_playlist  = models.ForeignKey(Playlist, blank=True, null=True)
