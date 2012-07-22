@@ -356,7 +356,11 @@ def add_song(dirname, files, user):
         try:
             tags = tagreader.File(path, easy=True)
         except Exception, e:
-            print "Error reading tags on file", path, e
+            try:
+                print "Error reading tags on file", path, e
+            except Exception, e:
+                print "Attention: maybe invalid character set on a path", e
+                continue
             continue
 
         # ignore everything except ogg and mp3
@@ -368,7 +372,12 @@ def add_song(dirname, files, user):
             # don't even warn
             continue
         else:
-            print "Ignoring file", path, "because of mime (", type(tags), ")"
+            try:
+                print "Ignoring file", path, "because of mime (", type(tags), ")"
+            except Exception, e:
+                print "Attention: maybe invalid character set on path", e
+                continue
+
             continue
 
         try:
@@ -425,7 +434,11 @@ def add_song(dirname, files, user):
         try:
             song.save()
         except Exception, e:
-            print "Database error on file", path, e
+            try:
+                print "Database error on file", path, e
+            except Exception, e:
+                print "Attention: maybe invalid character set on path", e
+
 
 def song_info_response(song):
 
