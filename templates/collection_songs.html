@@ -1,5 +1,7 @@
 <div class="songs" id="context_collection_songs">
-{% if songs|length > 0 %}
+{% if songs|length > 200 %}
+    <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>
+{% elif songs|length > 0 %}
     <ul class="song_items">
         {% for s in songs %}
         <li class="song_item">
