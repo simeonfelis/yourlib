@@ -1,11 +1,13 @@
-<div id="context_content">
-    <div class="context_header">
-        <div class="name">Playlist: {{ playlist.name }}</div>
-        <div class="btn_playlist_play btn" data-playlist_id="{{ playlist.id }}">play</div>
-        <div class="btn_playlist_delete btn" data-playlist_id="{{ playlist.id }}">delete</div>
-        <div class="stop_float"></div>
-    </div>
-    <div id="playlist_content">
-        {% include "playlist.html" %}
+<div class="context_content" id="context_content">
+    <div class="playlist" id="context_playlist">
+
+        <div class="header">
+            <div class="name">Playlist: <b>{{ playlist.name }}</b></div>
+            <div class="btn_playlist_delete btn" data-playlist_id="{{ playlist.id }}">delete</div>
+        </div>
+
+        <div id="context_playlist_container">
+            {% include "playlist.html" %}
+        </div>
     </div>
 </div>

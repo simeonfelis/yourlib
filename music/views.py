@@ -29,11 +29,15 @@ def home(request):
             music_session = MusicSession.objects.get(user=request.user)
         except MusicSession.DoesNotExist:
             print "Creating music session for user", request.user
-            music_session = MusicSession(user=request.user, currently_playing='none')
+            music_session = MusicSession(user=request.user, currently_playing='none', search_terms='')
             music_session.save()
 
-        songs = filter_songs(request, music_session.search_terms)
-
+        songs = filter_songs(request, terms=music_session.search_terms)
+        if len(music_session.search_terms) > 0:
+            artists = get_artists(request, songs)
+        else:
+            # all artists
+            artists = get_artists(request, None)
 
     print music_session.currently_playing
     return render_to_response(
@@ -50,8 +54,9 @@ def context(request, selection):
 
             music_session.context = "collection"
             music_session.save()
+            playlists = Playlist.objects.filter(user=request.user)
 
-            songs = filter_songs(request, music_session.search_terms)
+            songs = filter_songs(request, terms=music_session.search_terms)
 
             return render_to_response(
                     "context_collection.html",
@@ -72,29 +77,37 @@ def context(request, selection):
     return HttpResponse("")
 
 @login_required
-def search(request, terms):
+def search(request):
 
     if request.method == "POST":
-        if 'terms' in request.POST:
-            terms = request.POST.get('terms')
-        elif "" == terms:
-            return HttpResponse("")
-
-        ms = MusicSession.objects.get(user=request.user)
-        ms.search_terms = terms
-        ms.save()
-
-        songs = filter_songs(request, terms)
-
-        print "Found", len(songs), "songs for terms", terms
 
         playlists = Playlist.objects.filter(user=request.user)
+        ms = MusicSession.objects.get(user=request.user)
 
-        return render_to_response(
-                'collection.html',
-                locals(),
-                context_instance=RequestContext(request),
-                )
+        if 'terms' in request.POST:
+            terms = request.POST.get('terms')
+            ms.search_terms = terms
+            ms.save()
+
+            songs = filter_songs(request, terms=terms)
+            artists = get_artists(request, songs)
+
+            return render_to_response(
+                    'collection.html',
+                    locals(),
+                    context_instance=RequestContext(request),
+                    )
+
+        elif 'filter_artist' in request.POST:
+            artist = request.POST.get('filter_artist')
+            terms = ms.search_terms
+            songs = filter_songs(request, artist=artist)
+
+            return render_to_response(
+                    'collection_songs.html',
+                    locals(),
+                    context_instance=RequestContext(request),
+                    )
 
     # return nothing on GET requests
     return HttpResponse("")
@@ -118,7 +131,7 @@ def playlist_create(request):
     if request.method == "POST":
         name = request.POST.get('playlist_name')
         if not len(name) > 0:
-            raise "playlist name invalid: " + str(name)
+            raise Exception("playlist name invalid: " + str(name))
         playlist = Playlist(name=name, user=request.user, current_position=0)
         playlist.save()
         playlists = Playlist.objects.filter(user=request.user)
@@ -139,7 +152,7 @@ def playlist_delete(request):
         playlist = Playlist.objects.get(id=playlist_id)
 
         if playlist.name == "default":
-            raise "You can't delete the default playlist. it should stay."
+            raise Exception("You can't delete the default playlist. it should stay.")
 
         playlist.delete()
 
@@ -147,7 +160,7 @@ def playlist_delete(request):
         playlist = Playlist.objects.filter(user=request.user)[0]
 
         return render_to_response(
-                "playlist.html",
+                "context_playlist.html",
                 locals(),
                 context_instance=RequestContext(request),
                 )
@@ -206,7 +219,7 @@ def playlist_remove_item(request, playlist_id, item_id):
         pass
 
     return render_to_response(
-            'playlist.html',
+            'context_playlist.html',
             locals(),
             context_instance=RequestContext(request),
             )
@@ -268,7 +281,7 @@ def play_next(request):
         if "collection" == ms.currently_playing:
             # determin next song based on last search term
             # songs are unique in a collection or a filtered collection
-            songs = filter_songs(request, ms.search_terms)
+            songs = filter_songs(request, terms=ms.search_terms)
             current_song = ms.current_song
             found = False
             song = None
@@ -357,20 +370,29 @@ def add_song(dirname, files, user):
 
         try:
             artist    = tags['artist'][0].encode('utf-8')
+            if not len(artist)>0:
+                artist = "Unknown Artist"
         except:
-            artist = "Unknown"
+            artist = "Unknown Artist"
+
         try:
             title     = tags['title'][0].encode('utf-8')
+            if not len(title)>0:
+                title = "Unknown Title"
         except:
-            title = "Unknown"
+            title = "Unknown Title"
+
         try:
             track     = int(tags['tracknumber'][0].encode('utf-8').split('/')[0])
         except:
             track = 0
+
         try:
             album     = tags['album'][0].encode('utf-8')
+            if not len(album)>0:
+                album = "Unknown Album"
         except:
-            album = "Unknown"
+            album = "Unknown Album"
 
         if song == None:
             # new song item
@@ -424,16 +446,44 @@ def song_info_response(song):
 def login(request):
     return HttpResponse("Hi")
 
-def filter_songs(request, terms):
-    if not type(terms) == unicode:
-        return []
-    if len(terms) < 2:
-        return []
+def filter_songs(request, terms=None, artist=None):
 
-    term_list = terms.split(" ")
-    songs = Song.objects.filter(Q(artist__contains=term_list[0]) | Q(title__contains=term_list[0]) | Q(album__contains=term_list[0]), user=request.user)
-    for term in term_list[1:]:
-        songs = songs.filter(Q(artist__contains=term) | Q(title__contains=term) | Q(album__contains=term), user=request.user)
+    if not terms == None:
+        if not type(terms) == unicode:
+            print "Invalid type for terms: ", type(terms)
+            raise Exception("Invalid type for terms: " + type(terms))
+
+        if terms == "":
+            # return all songs
+            songs = Song.objects.filter(user=request.user)
+
+        else:
+            term_list = terms.split(" ")
+            songs = Song.objects.filter(Q(artist__contains=term_list[0]) | Q(title__contains=term_list[0]) | Q(album__contains=term_list[0]), user=request.user)
+            for term in term_list[1:]:
+                songs = songs.filter(Q(artist__contains=term) | Q(title__contains=term) | Q(album__contains=term), user=request.user)
+
+    elif not artist == None:
+        return Song.objects.filter(artist=artist, user=request.user)
+
+    else:
+        songs = []
 
     return songs
+
+def get_artists(request, songs):
+
+        artists = {}
+
+        if songs == None:
+            songs = Song.objects.filter(user=request.user)
+
+        for song in songs:
+            if song.artist in artists:
+                artists[song.artist] += 1
+            else:
+                artists[song.artist] = 1
+
+        return artists
+
 

@@ -1,36 +1,71 @@
-
 body {
     font-family: Arial,Helvetica,sans-serif;
+    margin: 0px;
+    padding: 0px;
 }
 
 .btn {
-    padding: 0.2em;
+    margin: 1px;
+    background-color: #d0d0d0;
 }
 
 .btn:hover {
     background-color: #a4acbf;
+    cursor: pointer;
 }
 
 .yourlib_header {
     width: 100%;
+    margin-left: 5px;
     background-color: #E4ECFF;
-    height: 3em;
+    height: 50px;
+    z-index: 1;
+    position: fixed;
 }
+
+
 .yourlib_header div {
     white-space: nowrap;
     float: left;
 }
+
+/* only before yourlib_footer (not implemented) or after yourlib_header */
 .stop_float {
-    /*float: right;*/
     clear: both;
 }
 
 .sidebar {
-    width: 20%;
-    float: left;
+    width: 300px;
+    margin: 5px;
+    position: fixed;
+    left: 0px;
+    top: 55px;
     white-space: nowrap;
     background-color: #d4d4df;
 }
+
+.context_container {
+    width: 1000px;
+    height: 550px;
+    margin: 5px;
+    background-color: #f8f8f8;
+    position: absolute;
+    left: 310px;
+    top: 55px;
+    overflow:hidden;
+}
+
+.context_container .header {
+    width: 100%;
+    height: 2em;
+    background-color: #c4cCdF;
+}
+
+.context_container .header div {
+    float: left;
+    white-space: nowrap;
+}
+
 
 .sidebar h1 {
     font-size: 1.2em;
@@ -38,9 +73,16 @@ body {
     font-weight: normal;
 }
 
-.playlists {
-    padding-left: 10px;
-    margin-left: 10px;
+.sidebar .container {
+    background-color: #f0f0f0;
+    margin-left: 5;
+    margin-right: 5;
+}
+
+.sidebar .playlists {
+    margin-left: 5;
+    margin-right: 5;
+    background-color: #f8f8f8;
 }
 
 .player_song_info div {
@@ -50,12 +92,7 @@ body {
     text-overflow: ellipsis;
 }
 
-.collection .search {
-    width: 100%;
-    height: 1.5em;
-    background-color: #c4cCdF;
-}
-
+/*
 .collection .search .status {
     float: left;
 }
@@ -63,38 +100,103 @@ body {
 .collection .search .input {
     float: left;
 }
+*/
 
-.context_container {
-    width: 80%;
-    background-color: #E4ECFF;
-    float: left;
+.collection .artists {
+    width: 200px;
+    height: 100%;
+    position: absolute;
+    background-color: #f8f8f8;
+    left: 0px;
+    margin: 0px;
+    padding: 5px;
+    overflow: auto;
+    overflow-x: hidden;
 }
 
-.context_header {
+.collection .songs {
     width: 100%;
-    height: 1.5em;
-    background-color: #c4cCdF;
+    height: 100%;
+    padding: 0px;
+    margin: 0px;
+    background-color: #f0f0f0;
+    overflow: auto;
+    overflow-x: hidden;
 }
 
-.context_header div {
-    float: left;
-    white-space: nowrap;
-}
 
-.song_items {
+.songs ul {
     list-style-type: none;
     padding: 0;
     margin: 0;
 }
 
-.song_item {
-/*    background-color: #dd1111;*/
-/*    height: 1.5em;*/
-    width: 100%;
+.collection ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
 }
-.song_item div {
+
+/*
+.collection li {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+*/
+
+.collection .artists li:hover {
+    background-color: #f0f0f0;
+}
+
+#context_collection_container {
+    background-color: #00ffff;
+    width: 100%;
+    height: 500px;
+    overflow: auto;
+    overflow-x: hidden;
+}
+
+.song_item {
+    width: 100%;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    position: relative;
+}
+
+.song_item li {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     float: left;
 }
+
+.song_item .artist {
+    width: 300px;
+}
+.song_item .title {
+    width: 300px;
+}
+
+.song_item .album {
+    width: 250px;
+}
+
+.song_item .mime {
+    width: 40px;
+}
+
+.song_items br {
+    clear: left;
+}
+
+.song_item .collection_add_to .playlists {
+    display: none;
+    position: absolute;
+    top: 0.7em;
+}
+
+/*
 
 .song_item .song_info {
     width: 50%;
@@ -107,4 +209,5 @@ body {
     white-space: nowrap;
     float: left;
 }
+*/
 

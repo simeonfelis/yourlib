@@ -1,0 +1,26 @@
+<div class="songs" id="context_collection_songs">
+{% if songs|length > 0 %}
+    <ul class="song_items">
+        {% for s in songs %}
+        <li class="song_item">
+            <ul>
+                <li class="btn_collection_play_song btn song_info artist" data-song_id="{{ s.id }}">{{ s.artist }}</li>
+                <li class="btn_collection_play_song btn song_info title" data-song_id="{{ s.id }}">{{ s.title }}</li>
+                <li class="btn_collection_play_song btn song_info album" data-song_id="{{ s.id }}">{{ s.album }}</li>
+                <li class="btn_collection_play_song btn song_info mime" data-song_id="{{ s.id }}">{{ s.mime|cut:"audio/" }}</li>
+                <li class="collection_add_to">add to
+                    <ul class="playlists">
+                        {% for pl in playlists %}
+                        <li class="btn_collection_append_to_playlist btn" data-playlist_id="{{ pl.id }}" data-song_id="{{ s.id }}">{{ pl.name }}</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <br />
+        {% endfor %}
+    </ul>
+{% else %}
+<p>No results</p>
+{% endif %}
+</div>
