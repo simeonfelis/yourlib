@@ -33,11 +33,14 @@ def home(request):
             music_session.save()
 
         songs = filter_songs(request, terms=music_session.search_terms)
-        if len(music_session.search_terms) > 0:
-            artists = get_artists(request, songs)
-        else:
-            # all artists
-            artists = get_artists(request, None)
+        if len(songs) > 200:
+            print "To many songs"
+        # not stable
+        #if len(music_session.search_terms) > 0:
+        #    artists = get_artists(request, songs)
+        #else:
+        #    # all artists
+        #    artists = get_artists(request, None)
 
     print music_session.currently_playing
     return render_to_response(
@@ -319,7 +322,7 @@ def rescan(request):
                 print "Deleting orphan file", s.path_orig
                 s.delete()
 
-        userdir = os.path.join(settings.MUSIC_PATH)
+        userdir = os.path.join(settings.MUSIC_PATH, request.user.username)
         print "scan music folder", userdir
         for root, dirs, files in os.walk(userdir):
             add_song(root, files, request.user)
