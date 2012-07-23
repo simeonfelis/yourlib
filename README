@@ -1,0 +1,64 @@
+This is so alpha. Don't use it. Although it might work for you.
+
+Purpose
+=======
+
+I want to listen to *my* music, that means to the files I posess. I have
+a slow server (arm, atom) so I don't want to live recode stuff. I don't want
+to use flash, html5 should be fine. And I want a user interface that does not
+suck.
+
+So I build a little webinterface to my music folder, that just plays directly
+my files via the browser´s <audio> tag. A decent browser will play oggs and mp3s
+(like chrome). Furthermore, multiple user have their own music folder.
+
+Features
+========
+
+Support for ogg and mp3
+
+Requires
+========
+
+chrome or firefox or any other that can play your music files natively.
+
+
+Dependencies
+============
+
+You may want to user pip to install dependencies rather than apt-get.
+yum should also be fine.
+
+ * python2
+ * django 1.4
+ * mutagen
+ * nginx
+
+You can use apache, too, if you know how to configure it. I don't.
+
+What you should know (setup)
+============================
+
+ * Your music folder must have the filesystem structure
+   /path/to/music/username1/...
+   /path/to/music/username2/...
+
+ * the file yourlib/settings.py will look at your hostname and includes the
+   corresponding yourlib/settings_hostname.py. Change it accordingly. Also
+   change the secret key, too: ''pwgen -sy 50''
+
+ * There is a example nginx config: yourlib/nginx.conf
+
+ * Start and stop the wsgi server with start.sh: ''./start.sh start''
+
+ * Don't click the rescan button too often. The app is stupid and would
+   start multiple filesystem scans. You probably will get a timeout response
+   when you debug the site. That's ok, just wait.
+
+
+Wishlist
+========
+ * Automatic conversion to mp3 and ogg to serv files to major browsers
+ * Server side playlists
+ * Playlist sharing within users, later server instances
+ * Mobile device support
