@@ -19,7 +19,7 @@ def home(request):
     if request.user.is_authenticated():
         playlists = Playlist.objects.filter(user=request.user)
         if 0 == len(playlists):
-            print "Creating default playlist for user", request.user
+            dbgprint("Creating default playlist for user ", request.user)
             pl = Playlist(name="default", user=request.user, current_position=0)
             pl.save()
             playlists = Playlist.objects.filter(user=request.user)
@@ -28,13 +28,11 @@ def home(request):
         try:
             music_session = MusicSession.objects.get(user=request.user)
         except MusicSession.DoesNotExist:
-            print "Creating music session for user", request.user
+            dbgprint("Creating music session for user ", request.user)
             music_session = MusicSession(user=request.user, currently_playing='none', search_terms='')
             music_session.save()
 
         songs = filter_songs(request, terms=music_session.search_terms)
-        if len(songs) > 200:
-            print "To many songs"
         # not stable
         #if len(music_session.search_terms) > 0:
         #    artists = get_artists(request, songs)
@@ -42,7 +40,6 @@ def home(request):
         #    # all artists
         #    artists = get_artists(request, None)
 
-    print music_session.currently_playing
     return render_to_response(
             'home.html',
             locals(),
@@ -68,7 +65,6 @@ def context(request, selection):
                     )
 
         elif selection == "playlist":
-            print "context playlist", request.POST
             playlist_id = request.POST.get('playlist_id')
             playlist = Playlist.objects.get(id=playlist_id)
             return render_to_response(
@@ -203,7 +199,6 @@ def playlist_append(request):
                 )
 @login_required
 def playlist_remove_item(request, playlist_id, item_id):
-    print playlist_id, item_id
 
     playlist = Playlist.objects.get(id=playlist_id, user=request.user)
 
@@ -249,19 +244,16 @@ def play(request):
     administrate song request. returns urls for audio player <source> tag and song info
     """
     song = None
-    print "New song play request"
     if request.method == "POST":
         ms = MusicSession.objects.get(user=request.user)
         song_id = request.POST.get('song_id')
         song = Song.objects.get(id=song_id)
 
         if "collection" == request.POST.get('source'):
-            print "Currently song source: collection"
             ms.currently_playing = "collection"
             ms.current_song = song
             ms.save()
         elif "playlist" == request.POST.get('source'):
-            print "Currently song source: playlist"
             playlist = Playlist.objects.get(id=request.POST.get('playlist_id'))
             item = PlaylistItem.objects.get(id=request.POST.get('item_id'))
             playlist.current_position = item.position
@@ -315,15 +307,15 @@ def play_next(request):
 @login_required
 def rescan(request):
     if request.method == "POST":
-        print "rescan of library requested."
-        print "check for orphans"
+        dbgprint("rescan of library requested.")
+        dbgprint("check for orphans")
         for s in Song.objects.filter(user=request.user):
             if not os.path.isfile(s.path_orig):
-                print "Deleting orphan file", s.path_orig
+                dbgprint("Deleting orphan file ", s.path_orig)
                 s.delete()
 
         userdir = os.path.join(settings.MUSIC_PATH, request.user.username)
-        print "scan music folder", userdir
+        dbgprint("scan music folder ", userdir)
         for root, dirs, files in os.walk(userdir):
             add_song(root, files, request.user)
 
@@ -356,11 +348,7 @@ def add_song(dirname, files, user):
         try:
             tags = tagreader.File(path, easy=True)
         except Exception, e:
-            try:
-                print "Error reading tags on file", path, e
-            except Exception, e:
-                print "Attention: maybe invalid character set on a path", e
-                continue
+            dbgprint("Error reading tags on file", path, e)
             continue
 
         # ignore everything except ogg and mp3
@@ -372,12 +360,7 @@ def add_song(dirname, files, user):
             # don't even warn
             continue
         else:
-            try:
-                print "Ignoring file", path, "because of mime (", type(tags), ")"
-            except Exception, e:
-                print "Attention: maybe invalid character set on path", e
-                continue
-
+            dbgprint("Ignoring file", path, "because of mime (", type(tags), ")")
             continue
 
         try:
@@ -408,7 +391,7 @@ def add_song(dirname, files, user):
 
         if song == None:
             # new song item
-            print "Adding file", path
+            dbgprint("Adding file ", path)
             song = Song(
                     artist    = artist,
                     title     = title,
@@ -421,7 +404,7 @@ def add_song(dirname, files, user):
                     )
         else:
             # overwrite old song item
-            print "Updating file", path
+            dbgprint("Updating file ", path)
             song.artist    = artist
             song.title     = title
             song.album     = album
@@ -434,10 +417,7 @@ def add_song(dirname, files, user):
         try:
             song.save()
         except Exception, e:
-            try:
-                print "Database error on file", path, e
-            except Exception, e:
-                print "Attention: maybe invalid character set on path", e
+            dbgprint("Database error on file", path, e)
 
 
 def song_info_response(song):
@@ -464,14 +444,14 @@ def login(request):
 
 def filter_songs(request, terms=None, artist=None):
 
-    print "search: ", terms
+    dbgprint("search: ", terms)
 
     if not terms == None:
         if not (type(terms) == unicode or type(terms) == str):
-            print "Invalid type for terms: ", type(terms), terms
-            raise Exception("Invalid type for terms: " + str(type(terms)) + " content: " + str(terms))
+            dbgprint("Invalid type for terms:", type(terms), terms)
+            songs = []
 
-        if len(terms) == 0:
+        elif len(terms) == 0:
             # return all songs
             songs = Song.objects.filter(user=request.user)
 
@@ -503,5 +483,29 @@ def get_artists(request, songs):
                 artists[song.artist] = 1
 
         return artists
+
+def dbgprint(*args):
+    """
+    When run as wsgi, there will be strange UnicodeErrors unless you decode it yourself.
+    When run as local server, you won't see the problems"
+    However, never use print, but dbgprint!
+    """
+
+    message = ""  # is a str
+    try:
+        for m in args:
+            if type(m) == unicode:
+                m = m.encode("utf-8")  # create a str from unicode, but encode it before
+            else:
+                m = str(m)  # make a str from element
+
+            message = message + m + " "
+
+        print message
+
+    except Exception, e:
+        print "EXCEPTION in dbgprint: Crappy string or unicode to print! This will be difficult to debug!"
+
+
 
 
