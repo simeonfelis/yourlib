@@ -1,5 +1,4 @@
 $(document).ready(function () {
-    check_scan_status(); // TODO: should be delivered directly
     bind_sidebar_playlists(); /* sidebar is persistent */
     bind_collection_search(); /* if context "collection" is loaded */
     bind_collection_songs();  /* if context "collection" is loaded */
@@ -13,17 +12,16 @@ $(document).ready(function () {
 
                 $( "#rescan_status" ).html("Status: " + rescan_status);
 
-                if (!(rescan_status == "idle" && rescan_status == "error")) {
+                if ((rescan_status != "idle") && (rescan_status != "error")) {
                     bind_check_scan_timeout();
                 }
-            })
-            .error(bind_check_scan_timeout());
+            });
 
             return false;
         }
 
         function bind_check_scan_timeout() {
-            setTimeout(check_scan_status, 10000);
+            setTimeout(check_scan_status, 5000);
         }
 
 
@@ -227,8 +225,7 @@ $(document).ready(function () {
         $( "#btn_rescan_library" ).click(function() {
             $( "#rescan_status" ).html("Rescan requested. This might take a while....");
             var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
-            $.post("/rescan", data, function(answer) {
-                $( "#rescan_status" ).html(answer);
+            $.post("rescan", data, function(rescan_status) {
                 check_scan_status();
             })
             .success(function() {  })
