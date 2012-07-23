@@ -1,4 +1,3 @@
-
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -35,6 +34,10 @@ class Song(models.Model):
 #     path should be 'BASE_PATH/User/conv/mime/id
 #     status 'converting' 'ready'
 
+class Collection(models.Model):
+    user = models.ForeignKey(User)
+    scan_status = models.CharField(max_length=32)
+
 class PlaylistItem(models.Model):
     def __unicode__(self):
         return str(self.position) + ". " + self.song.artist + " - " + self.song.title
@@ -58,4 +61,8 @@ class MusicSession(models.Model):
     currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
     current_song      = models.ForeignKey(Song, blank=True, null=True)
     current_playlist  = models.ForeignKey(Playlist, blank=True, null=True)
+
+from music.signals import connect_all
+
+connect_all()
 

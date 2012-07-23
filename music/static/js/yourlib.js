@@ -191,13 +191,27 @@ $(document).ready(function () {
         }
 
 /***************   handlers for items that are persistent *******************/
+        function check_scan_status() {
+            $.get("rescan", function(rescan_status) {
+                $( "#rescan_status" ).html("Status: " + rescan_status);
+                bind_check_scan_timeout();
+            });
+
+            return false;
+        }
+
+        function bind_check_scan_timeout() {
+            setTimeout(check_scan_status, 10000);
+        }
+
+        bind_check_scan_timeout();
 
         $( "#playlist_create" ).submit(function() {
             var $data = {
                 'csrfmiddlewaretoken': csrf_token,
                 'playlist_name': $( "#playlist_create_name" ).val(),
             };
-            $( "#sidebar_playlists_content" ).load("/playlist/create/", $data, function() {
+            $( "#sidebar_playlists_content" ).load("playlist/create/", $data, function() {
                 bind_sidebar_playlists();
             })
             .error(function() {alert("Error creating playlist");});
