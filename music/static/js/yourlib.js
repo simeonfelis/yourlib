@@ -1,4 +1,5 @@
 $(document).ready(function () {
+    check_scan_status(); // TODO: should be delivered directly
     bind_sidebar_playlists(); /* sidebar is persistent */
     bind_collection_search(); /* if context "collection" is loaded */
     bind_collection_songs();  /* if context "collection" is loaded */
@@ -6,6 +7,25 @@ $(document).ready(function () {
 
 
 /****************     common stuff      *********************/
+
+        function check_scan_status() {
+            $.get("rescan", function(rescan_status) {
+
+                $( "#rescan_status" ).html("Status: " + rescan_status);
+
+                if (!(rescan_status == "idle" && rescan_status == "error")) {
+                    bind_check_scan_timeout();
+                }
+            })
+            .error(bind_check_scan_timeout());
+
+            return false;
+        }
+
+        function bind_check_scan_timeout() {
+            setTimeout(check_scan_status, 10000);
+        }
+
 
         function play_song(song_info) {
             $( "#player1_song_info_title" ).html(song_info.title);
@@ -191,21 +211,6 @@ $(document).ready(function () {
         }
 
 /***************   handlers for items that are persistent *******************/
-        function check_scan_status() {
-            $.get("rescan", function(rescan_status) {
-                $( "#rescan_status" ).html("Status: " + rescan_status);
-                bind_check_scan_timeout();
-            });
-
-            return false;
-        }
-
-        function bind_check_scan_timeout() {
-            setTimeout(check_scan_status, 10000);
-        }
-
-        bind_check_scan_timeout();
-
         $( "#playlist_create" ).submit(function() {
             var $data = {
                 'csrfmiddlewaretoken': csrf_token,
@@ -224,6 +229,7 @@ $(document).ready(function () {
             var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
             $.post("/rescan", data, function(answer) {
                 $( "#rescan_status" ).html(answer);
+                check_scan_status();
             })
             .success(function() {  })
             .error(function() { $( "#rescan_status" ).html("Error during rescan"); });
