@@ -15,50 +15,54 @@ my files via the browser´s <audio> tag. A decent browser will play oggs and mp3
 Features
 ========
 
-Support for ogg and mp3
+ * Support for ogg and mp3 as source files
+ * Password protected music files
 
 Requires
 ========
 
 chrome or firefox or any other that can play your music files natively.
+iPhone did work, too.
 
 
 Dependencies
 ============
 
 You may want to user pip to install dependencies rather than apt-get.
-yum should also be fine.
+yum should also be fine. pacman, too.
 
  * python2
  * django 1.4
  * mutagen
  * nginx
 
-You can use apache, too, if you know how to configure it. I don't.
+You can use apache instead of nginx if you know how to configure it. I don't.
 
 What you should know (setup)
 ============================
 
  * Your music folder must have the filesystem structure
-   /path/to/music/username1/...
-   /path/to/music/username2/...
+   /path/to/music/username1/orig/....
+   /path/to/music/username2/orig/....
 
  * the file yourlib/settings.py will look at your hostname and includes the
    corresponding yourlib/settings_hostname.py. Change it accordingly. Also
-   change the secret key, too: ''pwgen -sy 50''
+   change the secret key. Generate a secret key with, eg. ''pwgen -sy 50''
 
  * There is a example nginx config: yourlib/nginx.conf
 
+ * You should not put your music in the media folder of the django project or app
+
  * Start and stop the wsgi server with start.sh: ''./start.sh start''
 
- * Don't click the rescan button too often. The app is stupid and would
-   start multiple filesystem scans. You probably will get a timeout response
-   when you debug the site. That's ok, just wait.
+ * a full clean restart of the server can be done like this (YOU MUST BE IN YOUR
+   DJANGO PROJECT FOLDER!):
+''# find . -name "*.pyc" -exec rm -v {} \; ; sudo -u http ./start.sh stop ; ./manage.py collectstatic ; systemctl restart nginx.service ; echo 1 > /proc/sys/vm/drop_caches ; sudo -u http ./start.sh start''
 
 
 Wishlist
 ========
- * Automatic conversion to mp3 and ogg to serv files to major browsers
- * Server side playlists
+ * Automatic conversion to mp3 and ogg to serve all files to major browsers equally
+ * Server side playlist stream for puplic access
  * Playlist sharing within users, later server instances
- * Mobile device support
+ * Mobile device support (UI)
