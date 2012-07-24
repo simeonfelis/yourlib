@@ -228,10 +228,13 @@ $(document).ready(function () {
             $.post("rescan", data, function(rescan_status) {
                 check_scan_status();
             })
-            .success(function() {  })
-            .error(function() { $( "#rescan_status" ).html("Error during rescan"); });
+            .success()
+            .error(function() { $( "#rescan_status" ).html("Status not yet available..."); });
             return false; // don't do anything else
         });
+        if ( $( "#rescan_status" ).html() != "" ) {
+            check_scan_status();
+        }
 
         $( "#btn_player1_next" ).click(function() {
             on_player1_event_ended();

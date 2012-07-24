@@ -11,13 +11,14 @@ from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection
 from music.signals import rescan_start
 from music.helper import dbgprint
 
-import os, datetime
+import os, datetime, time
 
 @login_required
 def home(request):
 
     if request.user.is_authenticated():
         playlists = Playlist.objects.filter(user=request.user)
+        # create playlists if not existent for user
         if 0 == len(playlists):
             dbgprint("Creating default playlist for user ", request.user)
             pl = Playlist(name="default", user=request.user, current_position=0)
@@ -31,6 +32,14 @@ def home(request):
             dbgprint("Creating music session for user ", request.user)
             music_session = MusicSession(user=request.user, currently_playing='none', search_terms='')
             music_session.save()
+
+        # create collection if not existent
+        try:
+            collection = Collection.objects.get(user=request.user)
+        except Collection.DoesNotExist:
+            collection = Collection(user=request.user, scan_status="idle")
+            collection.save()
+
 
         songs = filter_songs(request, terms=music_session.search_terms)
         # not stable
@@ -311,21 +320,17 @@ def rescan(request):
     on GET requests: return rescan status
     """
 
-    try:
-        col = Collection.objects.get(user=request.user)
-    except Collection.DoesNotExist:
-        col = Collection(user=request.user, scan_status="idle")
-        col.save()
+    col = Collection.objects.get(user=request.user)
 
     if col.scan_status == "idle" or col.scan_status == "error":
         if request.method == "POST":
             col.scan_status = "preparing"
             col.save()
+            time.sleep(1) # wait for db writeback before starting the rescan. this should avoid deadlocks
             rescan_start.send(sender=None, user=request.user, collection=col)
             return HttpResponse("started")
 
     elif col.scan_status == "finished":
-        dbgprint("looks we finished a rescan")
         col.scan_status = "idle"
         col.save()
 
