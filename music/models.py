@@ -7,6 +7,16 @@ CURRENTLY_PLAYING_CHOICES = (
         ('playlist', 'Playing from playlist'),
 )
 
+UPLOAD_FILE_STEPS = [
+        "idle",
+        "uploading",
+        "copying",     # move to user's upload dir
+        "decompress",  # if zip, deflate to global tmp, delete deflates afterwards
+        "structuring", # if supported file(s), read tags, determine target
+                       # locations and put files file(s) there
+        "error",
+        ]
+
 
 class Song(models.Model):
     class Meta:
@@ -61,6 +71,15 @@ class MusicSession(models.Model):
     currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
     current_song      = models.ForeignKey(Song, blank=True, null=True)
     current_playlist  = models.ForeignKey(Playlist, blank=True, null=True)
+
+class Upload(models.Model):
+    """
+    only available during upload processes, deleted afterwards
+    """
+    file        = models.FileField(upload_to="uploads")
+    step        = models.CharField(max_length=32)
+    step_status = models.IntegerField()
+    user        = models.ForeignKey(User)
 
 from music.signals import connect_all
 
