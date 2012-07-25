@@ -12,6 +12,8 @@ ADMINS = (
     ('Your Name', 'yourmail@example.com'),
 )
 
+FILE_UPLOAD_TEMP_DIR = os.path.join('/', 'path', 'to', 'tmp', 'uploads')
+FILE_UPLOAD_USER_DIR = os.path.join('/', 'path', 'to', 'tmp', 'useruploads')
 MANAGERS = ADMINS
 
 DATABASES = {
