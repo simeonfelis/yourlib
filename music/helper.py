@@ -27,13 +27,88 @@ def dbgprint(*args):
     except Exception, e:
         print "EXCEPTION in dbgprint: Crappy string or unicode to print! This will be difficult to debug!"
 
+def get_tags(path):
+    """
+    returns tags as dicts or None if no tags found in file
+    throws exceptions on file (path) errors
+    """
+    tags = tagreader.File(path, easy=True)
+    dbgprint("get_tags: analysing file", path)
+    dbgprint("get_tags: mime:", type(tags))
+    dbgprint("get_tags: tags:", tags)
+
+    # ignore everything except ogg and mp3
+    if type(tags) == tagreader.oggvorbis.OggVorbis:
+        mime = "audio/ogg"
+    elif type(tags) == tagreader.mp3.EasyMP3:
+        mime = "audio/mp3"
+    elif type(tags) == type(None):
+        # don't even warn
+        return
+    else:
+        # dbgprint("Ignoring file", path, "because of mime (", type(tags), ")")
+        return
+
+    try:
+        artist    = tags['artist'][0].encode('utf-8')
+        dbgprint("add_tags: artist:", artist)
+        if not len(artist)>0:
+            artist = "Unknown Artist"
+    except:
+        artist = "Unknown Artist"
+
+    try:
+        title     = tags['title'][0].encode('utf-8')
+        if not len(title)>0:
+            title = "Unknown Title"
+    except:
+        title = "Unknown Title"
+
+    try:
+        track     = int(tags['tracknumber'][0].encode('utf-8').split('/')[0])
+    except:
+        track = 0
+
+    try:
+        album     = tags['album'][0].encode('utf-8')
+        if not len(album)>0:
+            album = "Unknown Album"
+    except:
+        album = "Unknown Album"
+
+    tags = {
+            'artist': artist,
+            'album' : album,
+            'track': track,
+            'title': title,
+            'mime': mime,
+            }
+
+    return tags
+
 def add_song(dirname, files, user):
+    """
+    Takes a directory and one or more file names in that directory, reads tag information
+    and adds the songs to the database for the given user.
+    Invalid files or unsupported files are ignored.
+    dirname must be string or os.path
+    files must be array []
+
+    If the given file path(s) are already in the database, it compares their timestamps
+    and if they are not equal, the tags are read out again (->Performance)
+
+    Returns the number of processed files, including eventually invalid and unsupported
+    files.
+    """
+
     processed = 0
     for filename in files:
         path = os.path.join(dirname, filename)
+        dbgprint("add_song: analysing", path)
 
         if not os.path.isfile(path):
             processed += 1
+            dbgprint("add_song: file does not exist:", path)
             continue
 
         timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(path)).replace(tzinfo=utc)
@@ -46,6 +121,7 @@ def add_song(dirname, files, user):
         else:
             # file already in database
             if song.timestamp_orig == timestamp:
+                dbgprint("add_song: file did not change", path)
                 processed += 1
                 continue
             else:
@@ -53,78 +129,44 @@ def add_song(dirname, files, user):
                 pass
 
         try:
-            tags = tagreader.File(path, easy=True)
+            tags = get_tags(path)
         except Exception, e:
             dbgprint("Error reading tags on file", path, e)
             processed += 1
             continue
-
-        # ignore everything except ogg and mp3
-        if type(tags) == tagreader.oggvorbis.OggVorbis:
-            mime = "audio/ogg"
-        elif type(tags) == tagreader.mp3.EasyMP3:
-            mime = "audio/mp3"
-        elif type(tags) == type(None):
-            # don't even warn
-            processed += 1
-            continue
         else:
-            # dbgprint("Ignoring file", path, "because of mime (", type(tags), ")")
-            processed += 1
-            continue
-
-        try:
-            artist    = tags['artist'][0].encode('utf-8')
-            if not len(artist)>0:
-                artist = "Unknown Artist"
-        except:
-            artist = "Unknown Artist"
-
-        try:
-            title     = tags['title'][0].encode('utf-8')
-            if not len(title)>0:
-                title = "Unknown Title"
-        except:
-            title = "Unknown Title"
-
-        try:
-            track     = int(tags['tracknumber'][0].encode('utf-8').split('/')[0])
-        except:
-            track = 0
-
-        try:
-            album     = tags['album'][0].encode('utf-8')
-            if not len(album)>0:
-                album = "Unknown Album"
-        except:
-            album = "Unknown Album"
+            if tags == None:
+                dbgprint("add_song: no tags in file", path)
+                processed += 1
+                continue
 
         if song == None:
             # new song item
-            dbgprint("Adding file ", path)
+            dbgprint("add_song: Adding file ", path)
             song = Song(
-                    artist    = artist,
-                    title     = title,
-                    album     = album,
-                    track     = track,
-                    mime      = mime,
+                    artist    = tags['artist'],
+                    title     = tags['title'],
+                    album     = tags['album'],
+                    track     = tags['track'],
+                    mime      = tags['mime'],
                     user      = user,
                     path_orig = path,
                     timestamp_orig = timestamp,
                     )
         else:
             # overwrite old song item
-            dbgprint("Updating file ", path)
-            song.artist    = artist
-            song.title     = title
-            song.album     = album
-            song.track     = track
-            song.mime      = mime
+            dbgprint("add_song: Updating file ", path)
+            song.artist    = tags['artist'],
+            song.title     = tags['title'],
+            song.album     = tags['album'],
+            song.track     = tags['track'],
+            song.mime      = tags['mime'],
             song.user      = user
             song.path_orig = path
             song.timestamp_orig = timestamp
 
         try:
+            dbgprint("add_song: Saving database entry", song)
             song.save()
         except Exception, e:
             dbgprint("Database error on file", path, e)

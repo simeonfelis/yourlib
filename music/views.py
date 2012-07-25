@@ -7,9 +7,10 @@ from django.utils.timezone import utc
 from django.conf import settings
 from django.db.models import Q
 
-from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection
-from music.signals import rescan_start
-from music.helper import dbgprint
+from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection, Upload
+from music.forms import UploadForm
+from music.signals import rescan_start, upload_done
+from music.helper import dbgprint, get_tags
 
 import os, datetime, time
 
@@ -39,7 +40,6 @@ def home(request):
         except Collection.DoesNotExist:
             collection = Collection(user=request.user, scan_status="idle")
             collection.save()
-
 
         songs = filter_songs(request, terms=music_session.search_terms)
         # not stable
@@ -81,8 +81,30 @@ def context(request, selection):
                     locals(),
                     context_instance=RequestContext(request),
                     )
+    if selection == "upload":
+        #uploads = Upload.objects.filter(user=request.user)
+        form = UploadForm(request.POST)
+        return render_to_response(
+                "context_upload.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
 
     return HttpResponse("")
+
+@login_required
+def upload(request):
+    if request.method == 'POST':
+        form = UploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            # so here the upload is already done
+            upload_done.send(None, request=request)
+
+            return HttpResponse("Signal for further processing sent")
+            #handle_uploaded_file(request.FILES['file'])
+            #return HttpResponseRedirect('success/url/')
+        return HttpResponse("Error")
+    return HttpResponse("Only post requests")
 
 @login_required
 def search(request):
