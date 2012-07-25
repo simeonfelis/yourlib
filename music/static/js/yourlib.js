@@ -251,6 +251,15 @@ $(document).ready(function () {
             });
         });
 
+        $( "#btn_context_upload" ).click(function() {
+            var $data = {
+                'csrfmiddlewaretoken': csrf_token
+            };
+            $( "#context_container" ).load("context/upload/", $data, function() {
+                bind_upload();
+            });
+        });
+
         // deprecated
         //$( "#create_new_playlist" ).change(function() {
         //    var $data = {
