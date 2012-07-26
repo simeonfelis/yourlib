@@ -5,7 +5,7 @@ import shutil   # move, copy files and directories
 
 # Filesystem watcher
 import pyinotify
-from pyinotify import WatchManager, Notifier, ThreadedNotifier, EventsCodes, ProcessEvent
+#from pyinotify import WatchManager, Notifier, ThreadedNotifier, EventsCodes, ProcessEvent
 
 import django.dispatch
 from django.conf import settings
@@ -19,32 +19,64 @@ from music.helper import dbgprint, add_song, get_tags
 rescan_start = django.dispatch.Signal(providing_args=['user'])
 upload_done  = django.dispatch.Signal(providing_args=['request'])
 
-class ProcessInotifyEvent(ProcessEvent):
+class ProcessInotifyEvent(pyinotify.ProcessEvent):
+    stacktrace = None
+    def dbgprint(self, **kwargs):
+        """
+        When run as wsgi, there will be strange UnicodeErrors unless you decode it yourself.
+        When run as local server, you won't see the problems"
+        However, never use print, but dbgprint!
+        """
+    
+        if self.stacktrace == None:
+            self.stacktrace = open(os.path.join(settings.BASE_PATH, 'INOTIFY'), 'wb+')
+    
+        message = ""  # is a str
+        try:
+            for m in args:
+                if type(m) == unicode:
+                    m = m.encode("utf-8")  # create a str from unicode, but encode it before
+                else:
+                    m = str(m)  # make a str from element
+    
+                message = message + m + " "
+    
+            self.stacktrace.write(message + "\n")
+            self.stacktrace.flush()
+            os.fsync(self.stacktrace)
+    
+        except Exception, e:
+            self.stacktrace.write("EXCEPTION in dbgprint: Crappy string or unicode to print! This will be difficult to debug!")
+            self.stacktrace.write("\n")
+            self.stacktrace.write("Trying to print the string here:")
+            self.stacktrace.write(e)
+            self.stacktrace.flush()
+            os.fsync(self.stacktrace)
     # not all of these are filtered on watchmanager creation
     def process_IN_DELETE(self, event):
-        dbgprint("INOTIFY: IN_DELETE", event)
+        self.dbgprint("INOTIFY: IN_DELETE", event)
         self.song_removed(event)
 
     def process_IN_MOVED_FROM(self, event):
         # TODO: check if moved out of MUSIC_PATH
-        dbgprint("INOTIFY: IN_MOVED_FROM", event)
+        self.dbgprint("INOTIFY: IN_MOVED_FROM", event)
         self.song_removed(event)
 
     def process_IN_MOVED_TO(self, event):
         # TODO: check if moved out of MUSIC_PATH
-        dbgprint("INOTIFY: IN_MOVED_TO", event)
+        self.dbgprint("INOTIFY: IN_MOVED_TO", event)
         self.song_changed(event)
 
     def process_IN_MODIFY(self, event):
-        dbgprint("INOTIFY: IN_MODIFY", event)
+        self.dbgprint("INOTIFY: IN_MODIFY", event)
 
     def process_IN_CREATE(self, event):
-        dbgprint("INOTIFY: IN_CREATE", event)
+        self.dbgprint("INOTIFY: IN_CREATE", event)
         if os.path.isfile(event.pathname):
             self.song_changed(event)
 
     def process_IN_CLOSE_WRITE(self, event):
-        dbgprint("INOTIFY: IN_CLOSE_WRITE", event)
+        self.dbgprint("INOTIFY: IN_CLOSE_WRITE", event)
         self.song_changed(event)
 
     def song_removed(self, event):
@@ -53,7 +85,7 @@ class ProcessInotifyEvent(ProcessEvent):
         except Song.DoesNotExist:
             pass
         else:
-            dbgprint("INOTIFY: DELETING SONG ENTRY", song)
+            self.dbgprint("INOTIFY: DELETING SONG ENTRY", song)
             song.delete()
 
     def song_changed(self, event):
@@ -64,17 +96,24 @@ class ProcessInotifyEvent(ProcessEvent):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            dbgprint("INOTIFY: could not determine user for changed path:", event.path, "and pathname:", event.pathname)
+            self.dbgprint("INOTIFY: could not determine user for changed path:", event.path, "and pathname:", event.pathname)
         else:
-            dbgprint("INOTIFY: ADDING SONG FOR USER", username, ":", os.path.join(filedir, filename))
+            self.dbgprint("INOTIFY: ADDING SONG FOR USER", username, ":", os.path.join(filedir, filename))
             add_song(filedir, [filename], user)
 
 # create filesystem watcher in seperate thread
-wm       = WatchManager()
-notifier = ThreadedNotifier(wm, ProcessInotifyEvent())
+dbgprint("Creating inotify WatchManager")
+wm       = pyinotify.WatchManager()
+dbgprint("Creating ThreadNotifier")
+notifier = pyinotify.ThreadedNotifier(wm, ProcessInotifyEvent())
+dbgprint("Starting ThreadNotifier")
+notifier.setDaemon(True)
 notifier.start()
-mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
+#mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
+mask     = pyinotify.ALL_EVENTS
+dbgprint("Adding path to WatchManager:", settings.MUSIC_PATH)
 wdd      = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
+dbgprint("Added")
 
 
 def connect_all():
@@ -84,6 +123,7 @@ def connect_all():
     dbgprint("CONNECTING SIGNALS")
     rescan_start.connect(rescan_start_callback)
     upload_done.connect(upload_done_callback)
+    dbgprint("CONNECTING SIGNALS DONE")
 
 def upload_done_callback(sender, **kwargs):
 
@@ -186,11 +226,20 @@ def upload_done_callback(sender, **kwargs):
     upload.save()
 
     step_status = 0
+    old_status = 0
     amount = len(deflates)
     processed = 0
     for defl in deflates:
-        step_status = int(processed*100/amount)
+        if not amount == 0:
+            step_status = int(processed*100/amount)
+        else:
+            step_status = 1
         processed += 1
+
+        if (old_status < step_status) and ((step_status % 5) == 0):
+            old_status = step_status
+            upload.step_status = step_status
+            upload.save()
 
         # there could be subdirectories in zip
         if os.path.isdir(defl):
