@@ -2,8 +2,11 @@ import os, datetime
 import mutagen as tagreader
 
 from django.utils.timezone import utc
+from django.conf import settings
 
 from music.models import Song
+
+STACKTRACE = None
 
 def dbgprint(*args):
     """
@@ -11,6 +14,10 @@ def dbgprint(*args):
     When run as local server, you won't see the problems"
     However, never use print, but dbgprint!
     """
+    global STACKTRACE
+
+    if STACKTRACE == None:
+        STACKTRACE = open(os.path.join(settings.BASE_PATH, 'STACKTRACE'), 'wb+')
 
     message = ""  # is a str
     try:
@@ -22,10 +29,17 @@ def dbgprint(*args):
 
             message = message + m + " "
 
-        print message
+        STACKTRACE.write(message + "\n")
+        STACKTRACE.flush()
+        os.fsync(STACKTRACE)
 
     except Exception, e:
-        print "EXCEPTION in dbgprint: Crappy string or unicode to print! This will be difficult to debug!"
+        STACKTRACE.write("EXCEPTION in dbgprint: Crappy string or unicode to print! This will be difficult to debug!")
+        STACKTRACE.write("\n")
+        STACKTRACE.write("Trying to print the string here:")
+        STACKTRACE.write(e)
+        STACKTRACE.flush()
+        os.fsync(STACKTRACE)
 
 def get_tags(path):
     """
@@ -50,15 +64,16 @@ def get_tags(path):
         return
 
     try:
-        artist    = tags['artist'][0].encode('utf-8')
-        dbgprint("add_tags: artist:", artist)
+        artist    = tags['artist'][0] #.encode('utf-8')
+        dbgprint("get_tags: artist:", artist, "type:", type(artist))
         if not len(artist)>0:
             artist = "Unknown Artist"
     except:
         artist = "Unknown Artist"
 
     try:
-        title     = tags['title'][0].encode('utf-8')
+        title     = tags['title'][0] #.encode('utf-8')
+        dbgprint("get_tags: title:", title, "type:", type(title))
         if not len(title)>0:
             title = "Unknown Title"
     except:
@@ -70,7 +85,8 @@ def get_tags(path):
         track = 0
 
     try:
-        album     = tags['album'][0].encode('utf-8')
+        album     = tags['album'][0] #.encode('utf-8')
+        dbgprint("get_tags: album:", album, "type:", type(album))
         if not len(album)>0:
             album = "Unknown Album"
     except:
@@ -169,7 +185,7 @@ def add_song(dirname, files, user):
             dbgprint("add_song: Saving database entry", song)
             song.save()
         except Exception, e:
-            dbgprint("Database error on file", path, e)
+            dbgprint("Database error on file", path, ":", e)
 
         processed += 1
 

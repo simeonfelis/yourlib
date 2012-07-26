@@ -99,6 +99,7 @@ def upload(request):
         if form.is_valid():
             # so here the upload is already done
             upload_done.send(None, request=request)
+            time.sleep(1) # wait for db writeback before starting the rescan. this should avoid deadlocks
 
             return HttpResponse("Signal for further processing sent")
             #handle_uploaded_file(request.FILES['file'])

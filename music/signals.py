@@ -20,7 +20,7 @@ rescan_start = django.dispatch.Signal(providing_args=['user'])
 upload_done  = django.dispatch.Signal(providing_args=['request'])
 
 class ProcessInotifyEvent(ProcessEvent):
-
+    # not all of these are filtered on watchmanager creation
     def process_IN_DELETE(self, event):
         dbgprint("INOTIFY: IN_DELETE", event)
         self.song_removed(event)
@@ -70,11 +70,11 @@ class ProcessInotifyEvent(ProcessEvent):
             add_song(filedir, [filename], user)
 
 # create filesystem watcher in seperate thread
-wm = WatchManager()
+wm       = WatchManager()
 notifier = ThreadedNotifier(wm, ProcessInotifyEvent())
 notifier.start()
-mask=pyinotify.ALL_EVENTS
-wdd = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
+mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
+wdd      = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
 
 
 def connect_all():
@@ -105,6 +105,7 @@ def upload_done_callback(sender, **kwargs):
         os.makedirs(uploaddir)
 
     dbgprint("Determining copy-to location")
+    dbgprint("f.name:", f.name, "type:", type(f.name))
     # move temporary file to users's upload dir determine file name and path,
     # don't overwrite
     uploadpath = os.path.join(uploaddir, f.name)
@@ -116,7 +117,7 @@ def upload_done_callback(sender, **kwargs):
                 )
         ii += 1
 
-    dbgprint("Copy-to location:", uploadpath)
+    dbgprint("Copy-to location:", uploadpath, type(uploadpath))
 
     # now put the upload content to the user's location
     step_status = 0
@@ -147,15 +148,15 @@ def upload_done_callback(sender, **kwargs):
     upload.step_status = 0
     upload.save()
 
-    # TODO: put optional decompress routine here
     deflates = []
     magic_mime = magic.Magic(mime=True)
-    mime = magic_mime.from_file(uploadpath)
+    mime = magic_mime.from_file(uploadpath.encode('utf-8')) # Magic has problems with unicode?
     if "application/zip" == mime:
         # deflate
         todeflate = zipfile.ZipFile(uploadpath, 'r')
         processed = 0
         step_status = 0
+        old_status = 0
         amount = len(todeflate.namelist())
         for name in todeflate.namelist():
             extracted_to = todeflate.extract(name, uploaddir)
@@ -164,9 +165,11 @@ def upload_done_callback(sender, **kwargs):
 
             processed += 1
             step_status = int(processed*100/amount)
-            upload.step_status = step_status
-            upload.save()
-            dbgprint("Deflated", step_status, "%. From", uploadpath, ":", name, "to:", extracted_to)
+            if (old_status < step_status) and ((step_status % 5) == 0):
+                    old_status = step_status
+                    upload.step_status = step_status
+                    upload.save()
+                    dbgprint("Deflated", step_status, "%. From", uploadpath, ":", name, "to:", extracted_to)
         todeflate.close()
     else:
         deflates.append(uploadpath)
@@ -193,7 +196,12 @@ def upload_done_callback(sender, **kwargs):
         if os.path.isdir(defl):
             continue
 
-        tags = get_tags(defl)
+        try:
+            tags = get_tags(defl)
+        except Exception, e:
+            dbgprint("Error reading tags on", defl, e)
+            continue
+
         if tags == None:
             dbgprint("Deflate has no tags:", defl)
             continue
@@ -204,12 +212,14 @@ def upload_done_callback(sender, **kwargs):
                 request.user.username,
                 'uploads'
                 )
+        dbgprint("upload_done_callback: using dir", musicuploaddir)
         if not os.path.isdir(musicuploaddir):
             os.makedirs(musicuploaddir)
 
+
         # this filedir does not have to be unique
         filedir = os.path.join(
-                musicuploaddir,
+                musicuploaddir.encode('utf-8'),
                 tags['artist'].replace(os.path.sep, '_'),
                 tags['album'].replace(os.path.sep, '_')
                 )
