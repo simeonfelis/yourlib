@@ -157,6 +157,10 @@ body {
     overflow-x: hidden;
 }
 
+.currently_playing {
+    color: #dd3333;
+}
+
 .song_item {
     width: 100%;
     padding-top: 2px;

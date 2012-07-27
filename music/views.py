@@ -280,12 +280,15 @@ def play(request):
         ms = MusicSession.objects.get(user=request.user)
         song_id = request.POST.get('song_id')
         song = Song.objects.get(id=song_id)
+        source = request.POST.get('source')
 
-        if "collection" == request.POST.get('source'):
+        if "collection" == source:
             ms.currently_playing = "collection"
             ms.current_song = song
             ms.save()
-        elif "playlist" == request.POST.get('source'):
+            return song_info_response(song)
+
+        elif "playlist" == source:
             playlist = Playlist.objects.get(id=request.POST.get('playlist_id'))
             item = PlaylistItem.objects.get(id=request.POST.get('item_id'))
             playlist.current_position = item.position
@@ -294,8 +297,9 @@ def play(request):
             ms.currently_playing = "playlist"
             ms.current_playlist = playlist
             ms.save()
+            return song_info_response(song, playlist=playlist)
 
-    return song_info_response(song)
+        return song_info_response(song)
 
 @login_required
 def play_next(request):
@@ -361,20 +365,30 @@ def rescan(request):
 
 
 
-def song_info_response(song):
+def song_info_response(song, playlist=None):
 
     if song == None:
         return HttpResponse("")
 
+    if playlist:
+        playlist_id = playlist.id
+        item_id = playlist.current_position
+    else:
+        playlist_id = 0
+        item_id = 0
+
     filename = os.path.split(song.path_orig)[-1]
     song_info = {
-            'song_id': song.id,
-            'title': song.title,
-            'artist': song.artist,
-            'album': song.album,
-            'track': song.track,
-            'name': filename,
-            'mime': song.mime,
+            'playlist_id': playlist_id,
+            'item_id':     item_id,
+
+            'song_id':     song.id,
+            'title':       song.title,
+            'artist':      song.artist,
+            'album':       song.album,
+            'track':       song.track,
+            'mime':        song.mime,
+            'filename':    filename,
             }
     response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
     response['Cache-Control'] = 'no-cache'

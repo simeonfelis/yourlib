@@ -24,8 +24,25 @@ $(document).ready(function () {
             setTimeout(check_scan_status, 5000);
         }
 
+        function highlight_playing(song_info) {
+            $( ".currently_playing" ).removeClass("currently_playing");
+            if (song_info['playlist_id'] != 0) {
+                // create selector for playlist item
+                var sel = '#playlist_' + song_info['playlist_id'] + "_item_" + song_info['item_id'];
+                $( sel ).addClass("currently_playing");
+            }
+            else {
+                // create selector for collection song
+                var sel = '#collection_song_id_' + song_info['song_id'];
+                $( sel ).addClass("currently_playing");
+            }
+        }
+
 
         function play_song(song_info) {
+
+            highlight_playing(song_info);
+
             $( "#player1_song_info_title" ).html(song_info.title);
             $( "#player1_song_info_artist" ).html(song_info.artist);
 
