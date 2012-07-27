@@ -48,8 +48,6 @@ def get_tags(path):
     """
     tags = tagreader.File(path, easy=True)
     dbgprint("get_tags: analysing file", path)
-    dbgprint("get_tags: mime:", type(tags))
-    dbgprint("get_tags: tags:", tags)
 
     # ignore everything except ogg and mp3
     if type(tags) == tagreader.oggvorbis.OggVorbis:
@@ -65,7 +63,6 @@ def get_tags(path):
 
     try:
         artist    = tags['artist'][0] #.encode('utf-8')
-        dbgprint("get_tags: artist:", artist, "type:", type(artist))
         if not len(artist)>0:
             artist = "Unknown Artist"
     except:
@@ -73,7 +70,6 @@ def get_tags(path):
 
     try:
         title     = tags['title'][0] #.encode('utf-8')
-        dbgprint("get_tags: title:", title, "type:", type(title))
         if not len(title)>0:
             title = "Unknown Title"
     except:
@@ -86,7 +82,6 @@ def get_tags(path):
 
     try:
         album     = tags['album'][0] #.encode('utf-8')
-        dbgprint("get_tags: album:", album, "type:", type(album))
         if not len(album)>0:
             album = "Unknown Album"
     except:
@@ -120,7 +115,6 @@ def add_song(dirname, files, user):
     processed = 0
     for filename in files:
         path = os.path.join(dirname, filename)
-        dbgprint("add_song: analysing", path)
 
         if not os.path.isfile(path):
             processed += 1
@@ -137,7 +131,6 @@ def add_song(dirname, files, user):
         else:
             # file already in database
             if song.timestamp_orig == timestamp:
-                dbgprint("add_song: file did not change", path)
                 processed += 1
                 continue
             else:
