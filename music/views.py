@@ -104,7 +104,7 @@ def upload(request):
             return HttpResponse("Signal for further processing sent")
             #handle_uploaded_file(request.FILES['file'])
             #return HttpResponseRedirect('success/url/')
-        return HttpResponse("Error")
+        return HttpResponse("Your upload is invalid. Try refreshing the site.")
     return HttpResponse("Only post requests")
 
 @login_required

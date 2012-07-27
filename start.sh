@@ -1,4 +1,5 @@
 #!/bin/bash
+#set -x
 
 # http://www.derekschaefer.net/2011/06/07/nginx-django-yay/
 
@@ -8,11 +9,16 @@ MYAPP=music
 PIDFILE=/tmp/${MYAPP}_fcgi.pid
 HOST=127.0.0.1
 PORT=8080
+OUTLOG=/tmp/TRACE_STD
+ERRLOG=/tmp/TRACE_ERR
+DAEMONIZE=false
 
 echo "CWD:     " $CWD
 echo "PIDFILE: " $PIDFILE
 echo "HOST:    " $HOST
 echo "PORT:    " $PORT
+echo "OUTLOG:  " $OUTLOG
+echo "ERRLOG:  " $ERRLOG
 
 # Associate it with the settings file
 #SETTINGS=$CWD/yourlib/settings.py
@@ -20,13 +26,14 @@ echo "PORT:    " $PORT
 #SOCKET=
 # Maximum requests for a child to service before expiring
 
-METHOD=prefork
+#METHOD=prefork
+METHOD=threaded
 # Maximum number of children to have idle
-MAXSPARE=5
+MAXSPARE=8
 # Minimum number of children to have idle
-MINSPARE=5
+MINSPARE=4
 # Maximum number of children to spawn
-MAXCHILDREN=10
+MAXCHILDREN=20
 #MAXREQ=
 # Spawning method - prefork or threaded
 
@@ -41,25 +48,25 @@ function failure () {
 }
 
 function start_server () {
-  python2.7 ./manage.py runfcgi pidfile=$PIDFILE \
+  python2 ./manage.py runfcgi pidfile=$PIDFILE \
     ${HOST:+host=$HOST} \
     ${PORT:+port=$PORT} \
     ${SOCKET:+socket=$SOCKET} \
+    ${OUTLOG:+outlog=$OUTLOG} \
+    ${ERRLOG:+errlog=$ERRLOG} \
     ${SETTINGS:+--settings=$SETTINGS} \
     ${MAXREQ:+maxrequests=$MAXREQ} \
     ${METHOD:+method=$METHOD} \
     ${MAXSPARE:+maxspare=$MAXSPARE} \
     ${MINSPARE:+minspare=$MINSPARE} \
     ${MAXCHILDREN:+maxchildren=$MAXCHILDREN} \
-    ${DAEMONISE:+damonize=True}
+    ${DAEMONIZE:+damonize=$DAEMONIZE}
 }
 
 function stop_server () {
   kill `cat $PIDFILE` || failure "stopping fcgi"
   rm $PIDFILE
 }
-
-DAEMONISE=$2
 
 case "$1" in
   start)
