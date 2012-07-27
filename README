@@ -34,9 +34,9 @@ yum should be fine. pacman, of course, too.
  * python2
  * django 1.4
  * python mutagen  (tagreader)
- * python magic    (mime type detection, maybe included in python)
- * python zipfile  (deflate zips, maybe included in python)
- * python shutil   (maybe included in python)
+ * python magic    (mime type detection)
+ * python zipfile
+ * python shutil
  * nginx
 
 You can use apache instead of nginx if you know how to configure it. I don't.
