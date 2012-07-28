@@ -300,7 +300,7 @@ def playlist_reorder(request):
         # here, we have to correct the position of the item_previous element, if item_moved was moved below item_previous
         if (item_previous_position > item_moved_position) and not (item_previous_position == 0):
             print "reorder: item_moved was moved below item_previous,I have to correct the positon of item_previous:", item_previous
-            item_previous_position += 1
+            item_previous_position -= 1
             item_previous.position = item_previous_position
             item_previous.save()
 
