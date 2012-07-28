@@ -36,6 +36,7 @@ yum should be fine. pacman, of course, too.
  * python mutagen  (tagreader)
  * python magic    (mime type detection)
  * python zipfile
+ * pyinotify       (inotify python bindings)
  * python shutil
  * nginx
 
@@ -64,6 +65,11 @@ What you should know (setup)
  * a full clean restart of the server can be done like this (YOU MUST BE IN YOUR
    DJANGO PROJECT FOLDER!):
 ''# find . -name "*.pyc" -exec rm -v {} \; ; sudo -u http ./start.sh stop ; ./manage.py collectstatic ; systemctl restart nginx.service ; echo 1 > /proc/sys/vm/drop_caches ; sudo -u http ./start.sh start''
+
+ * currently it uses inotify (pyinotify), what is linux-only. If you want to
+   deploy on a Windows-Server you should have a look at
+   http://www.themacaque.com/?p=803
+   BSD-server deployment (like on openNAS) needs much more work. Patches welcome.
 
 
 Wishlist
