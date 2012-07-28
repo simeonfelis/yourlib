@@ -105,9 +105,44 @@ $(document).ready(function () {
 
 /****************      context: playlist    ***********************/
 
+        function sort_stop(event, ui) {
+            /* when an element was reordered, this is called */
+
+            // TODO: why is this not a jquery element?
+            var $pl_item         = ui.item.get(0);
+            var playlist_id      = $pl_item.getAttribute("data-playlist_id");
+            var item_id          = $pl_item.getAttribute("data-item_id");
+            if ($pl_item.previousElementSibling == null) {
+                var item_previous_id = 0;
+            }
+            else {
+                var item_previous_id = $pl_item.previousElementSibling.getAttribute("data-item_id");
+            }
+            var url = "/playlist/reorder/";
+
+            var $data = {
+                'csrfmiddlewaretoken': csrf_token,
+                'playlist_id'        : playlist_id,
+                'item_id'            : item_id,
+                'item_previous_id'   : item_previous_id,
+            };
+
+            // update playlist content. TODO: should be done with only one request!
+            $( "#context_playlist_container" ).load(url, $data, function() {
+                bind_playlist();
+            })
+            .error(function() {alert("error ordering playlist item");});
+        }
+
         function bind_playlist() {
 
             highlight_playing();
+
+            $( ".sortable" ).sortable( {
+                placeholder: "ui-state-highlight",
+                stop: sort_stop
+            });
+            $( ".sortable" ).disableSelection();
 
             $( ".btn_playlist_item_play" ).click(function() {
                 var $data = {
@@ -133,14 +168,14 @@ $(document).ready(function () {
                 };
 
                 // update playlist content. TODO: should be done with only one request!
-                $( "#context_container" ).load(url, $data, function() {
+                $( "#context_playlist_container" ).load(url, $data, function() {
                     bind_playlist();
                     // update number of playlists
                     $( "#sidebar_playlists_content" ).load("playlist/all/", function() {
                         bind_sidebar_playlists();
                     });
                 })
-                .error(function() {alert("error removing item");});
+                .error(function() {alert("error removing playlist item");});
 
                 return false; // Don't do anything else
             });
@@ -216,9 +251,14 @@ $(document).ready(function () {
                     "terms": $( "#collection_search_terms" ).val(),
                 };
                 $( "#context_collection_container").load("search/", $data, function() {
-                    $( "#context_collection_search_status" ).html("Finished");
                     bind_collection_songs();
                     bind_collection_artists();
+                })
+                .success( function() {
+                    $( "#context_collection_search_status" ).html("Finished");
+                })
+                .error( function() {
+                    $( "#context_collection_search_status" ).html("Server Error");
                 });
 
                 return false; // Don't do anything else
