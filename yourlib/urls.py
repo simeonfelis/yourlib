@@ -20,7 +20,7 @@ urlpatterns = patterns('',
     url(r'^playlist/remove/(?P<playlist_id>\d+)/(?P<item_id>\d+)$', 'music.views.playlist_remove_item'),
     url(r'^playlist/all/$', 'music.views.playlists'),
     url(r'^rescan$', 'music.views.rescan'),
-    url(r'^context/(?P<selection>\w+)/$', 'music.views.context'),
+    url(r'^context/(?P<selection>\w+)/.*$', 'music.views.context'),
     url(r'^upload/$', 'music.views.upload'),
 
     url(r'^accounts/login/.*$', 'django.contrib.auth.views.login'),
