@@ -324,6 +324,7 @@ def play_next(request):
                     break
                 if s == current_song:
                     found = True
+            return song_info_response(song)
 
         elif "playlist" == ms.currently_playing:
             # attention: multiple songs with same id can be in playlist.items
@@ -333,6 +334,7 @@ def play_next(request):
                 pl.current_position = current_position
                 pl.save()
                 song = pl.items.get(position=current_position).song
+            return song_info_response(song, playlist=pl)
 
     return song_info_response(song)
 
