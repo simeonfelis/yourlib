@@ -25,23 +25,28 @@ $(document).ready(function () {
         }
 
         function highlight_playing(song_info) {
-            $( ".currently_playing" ).removeClass("currently_playing");
-            if (song_info['playlist_id'] != 0) {
+
+            $( ".currently_playing" ).removeClass("currently_playing", 500);
+
+            var playlist_id = $( "#player1" ).attr("data-playlist_id");
+            var item_id     = $( "#player1" ).attr("data-item_id");
+            var song_id     = $( "#player1" ).attr("data-song_id");
+
+            if (playlist_id != 0) {
                 // create selector for playlist item
-                var sel = '#playlist_' + song_info['playlist_id'] + "_item_" + song_info['item_id'];
-                $( sel ).addClass("currently_playing");
+                var sel = '#playlist_' + playlist_id + "_item_" + item_id;
+                $( sel ).addClass("currently_playing", 500);
             }
             else {
                 // create selector for collection song
-                var sel = '#collection_song_id_' + song_info['song_id'];
-                $( sel ).addClass("currently_playing");
+                var sel = '#collection_song_id_' + song_id;
+                $( sel ).addClass("currently_playing", 500);
             }
         }
 
 
         function play_song(song_info) {
 
-            highlight_playing(song_info);
 
             $( "#player1_song_info_title" ).html(song_info.title);
             $( "#player1_song_info_artist" ).html(song_info.artist);
@@ -62,6 +67,12 @@ $(document).ready(function () {
             $( "#player1" )[0].pause();
             $( "#player1" )[0].load();
             $( "#player1" )[0].play();
+            // maybe this should be just defined globally
+            $( "#player1" ).attr("data-playlist_id", song_info['playlist_id']);
+            $( "#player1" ).attr("data-item_id", song_info['item_id']);
+            $( "#player1" ).attr("data-song_id", song_info['song_id']);
+
+            highlight_playing();
         };
 
         function on_player1_event_ended() {
@@ -95,6 +106,8 @@ $(document).ready(function () {
 /****************      context: playlist    ***********************/
 
         function bind_playlist() {
+
+            highlight_playing();
 
             $( ".btn_playlist_item_play" ).click(function() {
                 var $data = {
@@ -155,6 +168,9 @@ $(document).ready(function () {
 /*****************     context: collection     ********************/
 
         function bind_collection_songs() {
+
+            highlight_playing();
+
             $( ".collection_add_to" )
             .mouseenter(function() {
                 $(this).find( ".playlists" ).fadeIn("slow");
