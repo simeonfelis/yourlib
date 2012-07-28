@@ -297,9 +297,9 @@ def play(request):
             ms.currently_playing = "playlist"
             ms.current_playlist = playlist
             ms.save()
-            return song_info_response(song, playlist=playlist)
+            return song_info_response(song, playlist_id=playlist.id, item_id=item.id)
 
-        return song_info_response(song)
+    return song_info_response(song)
 
 @login_required
 def play_next(request):
@@ -327,14 +327,15 @@ def play_next(request):
             return song_info_response(song)
 
         elif "playlist" == ms.currently_playing:
-            # attention: multiple songs with same id can be in playlist.items
+            # attention: multiple songs with same song.id can be in playlist.items
             pl = ms.current_playlist
             current_position = pl.current_position + 1
             if current_position <= len(pl.items.all()):
                 pl.current_position = current_position
                 pl.save()
-                song = pl.items.get(position=current_position).song
-            return song_info_response(song, playlist=pl)
+                item = pl.items.get(position=current_position)
+                song = item.song
+            return song_info_response(song, playlist_id=pl.id, item_id=item.id)
 
     return song_info_response(song)
 
@@ -367,14 +368,13 @@ def rescan(request):
 
 
 
-def song_info_response(song, playlist=None):
+def song_info_response(song, playlist_id=None, item_id=None):
 
     if song == None:
         return HttpResponse("")
 
-    if playlist:
-        playlist_id = playlist.id
-        item_id = playlist.current_position
+    if playlist_id and item_id:
+        pass
     else:
         playlist_id = 0
         item_id = 0
