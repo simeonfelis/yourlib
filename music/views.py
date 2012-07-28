@@ -239,6 +239,7 @@ def playlist_remove_item(request, playlist_id, item_id):
         position = item.position
         item.delete()
         # correct positions of all following items
+        # TODO: this will be slow on large playlists, if item with low position number is removed
         for item in playlist.items.all().filter(position__gt=position):
             item.position = item.position-1
             item.save()
@@ -253,6 +254,70 @@ def playlist_remove_item(request, playlist_id, item_id):
             locals(),
             context_instance=RequestContext(request),
             )
+
+@login_required
+def playlist_reorder(request):
+    # reorder algorithm was a saturday afternoon work. althoug sometimes slow,
+    # the power of python made it beatiful. read it carefully, as it respects
+    # the case if an item was moved to the very top (item_previous_id = "0") by
+    # its cool queries (Q).
+
+    if request.method == "POST":
+
+        playlist_id         = request.POST.get('playlist_id')
+        item_id             = request.POST.get('item_id')
+        item_previous_id    = request.POST.get('item_previous_id')
+
+        playlist            = Playlist.objects.get(user=request.user, id=playlist_id)
+        item_moved          = PlaylistItem.objects.get(id=item_id)
+        item_moved_position = item_moved.position
+
+        if item_previous_id == "0":
+            # This happens when moved to top
+            item_previous_position = 0
+        else:
+            item_previous = PlaylistItem.objects.get(id=item_previous_id)
+            item_previous_position = item_previous.position
+
+        # TODO: this will be slow on large playlists, when moved from top to bottom (or vice versa)
+
+        print "reorder: in playlist", playlist.id, "item_previous_position", item_previous_position, "item_moved_position", item_moved_position
+
+        # correct positions on items inbetween item_before and item (moved up)
+        move_up = playlist.items.all().filter(Q(position__gt=item_previous_position) & Q(position__lt=item_moved_position))
+        for item in move_up:
+            print "reorder: move up correcting position of", item
+            item.position = item.position+1
+            item.save()
+
+        # correct positions on items inbetween item_before and item (moved down)
+        move_down = playlist.items.all().filter(Q(position__lt=item_previous_position) & Q(position__gt=item_moved_position))
+        for item in move_down:
+            print "reorder: move down correcting position of", item
+            item.position = item.position-1
+            item.save()
+
+        # here, we have to correct the position of the item_previous element, if item_moved was moved below item_previous
+        if (item_previous_position > item_moved_position) and not (item_previous_position == 0):
+            print "reorder: item_moved was moved below item_previous,I have to correct the positon of item_previous:", item_previous
+            item_previous_position += 1
+            item_previous.position = item_previous_position
+            item_previous.save()
+
+        # correct the position of moved item itself:
+        print "reorder: correct position of item_moved:", item_moved
+        item_moved.position = item_previous_position + 1
+        item_moved.save()
+
+        playlist = Playlist.objects.get(id=playlist_id)
+
+    return render_to_response(
+            'playlist.html',
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+
 
 ###############################    player    ##################################
 @login_required
