@@ -250,15 +250,15 @@ $(document).ready(function () {
                     "csrfmiddlewaretoken": csrf_token,
                     "terms": $( "#collection_search_terms" ).val(),
                 };
-                $( "#context_collection_container").load("search/", $data, function() {
-                    bind_collection_songs();
-                    bind_collection_artists();
-                })
-                .success( function() {
-                    $( "#context_collection_search_status" ).html("Finished");
-                })
-                .error( function() {
-                    $( "#context_collection_search_status" ).html("Server Error");
+                $( "#context_collection_container").load("search/", $data, function(response, status, xhr) {
+                    if (status == "error") {
+                        $( "#context_collection_search_status" ).html("Error " + xhr.status + " " + xhr.statusText);
+                    }
+                    else {
+                        $( "#context_collection_search_status" ).html("Finished");
+                        bind_collection_songs();
+                        bind_collection_artists();
+                    }
                 });
 
                 return false; // Don't do anything else
@@ -296,7 +296,9 @@ $(document).ready(function () {
         });
 
         $( "#btn_rescan_library" ).click(function() {
+
             $( "#rescan_status" ).html("Rescan requested. This might take a while....");
+
             var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
             $.post("rescan", data, function(rescan_status) {
                 check_scan_status();

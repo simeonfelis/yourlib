@@ -250,7 +250,7 @@ def playlist_remove_item(request, playlist_id, item_id):
         pass
 
     return render_to_response(
-            'context_playlist.html',
+            'playlist.html',
             locals(),
             context_instance=RequestContext(request),
             )
