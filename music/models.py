@@ -49,6 +49,8 @@ class Collection(models.Model):
     scan_status = models.CharField(max_length=32)
 
 class PlaylistItem(models.Model):
+    class Meta:
+        ordering = ['position']
     def __unicode__(self):
         return str(self.position) + ". " + self.song.artist + " - " + self.song.title
 
