@@ -260,7 +260,8 @@ def playlist_reorder(request):
     # reorder algorithm was a saturday afternoon work. althoug sometimes slow,
     # the power of python made it beatiful. read it carefully, as it respects
     # the case if an item was moved to the very top (item_previous_id = "0") by
-    # its cool queries (Q).
+    # its cool queries (Q). also, item_moved_position is the original value,
+    # but item_moved.position is going to be the new value
 
     if request.method == "POST":
 
@@ -309,7 +310,12 @@ def playlist_reorder(request):
         item_moved.position = item_previous_position + 1
         item_moved.save()
 
-        playlist = Playlist.objects.get(id=playlist_id)
+        # if the item_moved is currently played, correct the status
+        playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+        if playlist.current_position == item_moved_position: # compare with original value
+            playlist.current_position = item_moved.position  # set new position
+            playlist.save()
+
 
     return render_to_response(
             'playlist.html',
