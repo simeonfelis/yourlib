@@ -206,26 +206,21 @@ $(document).ready(function () {
 
             highlight_playing();
 
-            $( ".collection_add_to" )
-            .mouseenter(function() {
-                $(this).find( ".playlists" ).fadeIn("slow");
-            }).mouseleave(function() {
-                $(this).find( ".playlists" ).fadeOut("fast");
-            });
-
-            $( ".btn_collection_play_song" ).click(function() {
+            $( "body" ).off("click", ".btn_collection_play_song" );
+            $( "body" ).on("click", ".btn_collection_play_song", function() {
                 var $data = {
                     'csrfmiddlewaretoken': csrf_token,
                     'song_id': $(this).attr("data-song_id"),
                     'source' : 'collection',
                 };
-                $.post("/play/", $data, function(song_info) {
+                $.post("play/", $data, function(song_info) {
                     play_song(song_info);
                 });
                 return false;
             });
 
-            $( ".btn_collection_append_to_playlist" ).click(function() {
+            $( "body" ).off( "click", ".btn_collection_append_to_playlist" );
+            $( "body" ).on( "click", ".btn_collection_append_to_playlist", function() {
                 /* $(this) is expected to be a collection song item */
                 var $playlist_id = $(this).attr("data-playlist_id");
                 var $song_id = $(this).attr("data-song_id");
@@ -236,14 +231,32 @@ $(document).ready(function () {
                 };
                 /* update number of playlist items in sidebar */
                 // TODO: increase *only* number of playlist items in sidebar
-                $( "#sidebar_playlists_content" ).load("/playlist/append/", $data, function() {
+                $( "#sidebar_playlists_content" ).load("playlist/append/", $data, function() {
                     bind_sidebar_playlists();
                 });
                 return false; // don't do anything else
             });
+
         };
 
+        function get_more_results() {
+                var so_far = $( ".song_item" ).length;
+                var $data = {
+                    /* 'csrfmiddlewaretoken': csrf_token, */ // not required for $.get()
+                    'begin' : so_far,
+                };
+                $.get("context/collection/", $data, function(result) {
+                    $( result ).appendTo( "#collection_song_items" );
+                });
+        }
+
         function bind_collection_search() {
+            $( "#get_more_results" ).appear(function() {
+                get_more_results();
+            }, {one: false});
+
+            $( "#get_more_results" ).click(get_more_results);
+
             $( "#context_collection_search" ).submit(function() {
                 $( "#context_collection_search_status" ).html("Started");
                 var $data = {
@@ -280,6 +293,11 @@ $(document).ready(function () {
             //    .mouseleave(function() {
             //    });
         }
+
+/**************   event delegation  ****************/
+
+        $(document).on("mouseenter", ".collection_add_to", function() { $(this).find( ".playlists" ).fadeIn("fast"); });
+        $(document).on("mouseleave", ".collection_add_to", function() { $(this).find( ".playlists" ).fadeOut("fast"); });
 
 /***************   handlers for items that are persistent *******************/
         $( "#playlist_create" ).submit(function() {
@@ -334,17 +352,6 @@ $(document).ready(function () {
                 bind_upload();
             });
         });
-
-        // deprecated
-        //$( "#create_new_playlist" ).change(function() {
-        //    var $data = {
-        //        'csrfmiddlewaretoken': csrf_token,
-        //        'playlist_name': $(this).val(),
-        //    };
-        //    $.post("playlist/create/", $data, function(new_playlist) {
-        //        $( "#playlists" ).add(new_playlist);
-        //    });
-        //});
 
         $( "#logout" ).click(function() {
             var $data = {

@@ -1,27 +1,13 @@
 <div class="songs" id="context_collection_songs">
+
 {% if songs|length > 200 %}
     <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>
 {% elif songs|length > 0 %}
-    <ul class="song_items">
-        {% for s in songs %}
-        <li class="song_item" id="collection_song_id_{{ s.id }}">
-            <ul>
-                <li class="btn_collection_play_song btn song_info artist" data-song_id="{{ s.id }}">{{ s.artist }}</li>
-                <li class="btn_collection_play_song btn song_info title" data-song_id="{{ s.id }}">{{ s.title }}</li>
-                <li class="btn_collection_play_song btn song_info album" data-song_id="{{ s.id }}">{{ s.album }}</li>
-                <li class="btn_collection_play_song btn song_info mime" data-song_id="{{ s.id }}">{{ s.mime|cut:"audio/" }}</li>
-                <li class="collection_add_to">add to
-                    <ul class="playlists">
-                        {% for pl in playlists %}
-                        <li class="btn_collection_append_to_playlist btn" data-playlist_id="{{ pl.id }}" data-song_id="{{ s.id }}">{{ pl.name }}</li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            </ul>
-        </li>
-        <br />
-        {% endfor %}
+
+    <ul class="song_items" id="collection_song_items">
+        {% include "songs.html" %}
     </ul>
+    <div class="btn" id="get_more_results">more</div>
 {% else %}
 <p>No results</p>
 {% endif %}

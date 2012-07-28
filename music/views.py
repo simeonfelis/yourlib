@@ -42,6 +42,8 @@ def home(request):
             collection.save()
 
         songs = filter_songs(request, terms=music_session.search_terms)
+        if len(songs) > 50:
+            songs = songs[:50]
         # not stable
         #if len(music_session.search_terms) > 0:
         #    artists = get_artists(request, songs)
@@ -66,6 +68,8 @@ def context(request, selection):
             playlists = Playlist.objects.filter(user=request.user)
 
             songs = filter_songs(request, terms=music_session.search_terms)
+            if len(songs) > 50:
+                songs = songs[:50]
 
             return render_to_response(
                     "context_collection.html",
@@ -89,6 +93,28 @@ def context(request, selection):
                 locals(),
                 context_instance=RequestContext(request),
                 )
+    elif selection == "collection":
+        begin = int(request.GET.get('begin'))
+        howmany = 50
+        music_session = MusicSession.objects.get(user=request.user)
+        songs = filter_songs(request, terms=music_session.search_terms)
+        available = len(songs)
+        if begin < available:
+            if begin+howmany < available:
+                songs = songs[begin:begin+howmany]
+            else:
+                songs = songs[begin:available]
+        else:
+            songs = []
+
+        playlists = Playlist.objects.filter(user=request.user)
+
+        return render_to_response(
+                "songs.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+
 
     return HttpResponse("")
 
@@ -121,6 +147,9 @@ def search(request):
             ms.save()
 
             songs = filter_songs(request, terms=terms)
+            if len(songs) > 200:
+                songs = songs[:199]
+            print "returning", len(songs), "search results"
             artists = get_artists(request, songs)
 
             return render_to_response(
@@ -282,31 +311,31 @@ def playlist_reorder(request):
 
         # TODO: this will be slow on large playlists, when moved from top to bottom (or vice versa)
 
-        print "reorder: in playlist", playlist.id, "item_previous_position", item_previous_position, "item_moved_position", item_moved_position
+        #print "reorder: in playlist", playlist.id, "item_previous_position", item_previous_position, "item_moved_position", item_moved_position
 
         # correct positions on items inbetween item_before and item (moved up)
         move_up = playlist.items.all().filter(Q(position__gt=item_previous_position) & Q(position__lt=item_moved_position))
         for item in move_up:
-            print "reorder: move up correcting position of", item
+            #print "reorder: move up correcting position of", item
             item.position = item.position+1
             item.save()
 
         # correct positions on items inbetween item_before and item (moved down)
         move_down = playlist.items.all().filter(Q(position__lt=item_previous_position) & Q(position__gt=item_moved_position))
         for item in move_down:
-            print "reorder: move down correcting position of", item
+            #print "reorder: move down correcting position of", item
             item.position = item.position-1
             item.save()
 
         # here, we have to correct the position of the item_previous element, if item_moved was moved below item_previous
         if (item_previous_position > item_moved_position) and not (item_previous_position == 0):
-            print "reorder: item_moved was moved below item_previous,I have to correct the positon of item_previous:", item_previous
+            #print "reorder: item_moved was moved below item_previous,I have to correct the positon of item_previous:", item_previous
             item_previous_position -= 1
             item_previous.position = item_previous_position
             item_previous.save()
 
         # correct the position of moved item itself:
-        print "reorder: correct position of item_moved:", item_moved
+        #print "reorder: correct position of item_moved:", item_moved
         item_moved.position = item_previous_position + 1
         item_moved.save()
 
