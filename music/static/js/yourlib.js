@@ -92,19 +92,40 @@ function Yourlib() {
         $.get("rescan", function(rescan_status) {
             $( "#rescan_status" ).html("Status: " + rescan_status);
             if ((rescan_status != "idle") && (rescan_status != "error")) {
-                self.bind_check_scan_timeout();
+                this.bind_check_scan_timeout();
             }
         });
         return false;
     }
     this.bind_check_scan_timeout = function() {
-        setTimeout(check_scan_status, 5000);
+        setTimeout(this.check_scan_status, 5000);
     }
 }
 
-// stub class
 function Upload() {
-    this.bind = function() {} // stub
+    this.bind = function() {
+        // check if there are uploads ongoing
+        if ($("li", "#upload_status_content" ).length != 0 ) {
+            console.log("bind: uploads in progress");
+            this.bind_check_status_timeout();
+        }
+        else
+            console.log("bind: NO uploads in progress");
+    }
+    this.bind_check_status_timeout = function() {
+        setTimeout(this.check_status, 1000);
+    }
+    this.check_status = function() {
+        $( "#upload_status_content" ).load("upload/", function() {
+            // attention: we are now not in Upload, but document.window!
+            if ($("li", "#upload_status_content" ).length != 0) {
+                console.log("check_status: uploads in progress");
+                upload.bind_check_status_timeout();
+            }
+            else
+                console.log("check_status: NO uploads in progress");
+        });
+    }
 }
 
 
