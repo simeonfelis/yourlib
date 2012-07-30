@@ -102,6 +102,11 @@ function Yourlib() {
     }
 }
 
+// stub class
+function Upload() {
+    this.bind = function() {} // stub
+}
+
 
 $(document).ready(function () {
 
@@ -112,7 +117,7 @@ $(document).ready(function () {
     window.yourlib = new Yourlib();
     window.collection = new Collection();
     window.playlist = new Playlist();
-    //var upload = new Upload();
+    window.upload = new Upload();
     window.sidebar = new Sidebar(); // must be last?
 
     /*
