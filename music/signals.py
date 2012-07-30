@@ -17,7 +17,7 @@ from music.helper import dbgprint, add_song, get_tags
 
 # declare and create signals
 rescan_start = django.dispatch.Signal(providing_args=['user'])
-upload_done  = django.dispatch.Signal(providing_args=['request'])
+upload_done  = django.dispatch.Signal(providing_args=['handler', 'request'])
 
 class ProcessInotifyEvent(pyinotify.ProcessEvent):
 
@@ -95,15 +95,18 @@ def upload_done_callback(sender, **kwargs):
     dbgprint("upload_done_callback: checking for notifier:", notifier)
     dbgprint("upload_done_callback: notifier alive:", notifier.isAlive())
 
+    handler = kwargs.pop('handler')
     request = kwargs.pop('request')
+    upload = handler.userUploadStatus
 
     #################################  copying ################################
     dbgprint("Entering status copying")
     step_status = 0
-    upload = Upload(user=request.user, step="copying", step_status=0)
+    upload.step = "copying"
+    upload.step_status = 0
     upload.save()
 
-    f = request.FILES['file']
+    f = handler.file
     # create user's upload dir
     uploaddir = os.path.join(
             settings.FILE_UPLOAD_USER_DIR,
@@ -137,7 +140,7 @@ def upload_done_callback(sender, **kwargs):
             processed += chunk_size
             destination.write(chunk)
             step_status = int(processed*100/amount)
-            if (old_status < step_status) and (step_status % 5 == 0):
+            if (old_status < step_status) and (step_status % 3 == 0):
                 dbgprint("Chunks copied:", step_status, "%")
                 upload.step_status = step_status
                 upload.save()
@@ -171,7 +174,7 @@ def upload_done_callback(sender, **kwargs):
 
             processed += 1
             step_status = int(processed*100/amount)
-            if (old_status < step_status) and ((step_status % 20) == 0):
+            if (old_status < step_status) and ((step_status % 3) == 0):
                     old_status = step_status
                     upload.step_status = step_status
                     upload.save()
@@ -181,8 +184,7 @@ def upload_done_callback(sender, **kwargs):
         deflates.append(uploadpath)
 
     # Suppose we have decompressed a zip, so there multiple files now, and
-    # their paths will be stored as list in ''deflates''. For now, we just
-    # handle a single mp3
+    # their paths will be stored as list in ''deflates''.
 
     ############################### structuring ################################
     # read tags, determine file paths, move files
@@ -202,13 +204,13 @@ def upload_done_callback(sender, **kwargs):
             step_status = 1
         processed += 1
 
-        if (old_status < step_status) and ((step_status % 20) == 0):
+        if (old_status < step_status) and ((step_status % 3) == 0):
             dbgprint("Structuring:", step_status, "%")
             old_status = step_status
             upload.step_status = step_status
             upload.save()
 
-        # there could be subdirectories in zip
+        # there could be subdirectories in zips deflate list
         if os.path.isdir(defl):
             continue
 
@@ -263,9 +265,7 @@ def upload_done_callback(sender, **kwargs):
 
     # we are done here. inotify signal handler will add a database entry,
     # based on the last filesystem change
-    upload.step = "idle"
-    upload.step_status = 0
-    upload.save()
+    upload.delete()
 
 def rescan_start_callback(sender, **kwargs):
 

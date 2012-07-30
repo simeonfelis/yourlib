@@ -11,7 +11,7 @@ STACKTRACE = None
 def dbgprint(*args):
     """
     When run as wsgi, there will be strange UnicodeErrors unless you decode it yourself.
-    When run as local server, you won't see the problems"
+    When run as local server, you won't see the problems
     However, never use print, but dbgprint!
     """
     global STACKTRACE
@@ -47,7 +47,6 @@ def get_tags(path):
     throws exceptions on file (path) errors
     """
     tags = tagreader.File(path, easy=True)
-    dbgprint("get_tags: analysing file", path)
 
     # ignore everything except ogg and mp3
     if type(tags) == tagreader.oggvorbis.OggVorbis:
@@ -60,6 +59,8 @@ def get_tags(path):
     else:
         # dbgprint("Ignoring file", path, "because of mime (", type(tags), ")")
         return
+
+    dbgprint("get_tags: analysing file", path)
 
     try:
         artist    = tags['artist'][0] #.encode('utf-8')
@@ -118,7 +119,6 @@ def add_song(dirname, files, user):
 
         if not os.path.isfile(path):
             processed += 1
-            dbgprint("add_song: file does not exist:", path)
             continue
 
         timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(path)).replace(tzinfo=utc)
@@ -175,7 +175,6 @@ def add_song(dirname, files, user):
             song.timestamp_orig = timestamp
 
         try:
-            dbgprint("add_song: Saving database entry", song)
             song.save()
         except Exception, e:
             dbgprint("Database error on file", path, ":", e)

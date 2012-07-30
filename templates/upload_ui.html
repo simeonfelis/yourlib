@@ -1,12 +1,17 @@
 <div class="upload" id="context_upload_ui">
-    <p>Upload interface. Supported: .zip .ogg .mp3</p>
+    <p>Upload interface. Supported: .zip .ogg .mp3. Due to restrictions to html and javascript, you must open a new tab to continue to listen to music.</p>
 </div>
 
+<div id="upload_status">
+    {% include "upload_status.html" %}
+</div>
 
-<form enctype="multipart/form-data" action="upload/" method="POST">
-    {% csrf_token %}
-    <table>
-    {{ form.as_table }}
-    </table>
-    <input type="submit" value="Upload"/>
-</form>
+<div id="upload_form">
+    <form enctype="multipart/form-data" action="upload/" method="POST">
+        {% csrf_token %}
+        <table>
+        {{ form.as_table }}
+        </table>
+        <input type="submit" value="Upload"/>
+    </form>
+</div>

@@ -14,6 +14,11 @@ from music.helper import dbgprint, get_tags
 
 import os, datetime, time
 
+# Modifying upload behaviour
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.core.files.uploadhandler import FileUploadHandler
+from django.core.files.uploadedfile import TemporaryUploadedFile
+
 @login_required
 def home(request):
 
@@ -86,7 +91,7 @@ def context(request, selection):
                     context_instance=RequestContext(request),
                     )
     if selection == "upload":
-        #uploads = Upload.objects.filter(user=request.user)
+        uploads = Upload.objects.filter(user=request.user)
         form = UploadForm(request.POST)
         return render_to_response(
                 "context_upload.html",
@@ -118,20 +123,84 @@ def context(request, selection):
 
     return HttpResponse("")
 
+class ProgressBarUploadHandler(FileUploadHandler):
+    """
+    Stuff taken from django.core.files.uploadhandler.TemporaryFileUploadHandler
+    """
+    def __init__(self, *args, **kwargs):
+        super(ProgressBarUploadHandler, self).__init__(*args, **kwargs)
+
+    def new_file(self, file_name, *args, **kwargs):
+        """
+        Create the file object to append to as data is coming in.
+        """
+        super(ProgressBarUploadHandler, self).new_file(file_name, *args, **kwargs)
+        self.file = TemporaryUploadedFile(self.file_name, self.content_type, 0, self.charset)
+
+    def receive_data_chunk(self, raw_data, start):
+        if start == 0:
+            # create upload object, TODO: make recoverable! (but maybe django handles upladFileObjects per upload...)
+            self.userUploadStatus = Upload(user=self.request.user, step="uploading", step_status=0)
+            self.userUploadStatus.save()
+
+            if (self.content_length == None or self.content_length == 0):
+                dbgprint("receive_data_chunk  assuming content_length 200MB")
+                self.amount = 200*1024*1024 # just assume about 100MB
+            else:
+                dbgprint("receive_data_chunk  content_length", self.content_length)
+                self.amount = self.content_length
+
+            self.old_status = 0
+
+        step_status = int(start*100/self.amount)
+        if (self.old_status < step_status) and (step_status % 3 == 0):
+            dbgprint("reveive_data_chunk received:", step_status, "%")
+            self.userUploadStatus.step_status = step_status
+            self.userUploadStatus.save()
+            self.old_status = step_status
+
+        self.file.write(raw_data)
+
+    def file_complete(self, file_size):
+        self.file.seek(0)
+        self.file.size = file_size
+        return self.file
+
+    def upload_complete(self):
+        upload_done.send(None, handler=self, request=self.request)
+
+
+@csrf_exempt
+def upload_file_view(request):
+    dbgprint("upload_file_view: Received upload request")
+    request.upload_handlers.insert(0, ProgressBarUploadHandler())
+    return _upload_file_view(request)
+
+@csrf_protect
+def _upload_file_view(request):
+    dbgprint("_upload_file_view: should read from ProgressBarUploadHandler()")
+    return HttpResponse("Uploading in progress")
+
 @login_required
 def upload(request):
     if request.method == 'POST':
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
             # so here the upload is already done
-            upload_done.send(None, request=request)
-            time.sleep(1) # wait for db writeback before starting the rescan. this should avoid deadlocks
+            #upload_done.send(None, request=request)
+            #time.sleep(1) # wait for db writeback before starting the rescan. this should avoid deadlocks
 
             return HttpResponse("Signal for further processing sent")
             #handle_uploaded_file(request.FILES['file'])
             #return HttpResponseRedirect('success/url/')
         return HttpResponse("Your upload is invalid. Try refreshing the site.")
-    return HttpResponse("Only post requests")
+
+    uploads = Upload.objects.filter(user=request.user)
+    return render_to_response(
+            'upload_status.html',
+            locals(),
+            context_instance=RequestContext(request),
+            )
 
 @login_required
 def search(request):
@@ -147,8 +216,8 @@ def search(request):
             ms.save()
 
             songs = filter_songs(request, terms=terms)
-            if len(songs) > 200:
-                songs = songs[:199]
+            if len(songs) > 50:
+                songs = songs[:50]
             print "returning", len(songs), "search results"
             artists = get_artists(request, songs)
 
