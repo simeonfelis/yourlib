@@ -81,7 +81,7 @@ function Yourlib() {
 
         var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
         $.post("rescan", data, function(rescan_status) {
-            self.check_scan_status();
+            yourlib.check_scan_status();
         })
         .success()
         .error(function() { $( "#rescan_status" ).html("Status not yet available..."); });
