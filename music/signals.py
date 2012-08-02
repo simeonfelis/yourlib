@@ -62,12 +62,13 @@ class ProcessInotifyEvent(pyinotify.ProcessEvent):
     def song_changed(self, event):
         filedir = event.path
         filename = os.path.split(event.pathname)[-1]
-
-        username = filedir.strip(settings.MUSIC_PATH).split(os.path.sep)[0]
+        dbgprint("filename:", filename)
+        dbgprint("filedir[len]", filedir[len(settings.MUSIC_PATH):])
+        username = filedir[len(settings.MUSIC_PATH):].split(os.path.sep)[1]
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            dbgprint("INOTIFY: could not determine user for changed path:", event.path, "and pathname:", event.pathname)
+            dbgprint("INOTIFY: could not determine user for changed path:", event.path, "and pathname:", event.pathname, "and user", username)
         else:
             dbgprint("INOTIFY: ADDING SONG FOR USER", username, ":", os.path.join(filedir, filename))
             add_song(filedir, [filename], user)
@@ -97,7 +98,12 @@ def upload_done_callback(sender, **kwargs):
 
     handler = kwargs.pop('handler')
     request = kwargs.pop('request')
-    upload = handler.userUploadStatus
+    try:
+        upload = handler.userUploadStatus
+    except Exception, e:
+        dbgprint("An error occured when determining upload state", e)
+        dbgprint("upload_done_callback: empty file uploaded by:", request.user)
+        return
 
     #################################  copying ################################
     dbgprint("Entering status copying")
