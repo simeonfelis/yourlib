@@ -30,7 +30,7 @@ class Song(models.Model):
     album = models.CharField(max_length=256)
     track = models.IntegerField()
     mime = models.CharField(max_length=32)
-    path_orig = models.FilePathField(unique=True)
+    path_orig = models.FilePathField(unique=True, max_length=2048)
     timestamp_orig = models.DateTimeField()
     user = models.ForeignKey(User)
     # in planning:
@@ -82,6 +82,18 @@ class Upload(models.Model):
     step        = models.CharField(max_length=32)
     step_status = models.IntegerField()
     user        = models.ForeignKey(User)
+
+from django.conf import settings
+import os
+
+if not os.path.isdir(settings.MUSIC_PATH):
+    os.makedirs(settings.MUSIC_PATH)
+
+if not os.path.isdir(settings.FILE_UPLOAD_TEMP_DIR):
+    os.makedirs(settings.FILE_UPLOAD_TEMP_DIR)
+
+if not os.path.isdir(settings.FILE_UPLOAD_USER_DIR):
+    os.makedirs(settings.FILE_UPLOAD_USER_DIR)
 
 from music.signals import connect_all
 
