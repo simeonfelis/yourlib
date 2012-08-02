@@ -5,15 +5,23 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 BASE_PATH  = os.path.join('/', 'path', 'to', 'django', 'project') # not your django app
-BASE_SERVER = os.path.join('/', 'path', 'to', 'server', 'dir' ) # files that nginx (or whatever) shall deliver, not wsgi
-MUSIC_PATH = os.path.join('/', 'path', 'to', 'music' 'base')   # each username must have a subfolder here
 
 ADMINS = (
     ('Your Name', 'yourmail@example.com'),
 )
 
-FILE_UPLOAD_TEMP_DIR = os.path.join('/', 'path', 'to', 'tmp', 'uploads')
-FILE_UPLOAD_USER_DIR = os.path.join('/', 'path', 'to', 'tmp', 'useruploads')
+# music app constants
+FILE_UPLOAD_TEMP_DIR = os.path.join('/', 'path', 'to', 'tmp', 'uploads') # all users upload dump
+FILE_UPLOAD_USER_DIR = os.path.join('/', 'path', 'to', 'tmp', 'useruploads') # user specific upload dirs
+BASE_SERVER = os.path.join('/', 'path', 'to', 'server', 'dir' ) # files that nginx (or whatever) shall deliver, not wsgi
+MUSIC_PATH = os.path.join('/', 'path', 'to', 'music' 'base')   # each username must have a subfolder here
+
+FILE_UPLOAD_HANDLERS = (
+        # replace standard upload handler
+        "music.views.ProgressBarUploadHandler",
+       # "django.core.files.uploadhandler.MemoryFileUploadHandler", # without this, files are put on disk directly
+       # "django.core.files.uploadhandler.TemporaryFileUploadHandler",
+        )
 MANAGERS = ADMINS
 
 DATABASES = {

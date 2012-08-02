@@ -9,7 +9,7 @@ from django.db.models import Q
 
 from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection, Upload
 from music.forms import UploadForm
-from music.signals import rescan_start, upload_done
+from music.signals import rescan_start, upload_done, download_start
 from music.helper import dbgprint, get_tags
 
 import os, datetime, time
@@ -65,7 +65,12 @@ def home(request):
 @login_required
 def context(request, selection):
     if request.method == "POST":
-        music_session = MusicSession.objects.get(user=request.user)
+        try:
+            music_session = MusicSession.objects.get(user=request.user)
+        except MusicSession.DoesNotExist:
+            music_session = MusicSession(user=request.user, currently_playing = None, search_terms = "")
+            music_session.save()
+
         if selection == "collection":
 
             music_session.context = "collection"
@@ -90,6 +95,16 @@ def context(request, selection):
                     locals(),
                     context_instance=RequestContext(request),
                     )
+        elif selection == "download":
+            music_session.context = "download"
+            music_session.save()
+            downloads = Download.objects.get(user=request.user)
+            return render_to_response(
+                    "context_download.html",
+                    locals(),
+                    context_instance=RequestContext(request),
+                    )
+
     if selection == "upload":
         uploads = Upload.objects.filter(user=request.user)
         form = UploadForm(request.POST)
@@ -201,7 +216,6 @@ def upload(request):
             locals(),
             context_instance=RequestContext(request),
             )
-
 @login_required
 def search(request):
 
@@ -421,6 +435,14 @@ def playlist_reorder(request):
             context_instance=RequestContext(request),
             )
 
+def playlist_download(request):
+
+    if request.method == "POST":
+
+        download_start.send(None, request=request)
+        return HttpResponse("Your download request was sent to queue. It will appear in the download section")
+
+    return HttpResponse("Only post request allowed")
 
 
 ###############################    player    ##################################

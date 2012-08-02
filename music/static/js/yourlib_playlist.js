@@ -24,7 +24,7 @@ function Playlist() {
         else {
             var item_previous_id = $pl_item.previousElementSibling.getAttribute("data-item_id");
         }
-        var url = "/playlist/reorder/";
+        var url = "playlist/reorder/";
 
         var $data = {
             'csrfmiddlewaretoken': csrf_token,
@@ -35,7 +35,8 @@ function Playlist() {
 
         // update playlist content. TODO: should be done with only one request!
         $( "#context_playlist_container" ).load(url, $data, function() {
-            //sidebar.bind();
+            // our context is now document.window
+            playlist.bind();
         })
         .error(function() {alert("error ordering playlist item");});
     }
@@ -60,14 +61,15 @@ function Playlist() {
         var playlist_id = $(this).attr("data-playlist_id");
         var item_id = $(this).attr("data-item_id");
 
-        var url = "/playlist/remove/" + playlist_id + "/" + item_id;
+        var url = "playlist/remove/" + playlist_id + "/" + item_id;
         var $data = {
             'csrfmiddlewaretoken': csrf_token,
         };
 
         // update playlist content. TODO: should be done with only one request!
         $( "#context_playlist_container" ).load(url, $data, function() {
-            this.bind();
+            // our context is now document.window
+            playlist.bind();
             // update number of playlists
             $( "#sidebar_playlists_content" ).load("playlist/all/", function() {
                 sidebar.bind();
@@ -89,7 +91,8 @@ function Playlist() {
 
         /* get new view for context */
         $( "#context_content" ).load("playlist/delete/", $data, function() {
-            this.bind();
+            // our context is now document.window
+            playlist.bind();
             /* update playlists in sidebar */
             $( "#sidebar_playlists_content" ).load("playlist/all/", function() {
                 sidebar.bind();
@@ -97,6 +100,15 @@ function Playlist() {
         });
 
         return false; // Don't do anything else
+    }
+    this.download = function() {
+        var $data = {
+            'csrfmiddlewaretoken' : csrf_token,
+            'playlist_id'         : $(this).attr("data-playlist_id"),
+        };
+        $.post("playlist/download/", $data, function(msg) {
+            alert(msg);
+        });
     }
 
     this.create = function() {

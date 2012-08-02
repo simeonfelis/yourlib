@@ -128,18 +128,25 @@ function Upload() {
     }
 }
 
+function Download() {
+    this.bind = function() {
+        // stub
+    }
+}
+
 
 $(document).ready(function () {
 
     /*
      * Global variables. They are available without the window namespace, too.
      */
-    window.player1 = new Player();
-    window.yourlib = new Yourlib();
-    window.collection = new Collection();
-    window.playlist = new Playlist();
-    window.upload = new Upload();
-    window.sidebar = new Sidebar(); // must be last?
+    window.player1     = new Player();
+    window.yourlib     = new Yourlib();
+    window.collection  = new Collection();
+    window.playlist    = new Playlist();
+    window.upload      = new Upload();
+    window.download    = new Download();
+    window.sidebar     = new Sidebar(); // must be last?
 
     /*
      * Event delegation. They will work globally on dynamic content, too.
@@ -161,12 +168,14 @@ $(document).ready(function () {
     $(document).on("click",  "#btn_context_collection",   sidebar.show_collection);
     $(document).on("click",  ".btn_sidebar_playlist",     sidebar.show_playlist);
     $(document).on("click",  "#btn_context_upload",       sidebar.show_upload);
+    $(document).on("click",  "#btn_context_download",     sidebar.show_download);
     $(document).on("submit", "#playlist_create",          playlist.create);
 
     /* playlist */
     $(document).on("click",  ".btn_playlist_item_play",   playlist.item_play);
     $(document).on("click",  ".btn_playlist_item_remove", playlist.item_remove);
     $(document).on("click",  ".btn_playlist_delete",      playlist.delete_list);
+    $(document).on("click",  ".btn_playlist_download",    playlist.download);
 
     /* collection */
     $(document).on("submit", "#context_collection_search", collection.search);

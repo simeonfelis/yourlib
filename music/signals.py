@@ -12,12 +12,13 @@ from django.conf import settings
 from django.contrib.auth.models import User
 
 # You must not import anything from music.models
-from music.models import Song, Upload
+from music.models import Song, Upload, Playlist
 from music.helper import dbgprint, add_song, get_tags
 
 # declare and create signals
 rescan_start = django.dispatch.Signal(providing_args=['user'])
 upload_done  = django.dispatch.Signal(providing_args=['handler', 'request'])
+download_start = django.dispatch.Signal(providing_args=['request'])
 
 class ProcessInotifyEvent(pyinotify.ProcessEvent):
 
@@ -91,6 +92,7 @@ def connect_all():
     dbgprint("CONNECTING SIGNALS")
     rescan_start.connect(rescan_start_callback)
     upload_done.connect(upload_done_callback)
+    download_start.connect(download_start_callback)
 
 def upload_done_callback(sender, **kwargs):
     dbgprint("upload_done_callback: checking for notifier:", notifier)
@@ -316,5 +318,47 @@ def rescan_start_callback(sender, **kwargs):
         dbgprint("Error during rescan", e)
         collection.scan_status = "error"
         collection.save()
+
+def download_start_callback(sender, **kwargs):
+    request = kwargs.pop("request")
+    playlist_id = request.POST.get("playlist_id")
+    playlist = Playlist.objects.get(user=request.user, id=playlist_id)
+    upload = Upload(user=request.user, step="preparing", step_status=0)
+
+    # create file list
+    to_compress = []
+    for item in playlist.items.all():
+        path = item.song.path_orig.encode('utf-8')
+        to_compress.append(path)
+    # determine zipfile path
+    zipname = playlist.name.replace(os.path.sep, "_").encode('utf-8') + ".zip"
+    zipdir = os.path.join(settings.FILE_DOWNLOAD_USER_DIR, request.user.username)
+    if not os.path.isdir(zipdir):
+        os.makedirs(zipdir)
+
+    zippath = os.path.join(zipdir, zipname)
+    if os.path.isfile(zippath):
+        os.remove(zippath)
+
+    upload.step="compressing"
+    upload.save()
+
+    amount = len(playlist.items.all())
+    processed=0
+    newzip = zipfile.ZipFile(zippath, mode="w")
+    for songpath in to_compress:
+        dbgprint("Adding", songpath, type(songpath), os.path.exists(songpath))
+        newzip.write(songpath)
+        processed += 1
+        step_status = int(processed*100/amount) # amount won't be 0
+        if step_status % 3 == 0:
+            upload.step_status = step_status
+            upload.save()
+
+    newzip.close()
+
+    upload.step="finished"
+    upload.step_status = 0
+    upload.save()
 
 

@@ -47,6 +47,10 @@ You can use apache instead of nginx if you know how to configure it. I don't.
 What you should know (setup)
 ============================
 
+ * Do not expose the deployment to arbitrary or untrusted users. the zip-upload
+   functionality does not check for tar bombs, songs are maybe exposed to other
+   users and there are probably more security and privacy holes.
+
  * Your music folder must have the filesystem structure
    /path/to/music/username1/orig/....
    /path/to/music/username2/orig/....

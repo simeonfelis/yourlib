@@ -29,5 +29,13 @@ function Sidebar() {
             upload.bind(); // for eventually uploads in progress
         });
     }
+    this.show_download = function() {
+        var $data = {
+            'csrfmiddlewaretoken': csrf_token
+        };
+        $( "#context_container" ).load("context/download/", $data, function() {
+            download.bind(); // for eventually uploads in progress
+        });
+    }
 }
 

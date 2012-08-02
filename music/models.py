@@ -83,6 +83,12 @@ class Upload(models.Model):
     step_status = models.IntegerField()
     user        = models.ForeignKey(User)
 
+class Download(models.Model):
+    step        = models.CharField(max_length=32)
+    step_status = models.IntegerField()
+    user        = models.ForeignKey(User)
+    path        = models.FilePathField()
+
 from django.conf import settings
 import os
 
