@@ -1,0 +1,12 @@
+<uwsgi>
+        <socket>127.0.0.1:3031</socket>
+        <pidfile>/tmp/uwsgi.pid</pidfile>
+        <processes>4</processes>
+        <module>yourlib.wsgi</module>
+        <master/>
+        <uid>simeon</uid>
+        <gid>simeon</gid>
+        <chmod-socket>777</chmod-socket>
+        <vhost/>
+        <daemonize>false</daemonize>
+</uwsgi>
