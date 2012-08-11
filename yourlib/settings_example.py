@@ -1,6 +1,11 @@
 # Django settings for music project.
 import os
 
+# task management
+import djcelery
+djcelery.setup_loader()
+BROKER_URL = 'amqp://guest:guest@localhost:5672/'
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -150,6 +155,7 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'music',
+    'djcelery',
 )
 
 # A sample logging configuration. The only tangible logging
