@@ -7,7 +7,7 @@ from django.utils.timezone import utc
 from django.conf import settings
 from django.db.models import Q
 
-from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection, Upload
+from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
 from music.signals import rescan_start, upload_done, download_start
 from music.helper import dbgprint, get_tags
@@ -105,6 +105,7 @@ def context(request, selection):
                     context_instance=RequestContext(request),
                     )
 
+    # GET requests deliver status reports only
     if selection == "upload":
         uploads = Upload.objects.filter(user=request.user)
         form = UploadForm(request.POST)
@@ -531,7 +532,6 @@ def play_next(request):
     return song_info_response(song)
 
 
-
 #######################      internals     ##################################
 
 @login_required
@@ -545,10 +545,11 @@ def rescan(request):
 
     if col.scan_status == "idle" or col.scan_status == "error":
         if request.method == "POST":
+            dbgprint("rescan request accepted from user", request.user)
+            from music.tasks import rescan_task
             col.scan_status = "preparing"
             col.save()
-            time.sleep(1) # wait for db writeback before starting the rescan. this should avoid deadlocks
-            rescan_start.send(sender=None, user=request.user, collection=col)
+            stat = rescan_task.delay(request.user, col)
             return HttpResponse("started")
 
     elif col.scan_status == "finished":
@@ -556,8 +557,6 @@ def rescan(request):
         col.save()
 
     return HttpResponse(col.scan_status)
-
-
 
 def song_info_response(song, playlist_id=None, item_id=None):
 
@@ -571,6 +570,7 @@ def song_info_response(song, playlist_id=None, item_id=None):
         item_id = 0
 
     filename = os.path.split(song.path_orig)[-1]
+    dbg_file_path = "/music" + song.path_orig[len(settings.MUSIC_PATH):]
     song_info = {
             'playlist_id': playlist_id,
             'item_id':     item_id,
@@ -582,6 +582,7 @@ def song_info_response(song, playlist_id=None, item_id=None):
             'track':       song.track,
             'mime':        song.mime,
             'filename':    filename,
+            'dbg_file_path': dbg_file_path,
             }
     response = HttpResponse(simplejson.dumps(song_info), mimetype='application/json')
     response['Cache-Control'] = 'no-cache'
@@ -631,4 +632,3 @@ def get_artists(request, songs):
                 artists[song.artist] = 1
 
         return artists
-
