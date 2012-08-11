@@ -100,7 +100,7 @@ function Yourlib() {
         $.get("rescan", function(rescan_status) {
             $( "#rescan_status" ).html("Status: " + rescan_status);
             if ((rescan_status != "idle") && (rescan_status != "error")) {
-                this.bind_check_scan_timeout();
+                yourlib.bind_check_scan_timeout();
             }
         });
         return false;
