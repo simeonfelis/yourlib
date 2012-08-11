@@ -23,7 +23,7 @@ function highlight_playing() {
 
 function Player() {
     this.next = function() {
-        this.event_ended();
+        player1.event_ended();
     }
 
     this.event_ended = function() {
@@ -32,7 +32,7 @@ function Player() {
                 return;
             }
             else {
-                this.play_song(song_info);
+                player1.play_song(song_info);
             }
         });
     };
@@ -47,7 +47,15 @@ function Player() {
         $('<audio id="player1" controls="controls" preload="auto"></audio>').appendTo("#player1_temp");
 
         /* set src url */
-        var $song_url='play/song/' + song_info.song_id;
+        if (song_info.dbg_file_path) {
+            /* for debugging on localhost, I use a this to emulate x-accel-redirects */
+            var $song_url='http://localhost:8080' + song_info.dbg_file_path;
+        }
+        else {
+            var $song_url='play/song/' + song_info.song_id;
+        }
+
+
         if (song_info.mime == "audio/ogg") {
             $('<source id="player1_ogg_source" src="' + $song_url + '" type="audio/ogg"></source>').appendTo("#player1");
         }
@@ -147,6 +155,7 @@ $(document).ready(function () {
     window.upload      = new Upload();
     window.download    = new Download();
     window.sidebar     = new Sidebar(); // must be last?
+    collection.bind();
 
     /*
      * Event delegation. They will work globally on dynamic content, too.
