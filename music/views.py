@@ -23,7 +23,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 def home(request):
 
     if request.user.is_authenticated():
-        if not os.path.isdir(os.path.join(settings.MUSIC_PATH), request.user.username):
+        if not os.path.isdir(os.path.join(settings.MUSIC_PATH, request.user.username)):
             os.makedirs(os.path.join(settings.MUSIC_PATH, request.user.username))
         playlists = Playlist.objects.filter(user=request.user)
         # create playlists if not existent for user
