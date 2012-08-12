@@ -16,7 +16,6 @@ from music.models import Song, Upload, Playlist
 from music.helper import dbgprint, add_song, get_tags
 
 # declare and create signals
-rescan_start = django.dispatch.Signal(providing_args=['user'])
 upload_done  = django.dispatch.Signal(providing_args=['handler', 'request'])
 download_start = django.dispatch.Signal(providing_args=['request'])
 
@@ -90,7 +89,6 @@ def connect_all():
     to be called from models.py
     """
     dbgprint("CONNECTING SIGNALS")
-    rescan_start.connect(rescan_start_callback)
     upload_done.connect(upload_done_callback)
     download_start.connect(download_start_callback)
 

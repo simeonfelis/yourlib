@@ -9,7 +9,7 @@ from django.db.models import Q
 
 from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
-from music.signals import rescan_start, upload_done, download_start
+from music.signals import upload_done, download_start
 from music.helper import dbgprint, get_tags
 
 import os, datetime, time
