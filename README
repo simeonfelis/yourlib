@@ -35,14 +35,27 @@ yum should be fine. pacman, of course, too.
 
  * python2
  * django 1.4
+ * django-celery
  * python mutagen  (tagreader)
  * python magic    (mime type detection)
  * python zipfile
  * pyinotify       (inotify python bindings)
  * python shutil
- * nginx
+ * nginx (or other webserver)
+ * rabbitmq (or other broker)
 
-You can use apache instead of nginx if you know how to configure it. I don't.
+You can use apache instead of nginx if you know how to configure it for 
+X-Accel-Redirect. I don't.
+
+Furthermore you need a broker for the celery worker server. I use rabbitmq. See
+http://docs.celeryproject.org/en/latest/getting-started/first-steps-with-celery.html#rabbitmq
+
+Don't worry, it's easy.
+
+On arch I run rabbitmq:
+http://aur.archlinux.org/packages.php?ID=19090
+su -c '/usr/sbin/rabbitmq-server -detached' rabbitmq
+
 
 What you should know (setup)
 ============================
