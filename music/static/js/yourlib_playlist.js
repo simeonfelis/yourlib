@@ -3,6 +3,19 @@ function Playlist() {
 
         highlight_playing();
 
+        $(".btn_sidebar_playlist").droppable( {
+            accept: ".song_item",
+            activeClass: "ui-state-default",
+            hoverClass: "ui-state-highlight",
+            drop: function(event, ui) {
+                song_id = $(ui.draggable).attr("data-song_id");
+                playlist_id = $(this).attr("data-playlist_id");
+
+                playlist.append(playlist_id, song_id);
+            },
+            //stop: this.reorder
+        });
+
         $(".sortable").sortable( {
             placeholder: "ui-state-highlight",
             stop: this.reorder
@@ -110,7 +123,19 @@ function Playlist() {
             alert(msg);
         });
     }
-
+    this.append = function(playlist_id, song_id) {
+        /* $(this) is expected to be a collection song item */
+        var $data = {
+            'csrfmiddlewaretoken': csrf_token,
+            'playlist_id' : playlist_id,
+            'song_id': song_id,
+        };
+        /* update number of playlist items in sidebar */
+        // TODO: increase *only* number of playlist items in sidebar
+        $( "#sidebar_playlists_content" ).load("playlist/append/", $data, function() {
+            sidebar.bind();
+        });
+    }
     this.create = function() {
         /* will be called on submit of create playlist field forms */
         var $data = {

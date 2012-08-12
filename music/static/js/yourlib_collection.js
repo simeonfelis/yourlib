@@ -1,16 +1,19 @@
 function Collection() {
     this.bind = function(){
         $( ".song_item" ).draggable({
-            helper: "clone",
+            helper: function(event) {
+                artist = $(this).find(".artist").html();
+                title = $(this).find(".title").html();
+                song_id = $(this).attr("data-song_id");
+                console.log("Dragging element with song id " + song_id)
+                helper = $("<div class='ui-widget-header'></div>");
+                helper.attr("data-song_id", song_id);
+                helper.html(artist + " - " + title);
+                return $( helper );
+            },
             appendTo: "body",
-            revert: "invalid"
-        });
-        $(".btn_sidebar_playlist").droppable( {
-            accept: ".song_item",
-            activeClass: "ui-state-default",
-            hoverClass: "ui-state-highlight",
-            drop: function() {console.log("Item dropped");}
-            //stop: this.reorder
+            containment: "document",
+            revert: "invalid",
         });
         $( ".song_item").disableSelection();
     }

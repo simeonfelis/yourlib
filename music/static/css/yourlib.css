@@ -124,17 +124,16 @@ body {
     overflow-x: hidden;
 }
 
-
 .songs ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
+    /*list-style-type: none;*/
+    /*padding: 0;*/
+    /*margin: 0;*/
 }
 
 .collection ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
+    /*list-style-type: none;*/
+    /*padding: 0;*/
+    /*margin: 0;*/
 }
 
 /*
@@ -169,6 +168,13 @@ body {
     color: #dd3333;
 }
 
+.song_items {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 10px
+}
+
 .song_item {
     width: 100%;
     padding-top: 2px;
@@ -200,6 +206,10 @@ body {
 
 .song_items br {
     clear: left;
+}
+
+.song_items li {
+     float: left;
 }
 
 .song_item .collection_add_to .playlists {

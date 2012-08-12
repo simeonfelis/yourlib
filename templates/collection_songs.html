@@ -4,7 +4,7 @@
     <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>
 {% elif songs|length > 0 %}
 
-    <ul class="song_items" id="collection_song_items">
+    <ul class="song_items ui-helper-clearfix" id="collection_song_items">
         {% include "songs.html" %}
     </ul>
     <div class="btn" id="get_more_results">more</div>

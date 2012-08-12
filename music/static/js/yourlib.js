@@ -156,6 +156,7 @@ $(document).ready(function () {
     window.download    = new Download();
     window.sidebar     = new Sidebar(); // must be last?
     collection.bind();
+    playlist.bind();
 
     /*
      * Event delegation. They will work globally on dynamic content, too.
