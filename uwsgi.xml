@@ -4,9 +4,10 @@
         <processes>4</processes>
         <module>yourlib.wsgi</module>
         <master/>
-        <uid>simeon</uid>
-        <gid>simeon</gid>
-        <chmod-socket>777</chmod-socket>
+        <uid>simeon</uid><!-- change this to your http server! -->
+        <gid>simeon</gid><!-- change this to your http server! -->
+        <chmod-socket>666</chmod-socket>
         <vhost/>
-        <daemonize>false</daemonize>
+        <daemonize>false</daemonize><!-- user true for production -->
 </uwsgi>
+<!-- start with uwsgi -x uwsgi.xml -->
