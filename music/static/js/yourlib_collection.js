@@ -1,5 +1,19 @@
 function Collection() {
-    this.bind = function(){} // stub
+    this.bind = function(){
+        $( ".song_item" ).draggable({
+            helper: "clone",
+            appendTo: "body",
+            revert: "invalid"
+        });
+        $(".btn_sidebar_playlist").droppable( {
+            accept: ".song_item",
+            activeClass: "ui-state-default",
+            hoverClass: "ui-state-highlight",
+            drop: function() {console.log("Item dropped");}
+            //stop: this.reorder
+        });
+        $( ".song_item").disableSelection();
+    }
 
     this.song_play = function() {
         var $data = {
@@ -26,6 +40,7 @@ function Collection() {
             else {
                 $( "#context_collection_search_status" ).html("Finished");
             }
+            collection.bind();
         });
         return false; // Don't do anything else
     }
@@ -37,7 +52,9 @@ function Collection() {
                 'begin' : so_far,
             };
             $.get("context/collection/", $data, function(result) {
-                $( result ).appendTo( "#collection_song_items" );
+                if (result != "") {
+                    $( result ).appendTo( "#collection_song_items" );
+                }
             });
     }
 
