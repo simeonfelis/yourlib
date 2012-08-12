@@ -128,7 +128,7 @@ def context(request, selection):
             else:
                 songs = songs[begin:available]
         else:
-            songs = []
+            return HttpResponse("")
 
         playlists = Playlist.objects.filter(user=request.user)
 
