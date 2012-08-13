@@ -1,0 +1,13 @@
+{% for i in playlist.items.all %}
+<li class="song_item ui-widget-content ui-state-default ui-corner-all" id="playlist_{{ playlist.id }}_item_{{ i.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}">
+    <ul class="">
+        <li class="song_info pos">{{ i.position }}</li>
+        <li class="btn_playlist_item_play song_info artist" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.artist }}</li>
+        <li class="btn_playlist_item_play song_info title"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.title }}</li>
+        <li class="btn_playlist_item_play song_info album"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.album }}</li>
+        <li class="btn_playlist_item_play song_info track"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.track }}</li>
+        <li class="btn_playlist_item_play song_info mime"   data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.mime|cut:"audio/" }}</li>
+        <li class="btn_playlist_item_remove btn song_info func" data-song_id="{{ i.song.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" title="remove">remove</li>
+    </ul>
+</li>
+{% endfor %}

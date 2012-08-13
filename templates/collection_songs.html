@@ -1,14 +1,15 @@
-<div class="songs" id="context_collection_songs">
+<div id="context_collection_songs_container"><!-- required anchor -->
+    <div id="songs">
 
-{% if songs|length > 200 %}
-    <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>
-{% elif songs|length > 0 %}
-
-    <ul class="song_items ui-helper-clearfix" id="collection_song_items">
-        {% include "songs.html" %}
-    </ul>
-    <div class="btn" id="get_more_results">more</div>
-{% else %}
-<p>No results</p>
-{% endif %}
+        {% if songs|length > 200 %}
+            <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>
+        {% elif songs|length > 0 %}
+            <ul class="song_items ui-helper-clearfix" id="collection_song_items">
+                {% include "collection_songs_li.html" %}
+            </ul>
+            <div class="btn" id="get_more_results">more</div>
+        {% else %}
+            <p>No results</p>
+        {% endif %}
+    </div>
 </div>

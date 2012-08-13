@@ -130,10 +130,8 @@ def context(request, selection):
         else:
             return HttpResponse("")
 
-        playlists = Playlist.objects.filter(user=request.user)
-
         return render_to_response(
-                "songs.html",
+                "collection_songs_li.html",
                 locals(),
                 context_instance=RequestContext(request),
                 )
@@ -239,7 +237,7 @@ def search(request):
             artists = get_artists(request, songs)
 
             return render_to_response(
-                    'collection.html',
+                    'collection_songs.html',
                     locals(),
                     context_instance=RequestContext(request),
                     )
@@ -250,7 +248,7 @@ def search(request):
             songs = filter_songs(request, artist=artist)
 
             return render_to_response(
-                    'collection_songs.html',
+                    'collection_songs_li.html',
                     locals(),
                     context_instance=RequestContext(request),
                     )
@@ -365,7 +363,7 @@ def playlist_remove_item(request, playlist_id, item_id):
         pass
 
     return render_to_response(
-            'playlist.html',
+            'playlist_songs.html',
             locals(),
             context_instance=RequestContext(request),
             )
@@ -373,7 +371,7 @@ def playlist_remove_item(request, playlist_id, item_id):
 @login_required
 def playlist_reorder(request):
     # reorder algorithm was a saturday afternoon work. althoug sometimes slow,
-    # the power of python made it beatiful. read it carefully, as it respects
+    # the power of python made it beautiful. read it carefully, as it respects
     # the case if an item was moved to the very top (item_previous_id = "0") by
     # its cool queries (Q). also, item_moved_position is the original value,
     # but item_moved.position is going to be the new value
@@ -433,7 +431,7 @@ def playlist_reorder(request):
 
 
     return render_to_response(
-            'playlist.html',
+            'playlist_songs.html',
             locals(),
             context_instance=RequestContext(request),
             )

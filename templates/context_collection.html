@@ -1,8 +1,9 @@
-<div class="context_content" id="context_content">
-    <div class="collection" id="context_collection">
+<div id="context_content">
+    <div id="context_collection">
 
-        <div class="header">
-            <div class="input">Search:
+        <div id="context_header">
+            <div>Search:</div>
+            <div class="input">
                 <form id="context_collection_search">
                     <input id="collection_search_terms" name="search_terms" type="text" size="20" maxlength="32" value="{{ music_session.search_terms }}">
                 </form>
@@ -11,7 +12,7 @@
         </div>
 
         <div id="context_collection_container">
-            {% include "collection.html" %}
+            {% include "collection_songs.html" %}
         </div>
     </div>
 </div>

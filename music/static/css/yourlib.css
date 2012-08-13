@@ -44,7 +44,7 @@ body {
     background-color: #d4d4df;
 }
 
-.context_container {
+#context_container {
     width: 1000px;
     height: 550px;
     margin: 5px;
@@ -55,13 +55,13 @@ body {
     overflow:hidden;
 }
 
-.context_container .header {
+#context_header {
     width: 100%;
     height: 2em;
     background-color: #c4cCdF;
 }
 
-.context_container .header div {
+#context_header div {
     float: left;
     white-space: nowrap;
 }
@@ -119,7 +119,6 @@ body {
     height: 100%;
     padding: 0px;
     margin: 0px;
-    background-color: #f0f0f0;
     overflow: auto;
     overflow-x: hidden;
 }
@@ -165,7 +164,7 @@ body {
 }
 
 .currently_playing {
-    color: #dd3333;
+    /* dummy class to get/set currently playing */
 }
 
 .song_items {
@@ -180,13 +179,30 @@ body {
     padding-top: 2px;
     padding-bottom: 2px;
     position: relative;
+    cursor: pointer;
 }
 
 .song_item li {
+    list-style-type: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     float: left;
+}
+
+.song_info {
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.song_item ul {
+    padding: 0;
+}
+
+/* playlist only */
+.song_item .pos {
+    text-align: right;
+    width: 20px;
 }
 
 .song_item .artist {
@@ -200,10 +216,20 @@ body {
     width: 250px;
 }
 
-.song_item .mime {
-    width: 40px;
+/* album track number */
+.song_item .track {
+    text-align: right;
+    width: 20px;
 }
 
+.song_item .mime {
+    width: 35px;
+}
+
+/* additional settings/functions */
+.song_item .func {
+    width: 25px;
+}
 .song_items br {
     clear: left;
 }

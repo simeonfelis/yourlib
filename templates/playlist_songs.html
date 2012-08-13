@@ -1,25 +1,12 @@
-<div class="songs" id="context_playlist_songs">
-{% if playlist.items.all|length > 0 %}
+<div id="context_playlist_songs_container"><!-- required anchor -->
+    <div id="songs">
 
-<ul id="playlist_content_{{ playlist.id }}" class="song_items sortable">
-    {% for i in playlist.items.all %}
-    <li class="song_item" id="playlist_{{ playlist.id }}_item_{{ i.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}">
-            <ul>
-                <li>{{ i.position }}</li>
-                <li class="btn_playlist_item_play btn song_info artist" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.artist }}</li>
-<li class="btn_playlist_item_play btn song_info title"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.title }}</li>
-<li class="btn_playlist_item_play btn song_info album"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.album }}</li>
-<li class="btn_playlist_item_play btn song_info mime"   data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.mime|cut:"audio/" }}</li>
-<li class="btn_playlist_item_remove btn" data-song_id="{{ i.song.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}">remove</li>
-            </ul>
-        <br />
-    </li>
-    {% endfor %}
-</ul>
-
-{% else %}
-
-<div id="playlist_content_{{ playlist_id }}">No songs in playlist</div>
-
-{% endif %}
+        {% if playlist.items.all|length > 0 %}
+        <ul class="song_items sortable ui-helper-clearfix" id="playlist_content_{{ playlist.id }}">
+            {% include "playlist_songs_li.html" %}
+        </ul>
+        {% else %}
+            <div id="playlist_content_{{ playlist_id }}">No songs in playlist</div>
+        {% endif %}
+    </div>
 </div>

@@ -3,22 +3,13 @@ function Playlist() {
 
         highlight_playing();
 
-        $(".btn_sidebar_playlist").droppable( {
-            accept: ".song_item",
-            activeClass: "ui-state-default",
-            hoverClass: "ui-state-highlight",
-            drop: function(event, ui) {
-                song_id = $(ui.draggable).attr("data-song_id");
-                playlist_id = $(this).attr("data-playlist_id");
-
-                playlist.append(playlist_id, song_id);
-            },
-            //stop: this.reorder
-        });
-
         $(".sortable").sortable( {
-            placeholder: "ui-state-highlight",
-            stop: this.reorder
+            start: function(event, ui) {
+                $(ui.helper).addClass("ui-state-active");
+            },
+            stop: this.reorder,
+            activeClass: "ui-state-active",
+            delay: 100,
         });
         $( ".sortable").disableSelection();
     }
@@ -64,7 +55,7 @@ function Playlist() {
             'source'             : 'playlist',
         };
         $.post("/play/", $data, function(song_info) {
-            play_song(song_info);
+            player1.play_song(song_info);
         });
         return false; // Don't do anything else
     }

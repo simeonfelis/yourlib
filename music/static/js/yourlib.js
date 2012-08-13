@@ -3,6 +3,8 @@
 
 function highlight_playing() {
 
+    $( ".currently_playing" ).removeClass("ui-state-active", 500);
+    $( ".currently_playing" ).addClass("ui-state-default", 500);
     $( ".currently_playing" ).removeClass("currently_playing", 500);
 
     var playlist_id = $( "#player1" ).attr("data-playlist_id");
@@ -12,12 +14,20 @@ function highlight_playing() {
     if (playlist_id != 0) {
         // create selector for playlist item
         var sel = '#playlist_' + playlist_id + "_item_" + item_id;
+        $( sel ).removeClass("ui-state-default", 500);
         $( sel ).addClass("currently_playing", 500);
+        $( sel ).addClass("ui-state-active", 500);
+        a = $( sel ).html();
+        console.log(a);
     }
     else {
         // create selector for collection song
         var sel = '#collection_song_id_' + song_id;
+        $( sel ).removeClass("ui-state-default", 500);
         $( sel ).addClass("currently_playing", 500);
+        $( sel ).addClass("ui-state-active", 500);
+        a = $( sel ).html();
+        console.log(a);
     }
 }
 
@@ -47,13 +57,13 @@ function Player() {
         $('<audio id="player1" controls="controls" preload="auto"></audio>').appendTo("#player1_temp");
 
         /* set src url */
-        //if (song_info.dbg_file_path) {
-        //    /* for debugging on localhost, I use a this to emulate x-accel-redirects */
-        //    var $song_url='http://localhost:8080' + song_info.dbg_file_path;
-        //}
-        //else {
+        if (song_info.dbg_file_path) {
+            /* for debugging on localhost, I use a this to emulate x-accel-redirects */
+            var $song_url='http://localhost:8080' + song_info.dbg_file_path;
+        }
+        else {
             var $song_url='play/song/' + song_info.song_id;
-        //}
+        }
 
 
         if (song_info.mime == "audio/ogg") {
@@ -99,7 +109,7 @@ function Yourlib() {
     this.check_scan_status = function() {
         $.get("rescan", function(rescan_status) {
             $( "#rescan_status" ).html("Status: " + rescan_status);
-            if ((rescan_status != "idle") && (rescan_status != "error")) {
+            if ((rescan_status != "idle") && (rescan_status != "error") && (rescan_status != "")) {
                 yourlib.bind_check_scan_timeout();
             }
         });
@@ -157,6 +167,7 @@ $(document).ready(function () {
     window.sidebar     = new Sidebar(); // must be last?
     collection.bind();
     playlist.bind();
+    sidebar.bind();
 
     /*
      * Event delegation. They will work globally on dynamic content, too.

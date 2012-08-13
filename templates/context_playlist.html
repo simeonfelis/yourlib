@@ -1,14 +1,14 @@
-<div class="context_content" id="context_content">
-    <div class="playlist" id="context_playlist">
+<div id="context_content">
+    <div id="context_playlist">
 
-        <div class="header">
+        <div id="context_header">
             <div class="name">Playlist: <b>{{ playlist.name }}</b></div>
             <div class="btn_playlist_delete btn" data-playlist_id="{{ playlist.id }}">delete</div>
             <div class="btn_playlist_download btn" data-playlist_id="{{ playlist.id }}">download</div>
         </div>
 
         <div id="context_playlist_container">
-            {% include "playlist.html" %}
+            {% include "playlist_songs.html" %}
         </div>
     </div>
 </div>
