@@ -19,71 +19,6 @@ from music.helper import dbgprint, add_song, get_tags
 upload_done  = django.dispatch.Signal(providing_args=['handler', 'request'])
 download_start = django.dispatch.Signal(providing_args=['request'])
 
-class ProcessInotifyEvent(pyinotify.ProcessEvent):
-
-    def __init__(self):
-        self.stacktrace = None
-        dbgprint( "INOTIFY ProcessInotifyEvent constructed")
-
-    # not all of these are filtered on watchmanager creation
-    def process_IN_DELETE(self, event):
-        self.song_removed(event)
-
-    def process_IN_MOVED_FROM(self, event):
-        # TODO: check if moved out of MUSIC_PATH
-        self.song_removed(event)
-
-    def process_IN_MOVED_TO(self, event):
-        # TODO: check if moved out of MUSIC_PATH
-        dbgprint( "INOTIFY: IN_MOVED_TO", event)
-        self.song_changed(event)
-
-    def process_IN_MODIFY(self, event):
-        dbgprint( "INOTIFY: IN_MODIFY", event)
-
-    def process_IN_CREATE(self, event):
-        dbgprint( "INOTIFY: IN_CREATE", event)
-        if os.path.isfile(event.pathname):
-            self.song_changed(event)
-
-    def process_IN_CLOSE_WRITE(self, event):
-        dbgprint( "INOTIFY: IN_CLOSE_WRITE", event)
-        self.song_changed(event)
-
-    def song_removed(self, event):
-        try:
-            song = Song.objects.get(path_orig=event.pathname)
-        except Song.DoesNotExist:
-            pass
-        else:
-            dbgprint("INOTIFY: deleting song entry", song)
-            song.delete()
-
-    def song_changed(self, event):
-        filedir = event.path
-        filename = os.path.split(event.pathname)[-1]
-        dbgprint("filename:", filename)
-        dbgprint("filedir[len]", filedir[len(settings.MUSIC_PATH):])
-        username = filedir[len(settings.MUSIC_PATH):].split(os.path.sep)[1]
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            dbgprint("INOTIFY: could not determine user for changed path:", event.path, "and pathname:", event.pathname, "and user", username)
-        else:
-            dbgprint("INOTIFY: ADDING SONG FOR USER", username, ":", os.path.join(filedir, filename))
-            add_song(filedir, [filename], user)
-
-# create filesystem watcher in seperate thread
-wm       = pyinotify.WatchManager()
-notifier = pyinotify.ThreadedNotifier(wm, ProcessInotifyEvent())
-#notifier.setDaemon(True)
-notifier.start()
-#mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
-mask     = pyinotify.ALL_EVENTS
-wdd      = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
-dbgprint("Notifier:", notifier, "status isAlive():", notifier.isAlive())
-
-
 def connect_all():
     """
     to be called from models.py
@@ -93,8 +28,6 @@ def connect_all():
     download_start.connect(download_start_callback)
 
 def upload_done_callback(sender, **kwargs):
-    dbgprint("upload_done_callback: checking for notifier:", notifier)
-    dbgprint("upload_done_callback: notifier alive:", notifier.isAlive())
 
     handler = kwargs.pop('handler')
     request = kwargs.pop('request')

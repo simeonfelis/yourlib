@@ -74,7 +74,7 @@ def get_tags(path):
         if not len(title)>0:
             title = "Unknown Title"
     except:
-        title = "Unknown Title"
+        title = os.path.split(path)[-1]
 
     try:
         track     = int(tags['tracknumber'][0].encode('utf-8').split('/')[0])
@@ -97,6 +97,55 @@ def get_tags(path):
             }
 
     return tags
+
+def set_song(tags, timestamp, user, path, song):
+    # if song == None, returns a new Song object
+    # song must be explicitly saved after that function
+    # returns changed or new Song object instance
+
+    if not song == None:
+        song.artist    = tags['artist'],
+        song.title     = tags['title'],
+        song.album     = tags['album'],
+        song.track     = tags['track'],
+        song.mime      = tags['mime'],
+        song.user      = user
+        song.path_orig = path
+        song.timestamp_orig = timestamp
+    else:
+        song = Song(
+             artist    = tags['artist'],
+             title     = tags['title'],
+             album     = tags['album'],
+             track     = tags['track'],
+             mime      = tags['mime'],
+             user      = user,
+             path_orig = path,
+             timestamp_orig = timestamp,
+             )
+    return song
+
+def update_song(song):
+    """
+    re-reads tags of song and saves it
+    """
+
+    timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(song.path_orig)).replace(tzinfo=utc)
+
+    if song.timestamp_orig == timestamp:
+        return
+
+    try:
+        tags = get_tags(song.path_orig)
+    except Exception, e:
+        dbgprint("update_song: error reading tags on file", song.path_orig, ":", e)
+
+    set_song(tags, timestamp, song.user, song.path_orig, song)
+
+    try:
+        song.save()
+    except Exception, e:
+        dbgprint("update_song: error saving entry", song, ":", e)
 
 def add_song(dirname, files, user):
     """
@@ -145,34 +194,11 @@ def add_song(dirname, files, user):
             continue
         else:
             if tags == None:
-                dbgprint("add_song: no tags in file", path)
+                #dbgprint("add_song: no tags in file", path)
                 processed += 1
                 continue
 
-        if song == None:
-            # new song item
-            dbgprint("add_song: Adding file ", path)
-            song = Song(
-                    artist    = tags['artist'],
-                    title     = tags['title'],
-                    album     = tags['album'],
-                    track     = tags['track'],
-                    mime      = tags['mime'],
-                    user      = user,
-                    path_orig = path,
-                    timestamp_orig = timestamp,
-                    )
-        else:
-            # overwrite old song item
-            dbgprint("add_song: Updating file ", path)
-            song.artist    = tags['artist'],
-            song.title     = tags['title'],
-            song.album     = tags['album'],
-            song.track     = tags['track'],
-            song.mime      = tags['mime'],
-            song.user      = user
-            song.path_orig = path
-            song.timestamp_orig = timestamp
+        song = set_song(tags, timestamp, user, path, song)
 
         try:
             song.save()
