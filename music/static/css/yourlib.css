@@ -5,7 +5,6 @@ body {
 }
 
 .btn {
-    margin: 1px;
     background-color: #d0d0d0;
 }
 
@@ -16,17 +15,32 @@ body {
 
 .yourlib_header {
     width: 100%;
-    margin-left: 5px;
-    background-color: #E4ECFF;
+    /*margin-left: 5px;*/
+    /*background-color: #E4ECFF;*/
     height: 50px;
+    line-height:50px;
     z-index: 1;
     position: fixed;
+    text-align: center;
+}
+
+.yourlib_header div {
+    width: auto;
+    white-space: nowrap;
+    float: left;
 }
 
 
-.yourlib_header div {
+#btn_rescan_library {
+    width:auto;
     white-space: nowrap;
     float: left;
+}
+
+#logout {
+    width: auto;
+    white-space: nowrap;
+    float: right;
 }
 
 /* only before yourlib_footer (not implemented) or after yourlib_header */
@@ -41,7 +55,7 @@ body {
     left: 0px;
     top: 55px;
     white-space: nowrap;
-    background-color: #d4d4df;
+    /*background-color: #d4d4df;*/
 }
 
 #context_container {
@@ -58,7 +72,8 @@ body {
 #context_header {
     width: 100%;
     height: 2em;
-    background-color: #c4cCdF;
+    line-height: 2em; /* vertical-align trick */
+    /*background-color: #c4cCdF;*/
 }
 
 #context_header div {
@@ -66,11 +81,26 @@ body {
     white-space: nowrap;
 }
 
+#context_header .btn {
+    float: right;
+    margin: 0 0 0 0;
+    padding: 0 0 0 0;
+}
+
 
 .sidebar h1 {
     font-size: 1.2em;
     font-style: normal;
     font-weight: normal;
+    margin: 2px 0 2px 0;
+}
+
+.sidebar h2 {
+    font-size: 1.1em;
+    font-style: normal;
+    font-weight: normal;
+    margin: 1px 0 1px 0;
+    padding: 0 0 0 15px;
 }
 
 .sidebar .container {
@@ -79,17 +109,50 @@ body {
     margin-right: 5;
 }
 
-.sidebar .playlists {
-    margin-left: 5;
-    margin-right: 5;
-    background-color: #f8f8f8;
+#player1_container {
+    position: relative;
+}
+#player1_temp {
+    position: relative;
+}
+#player1_info_container {
+    position: relative;
+}
+
+.player_song_info {
+    padding: 2px 0 2px 0;
+    width: 100%;
+    /*height: 1em;*/
 }
 
 .player_song_info div {
-    float: left;
+    /*width: 3px;
+    float: left;*/
+    width: 100%;
     white-space: nowrap;
     font-size: 0.8em;
     text-overflow: ellipsis;
+    text-align: left;
+}
+/*
+.player_song_info .artist {
+    width: auto;
+    max-width: 125px;
+}
+
+.player_song_info .title {
+    width: auto;
+    max-width: 125px;
+}*/
+
+.player_song_info .btn {
+    width: auto;
+    position: absolute;
+    right: 0;
+    top: 0;
+/*    float: right;
+    width: auto;
+    max-width: 40px;*/
 }
 
 /*

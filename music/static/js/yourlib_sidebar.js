@@ -4,7 +4,7 @@ function Sidebar() {
 
         $(".btn_sidebar_playlist").droppable( {
             accept: ".song_item",
-            activeClass: "ui-state-default",
+            activeClass: "ui-state-focus",
             hoverClass: "ui-state-highlight",
             drop: function(event, ui) {
                 song_id = $(ui.draggable).attr("data-song_id");
@@ -13,6 +13,8 @@ function Sidebar() {
                 playlist.append(playlist_id, song_id);
             },
         });
+
+        highlight_playing(by_who='sidebar.bind', target="#sidebar");
     }
 
     this.show_collection = function() {

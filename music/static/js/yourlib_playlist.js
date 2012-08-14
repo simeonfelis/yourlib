@@ -1,17 +1,21 @@
 function Playlist() {
     this.bind = function () {
 
-        highlight_playing();
+        $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
+        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+
 
         $(".sortable").sortable( {
             start: function(event, ui) {
                 $(ui.helper).addClass("ui-state-active");
             },
             stop: this.reorder,
-            activeClass: "ui-state-active",
+            //activeClass: "ui-state-active",
             delay: 100,
         });
         $( ".sortable").disableSelection();
+
+        highlight_playing("Playlist.bind()", target="#context_content");
     }
 
     this.reorder = function (event, ui) {

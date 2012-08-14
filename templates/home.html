@@ -10,38 +10,42 @@
 
 <div class="content">
 
-    <div class="sidebar">
+    <div class="sidebar ui-widget-content ui-corner-all" id="sidebar">
 
         {% include "yourlib_player1.html" %}
 
         <div style="height:3px; width:100%; background-color:#5f5f5f;"></div>
 
-        <div class="context_selection">
+        <div class="ui-widget-content">
+            <!--<div class="ui-widget-content">-->
+                <h1 class="ui-widget-header btn ui-state-default" id="btn_context_collection">Collection</h1>
+            <!--</div>-->
             <div class="container">
-                <h1 class="btn" id="btn_context_collection">Collection</h1>
-            </div>
-            <div class="container">
-                <h1 class="btn" id="btn_context_playlists">Playlists</h1>
+                <h1 class="ui-widget-header" id="btn_context_playlists">Playlists</h1>
                 <div id="sidebar_playlists_content">
                     {% include "playlists.html" %}
                 </div>
-                <div>Create: <form id="playlist_create"><input id="playlist_create_name" name="playlist_name" type="text" size="10" maxlength="32"></form></div>
+                <h2 style="float:left;">New:</h2>
+                <form id="playlist_create">
+                    <input id="playlist_create_name" name="playlist_name" type="text" size="10" maxlength="32">
+                </form>
             </div>
             <div class="container">
-                <h1 class="btn" id="btn_context_upload">Upload</h1>
+                <h1 class="btn ui-state-default" id="btn_context_upload">Upload</h1>
             </div>
             <div class="container">
-                <h1 class="btn" id="btn_context_download">Download</h1>
+                <h1 class="btn ui-state-default" id="btn_context_download">Download</h1>
             </div>
         </div>
     </div>
 
-    <div id="context_container">
+    <div id="context_container" class="ui-widget-content ui-corner-all">
         {% if music_session.currently_playing == "collection" %}
             {% include "context_collection.html" %}
-        {% else %}
-            <div id="context_content">
-            </div>
+        {% elif music_session.currently_playing = "playlist" %}
+            {% with music_session.current_playlist as playlist %}
+                {% include "context_playlist.html" %}
+            {% endwith %}
         {% endif %}
     </div>
 

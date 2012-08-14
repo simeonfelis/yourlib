@@ -1,11 +1,18 @@
 
 /* yourlib common stuff, find context specific stuff in subsequent yourlib_<files>.js  */
 
-function highlight_playing() {
+function highlight_playing(by_who, target) {
 
-    $( ".currently_playing" ).removeClass("ui-state-active", 500);
-    $( ".currently_playing" ).addClass("ui-state-default", 500);
-    $( ".currently_playing" ).removeClass("currently_playing", 500);
+    if (by_who) {
+        console.log("highligth_playling by", by_who);
+    }
+    else {
+        console.log("highlight_playling by unknown");
+    }
+
+    $( target + ",.currently_playing" ).removeClass("ui-state-highlight", 500);
+    $( target + ",.currently_playing" ).addClass("ui-state-default", 500);
+    $( target + ",.currently_playing" ).removeClass("currently_playing", 500);
 
     var playlist_id = $( "#player1" ).attr("data-playlist_id");
     var item_id     = $( "#player1" ).attr("data-item_id");
@@ -13,21 +20,23 @@ function highlight_playing() {
 
     if (playlist_id != 0) {
         // create selector for playlist item
-        var sel = '#playlist_' + playlist_id + "_item_" + item_id;
+        var sel = target + ',#playlist_' + playlist_id + "_item_" + item_id;
         $( sel ).removeClass("ui-state-default", 500);
         $( sel ).addClass("currently_playing", 500);
-        $( sel ).addClass("ui-state-active", 500);
-        a = $( sel ).html();
-        console.log(a);
+        $( sel ).addClass("ui-state-highlight", 500);
+
+        // create selector for playlist name in sidebar
+        sel = target + ',#sidebar_playlist_' + playlist_id;
+        $( sel ).removeClass("ui-state-default", 500);
+        $( sel ).addClass("ui-state-highlight", 500);
+        $( sel ).addClass("currently_playing", 500);
     }
     else {
         // create selector for collection song
-        var sel = '#collection_song_id_' + song_id;
+        var sel = target + ',#collection_song_id_' + song_id;
         $( sel ).removeClass("ui-state-default", 500);
         $( sel ).addClass("currently_playing", 500);
-        $( sel ).addClass("ui-state-active", 500);
-        a = $( sel ).html();
-        console.log(a);
+        $( sel ).addClass("ui-state-highlight", 500);
     }
 }
 
@@ -81,7 +90,7 @@ function Player() {
         $( "#player1" ).attr("data-item_id", song_info['item_id']);
         $( "#player1" ).attr("data-song_id", song_info['song_id']);
 
-        highlight_playing();
+        highlight_playing("Player.play_song()", $target=$("document"));
     }
 }
 
@@ -95,14 +104,43 @@ function Yourlib() {
         });
     }
     this.rescan = function() {
-        $( "#rescan_status" ).html("Rescan requested. This might take a while....");
+        if ($( "#btn_rescan_library" ).html() == "Cancel") {
 
-        var data = {"csrfmiddlewaretoken": csrf_token, "playlist_name": $(this).val()};
-        $.post("rescan", data, function(rescan_status) {
-            yourlib.check_scan_status();
-        })
-        .success()
-        .error(function() { $( "#rescan_status" ).html("Status not yet available..."); });
+            $( "#dialog-confirm" ).dialog({
+                resizable: true,
+                height:300,
+                width:400,
+                modal: true,
+                buttons: {
+                    "Continue Rescan": function() {
+                        $( this ).dialog( "close" );
+                    },
+                    "Cancel Rescan": function() {
+
+                        $( "#rescan_status" ).html("Cancel requested...");
+                        var data = {"csrfmiddlewaretoken": csrf_token, "cancel": true};
+                        $.post("rescan", data, function(rescan_status) {
+                            yourlib.check_scan_status();
+                        })
+                        .success()
+                        .error(function() { $( "#rescan_status" ).html("Server Error?"); });
+
+                        $( this ).dialog( "close" );
+                    }
+                }
+            });
+        }
+        else{
+            $("#btn_rescan_library").html("Cancel");
+            $( "#rescan_status" ).html("Rescan requested. This might take a while....");
+
+            var data = {"csrfmiddlewaretoken": csrf_token};
+            $.post("rescan", data, function(rescan_status) {
+                yourlib.check_scan_status();
+            })
+            .success()
+            .error(function() { $( "#rescan_status" ).html("Server Error?"); });
+        }
         return false; // don't do anything else
     }
 
@@ -110,7 +148,11 @@ function Yourlib() {
         $.get("rescan", function(rescan_status) {
             $( "#rescan_status" ).html("Status: " + rescan_status);
             if ((rescan_status != "idle") && (rescan_status != "error") && (rescan_status != "")) {
+                $("#btn_rescan_library").html("Cancel");
                 yourlib.bind_check_scan_timeout();
+            }
+            else {
+                $("#btn_rescan_library").html("Rescan");
             }
         });
         return false;
@@ -204,6 +246,10 @@ $(document).ready(function () {
     $(document).on("click",  ".btn_collection_append_to_playlist", collection.append_to_playlist);
     $(document).on("click",  "#get_more_results",          collection.get_more_results);
     $(document).on("appear", "#get_more_results",          collection.get_more_results, {one: false});
+
+    /* some global ui theming */
+    $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
+    $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
 
     /* check document state, maybe there are ongoing actions in progress */
     if ( $( "#rescan_status" ).html() != "" ) {

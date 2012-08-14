@@ -19,5 +19,13 @@
     <body>
         {% block content %}
         {% endblock %}
+
+        {# pre-defined dialogs, not visible hopefully #}
+        <div class="hiddenInViewSource" style="padding:20px;">
+            <div class="hiddenInViewSource" id="dialog-confirm" title="Cancel Rescan?">
+                <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>A rescan should only be canceled after Server-Erros.</p>
+            </div>
+        </div><!-- End hidden stuff -->
+
     </body>
 </html>

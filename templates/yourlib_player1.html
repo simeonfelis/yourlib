@@ -1,19 +1,22 @@
-<div id="player1_container" class="player_container">
-
-    <div class="controls">
-        <div class="btn" id="btn_player1_next">next</div>
-        <!-- <div class="btn" id="btn_player1_stop">stop</div> -->
-    </div>
+<div id="player1_container" class="player_container ui-widget-content">
 
     <div id="player1_temp">
-    <audio id="player1" controls="controls" preload="auto" >
-        <source id="player1_ogg_source" type="audio/ogg" src="" ></source>
-        <source id="player1_mp3_source" type="audio/mp3" src="" ></source>
-    </audio>
+        <audio id="player1" controls="controls" preload="auto"
+            data-song_id="{{ current_song.id }}"
+            data-playlist_id="{{ current_playlist_id }}"
+            data-item_id="{{ current_item_id }}">
+            <source id="player1_ogg_source" type="audio/ogg" src="" ></source>
+            <source id="player1_mp3_source" type="audio/mp3" src="" ></source>
+        </audio>
     </div>
 
-    <div id="player1_info_container" class="player_song_info">
-        <div id="player1_song_info_artist"></div><div> - </div><div id="player1_song_info_title"></div>
-        <br />
+    <div id="player1_info_container" class="player_song_info ui-widget-content">
+        <div class="artist" id="player1_song_info_artist">
+            {{ current_song.artist }}
+        </div>
+        <div class="title" id="player1_song_info_title">
+            {{ current_song.title }}
+        </div>
+        <div class="btn ui-state-default" id="btn_player1_next" title="Next in whatever you are playing">next</div>
     </div>
 </div>

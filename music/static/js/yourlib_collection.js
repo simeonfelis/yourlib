@@ -1,8 +1,6 @@
 function Collection() {
     this.bind = function(){
 
-        highlight_playing();
-
         $( ".song_item" ).draggable({
             helper: function(event) {
                 artist = $(this).find(".artist").html();
@@ -20,6 +18,8 @@ function Collection() {
             delay: 100,
         });
         $( ".song_item").disableSelection();
+
+        highlight_playing("Collection.bind()", target="#context_container");
     }
 
     this.song_play = function() {

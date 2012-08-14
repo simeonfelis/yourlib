@@ -41,6 +41,23 @@ def home(request):
             music_session = MusicSession(user=request.user, currently_playing='none', search_terms='')
             music_session.save()
 
+        if music_session.currently_playing == "playlist":
+            cur_pos = music_session.current_playlist.current_position
+
+            current_item = music_session.current_playlist.items.get(position=cur_pos)
+
+            # the following is needed to prefill player data
+            current_song = current_item.song
+            current_item_id = current_item.id
+            current_song_id = current_song.id
+            current_playlist_id = music_session.current_playlist.id
+
+        elif music_session.currently_playing == "collection":
+            current_song = music_session.current_song
+            current_song_id = current_song.id
+            current_playlist_id = 0
+            current_item_id = 0
+
         # create collection if not existent
         try:
             collection = Collection.objects.get(user=request.user)
@@ -542,6 +559,11 @@ def rescan(request):
     """
 
     col = Collection.objects.get(user=request.user)
+    if request.method == "POST":
+        if request.POST.get("cancel", False):
+            col.scan_status = "idle"
+            col.save()
+            return HttpResponse(col.scan_status)
 
     if col.scan_status == "idle" or col.scan_status == "error":
         if request.method == "POST":

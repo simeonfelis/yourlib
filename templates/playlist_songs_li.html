@@ -7,7 +7,7 @@
         <li class="btn_playlist_item_play song_info album"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.album }}</li>
         <li class="btn_playlist_item_play song_info track"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.track }}</li>
         <li class="btn_playlist_item_play song_info mime"   data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.mime|cut:"audio/" }}</li>
-        <li class="btn_playlist_item_remove btn song_info func" data-song_id="{{ i.song.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" title="remove">remove</li>
+        <li class="btn_playlist_item_remove btn ui-state-default func" data-song_id="{{ i.song.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" title="remove">X</li>
     </ul>
 </li>
 {% endfor %}
