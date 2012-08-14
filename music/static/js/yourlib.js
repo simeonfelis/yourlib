@@ -10,33 +10,47 @@ function highlight_playing(by_who, target) {
         console.log("highlight_playling by unknown");
     }
 
-    $( target + ",.currently_playing" ).removeClass("ui-state-highlight", 500);
-    $( target + ",.currently_playing" ).addClass("ui-state-default", 500);
-    $( target + ",.currently_playing" ).removeClass("currently_playing", 500);
-
     var playlist_id = $( "#player1" ).attr("data-playlist_id");
     var item_id     = $( "#player1" ).attr("data-item_id");
     var song_id     = $( "#player1" ).attr("data-song_id");
 
     if (playlist_id != 0) {
+        // eventually update sidebar; create selector for sidebar playlist item
+        var sb_sel = '#sidebar_playlist_' + playlist_id;
+        if ( ! $( sb_sel ).hasClass("currently_playing") ) {
+            $( "#sidebar" ).find( ".currently_playing" ).removeClass("ui-state-highlight");
+            $( "#sidebar" ).find( ".currently_playing" ).addClass("ui-state-default");
+            $( "#sidebar" ).find( ".currently_playing" ).removeClass("currently_playing");
+            $( sb_sel ).removeClass("ui-state-default");
+            $( sb_sel ).addClass("currently_playing");
+            $( sb_sel ).addClass("ui-state-highlight");
+        }
         // create selector for playlist item
-        var sel = target + ',#playlist_' + playlist_id + "_item_" + item_id;
-        $( sel ).removeClass("ui-state-default", 500);
-        $( sel ).addClass("currently_playing", 500);
-        $( sel ).addClass("ui-state-highlight", 500);
-
-        // create selector for playlist name in sidebar
-        sel = target + ',#sidebar_playlist_' + playlist_id;
-        $( sel ).removeClass("ui-state-default", 500);
-        $( sel ).addClass("ui-state-highlight", 500);
-        $( sel ).addClass("currently_playing", 500);
+        var sel = '#playlist_' + playlist_id + "_item_" + item_id;
     }
     else {
         // create selector for collection song
-        var sel = target + ',#collection_song_id_' + song_id;
-        $( sel ).removeClass("ui-state-default", 500);
-        $( sel ).addClass("currently_playing", 500);
-        $( sel ).addClass("ui-state-highlight", 500);
+        var sel = '#collection_song_id_' + song_id;
+
+        // remove highlighting from playlist
+        $( "#sidebar" ).find( ".currently_playing" ).removeClass("ui-state-highlight");
+        $( "#sidebar" ).find( ".currently_playing" ).addClass("ui-state-default");
+        $( "#sidebar" ).find( ".currently_playing" ).removeClass("currently_playing");
+        $( "#btn_context_collection" ).removeClass("ui-state-default");
+        $( "#btn_context_collection" ).addClass("currently_playing");
+        $( "#btn_context_collection" ).addClass("ui-state-highlight");
+    }
+
+    if ( $( sel ).hasClass("currently_playing") ) {
+        // don't re-apply
+    }
+    else {
+        $( "#context_content" ).find( ".currently_playing" ).removeClass("ui-state-highlight");
+        $( "#context_content" ).find( ".currently_playing" ).addClass("ui-state-default");
+        $( "#context_content" ).find( ".currently_playing" ).removeClass("currently_playing");
+        $( sel ).removeClass("ui-state-default");
+        $( sel ).addClass("currently_playing");
+        $( sel ).addClass("ui-state-highlight");
     }
 }
 
@@ -90,7 +104,7 @@ function Player() {
         $( "#player1" ).attr("data-item_id", song_info['item_id']);
         $( "#player1" ).attr("data-song_id", song_info['song_id']);
 
-        highlight_playing("Player.play_song()", $target=$("document"));
+        highlight_playing("Player.play_song()", target="#content");
     }
 }
 
