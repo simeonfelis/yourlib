@@ -101,7 +101,7 @@ def fswatch_file_removed(event):
         song.delete()
 
 @task()
-def rescan_task(user_id, collection_id):
+def rescan_task(user_id):
 
     user = User.objects.get(id=user_id)
     collection = Collection.objects.get(user=user)
@@ -133,8 +133,7 @@ def rescan_task(user_id, collection_id):
             so_far = int((processed*100)/amount)
             #dbgprint("we have processed so far", processed, "files (", so_far, ") from ", amount)
 
-            if so_far > 0 and so_far % 5 == 0:
-                # update status every 5 percent
+            if so_far > 0 and so_far % 2 == 0:
                 collection.scan_status = str(so_far)
                 collection.save()
 
