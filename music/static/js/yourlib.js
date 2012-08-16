@@ -178,6 +178,35 @@ function Yourlib() {
 
 function Upload() {
     this.bind = function() {
+
+var bar = $('.bar');
+var percent = $('.percent');
+var status = $('#status');
+
+
+$('#upload_form').ajaxForm({
+    //data: {"csrfmiddlewaretoken": csrf_token},
+    beforeSend: function() {
+        this.url = "upload/?";
+        console.log("beforeSend");
+        status.empty();
+        var percentVal = '0%';
+        bar.width(percentVal)
+        percent.html(percentVal);
+    },
+    uploadProgress: function(event, position, total, percentComplete) {
+        console.log("uploadProgress", percentComplete);
+        var percentVal = percentComplete + '%';
+        bar.width(percentVal)
+        percent.html(percentVal);
+    },
+    complete: function(xhr) {
+        console.log("complete", xhr.responseTest);
+        status.html(xhr.responseText);
+    }
+}); 
+
+
         // check if there are uploads ongoing
         if ($("li", "#upload_status_content" ).length != 0 ) {
             console.log("bind: uploads in progress");
@@ -186,9 +215,16 @@ function Upload() {
         else
             console.log("bind: NO uploads in progress");
     }
+    this.upload = function(event) {
+        /* don't do a normal submit */
+        //event.preventDefault();
+
+    }
+
     this.bind_check_status_timeout = function() {
         setTimeout(this.check_status, 1000);
     }
+
     this.check_status = function() {
         $( "#upload_status_content" ).load("upload/", function() {
             // attention: we are now not in Upload, but document.window!
@@ -204,7 +240,6 @@ function Upload() {
 
 function Download() {
     this.bind = function() {
-        // stub
     }
 }
 
@@ -261,6 +296,50 @@ $(document).ready(function () {
     $(document).on("click",  "#get_more_results",          collection.get_more_results);
     $(document).on("appear", "#get_more_results",          collection.get_more_results, {one: false});
 
+
+    /* upload */
+    //$(document).on("submit", "#upload_form",               upload.upload);
+//    $("body").bind("ajaxSend", function(elm, xhr, s){
+//       if (s.type == "POST") {
+//          xhr.setRequestHeader('X-CSRF-Token', csrf_token);
+//       }
+//    });
+jQuery(document).ajaxSend(function(event, xhr, settings) {
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie != '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = jQuery.trim(cookies[i]);
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    function sameOrigin(url) {
+        // url could be relative or scheme relative or absolute
+        var host = document.location.host; // host + port
+        var protocol = document.location.protocol;
+        var sr_origin = '//' + host;
+        var origin = protocol + sr_origin;
+        // Allow absolute or scheme relative URLs to same origin
+        return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+            (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+            // or any other URL that isn't scheme relative or absolute i.e relative.
+            !(/^(\/\/|http:|https:).*/.test(url));
+    }
+    function safeMethod(method) {
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    }
+
+    if (!safeMethod(settings.type) && sameOrigin(settings.url)) {
+        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+    }
+});
     /* some global ui theming */
     $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
     $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});

@@ -2,16 +2,23 @@
     <p>Upload interface. Supported: .zip .ogg .mp3. Due to restrictions to html and javascript, you must open a new tab to continue to listen to music.</p>
 </div>
 
+    <div class="progress">
+        <div class="bar"></div >
+        <div class="percent">0%</div >
+    </div>
+
+    <div id="status"></div>
+
 <div id="upload_status">
     {% include "upload_status.html" %}
 </div>
 
-<div id="upload_form">
-    <form enctype="multipart/form-data" action="upload/" method="POST">
-        {% csrf_token %}
-        <table>
-        {{ form.as_table }}
-        </table>
+<div id="upload_form_container">
+    <form enctype="multipart/form-data" action="upload/" method="POST" id="upload_form">{% csrf_token %}
         <input type="submit" value="Upload"/>
+        <input type="file" name="file">
+        {# <table> #}
+        {# {{ form.as_p }} #}
+        {# </table> #}
     </form>
 </div>

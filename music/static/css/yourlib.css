@@ -8,6 +8,11 @@ body {
     background-color: #d0d0d0;
 }
 
+.bar {
+    height: 18px;
+    background: green;
+}
+
 .btn:hover {
     background-color: #a4acbf;
     cursor: pointer;

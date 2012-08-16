@@ -30,7 +30,7 @@ iPhone did work, too.
 Dependencies
 ============
 
-You may want to user pip to install dependencies rather than apt-get.
+You may want to user pip2 to install dependencies rather than apt-get.
 yum should be fine. pacman, of course, too.
 
  * python2
@@ -69,17 +69,23 @@ What you should know (setup)
    /path/to/music/username2/orig/....
 
  * the file yourlib/settings.py will look at your hostname and includes the
-   corresponding yourlib/settings_hostname.py. Change it accordingly. You can
-   get your hostname with the command ''hostname''. Also change the secret key.
-   Generate a secret key with, eg. ''pwgen -sy 50''
+   corresponding yourlib/settings_hostname.py. Copy the yourlib/settings_example.py
+   and change it accordingly. You can get your hostname with the command
+   ''hostname''. Also change the secret key. Generate a secret key with, eg.
+   ''pwgen -sy 50''
 
  * There is a example nginx config: yourlib/nginx.conf
 
  * You should not put your music in the media folder of the django project or app
- * You should create a big storage different to your django project folder and
+
+ * You should use a big storage different to your django project folder and
    media folder that holds temporary upload stuff. Clean it yourself from time to time.
 
- * Start and stop the wsgi server with start.sh: ''./start.sh start''
+ * Neither the temporary upload folder nor the django project files should be
+   accessibl through the web server indexes.
+
+ * Start and stop the fcgi server with start.sh: ''./start.sh start''. However
+   I recommend uwsgi.
 
  * a full clean restart of the server can be done like this (YOU MUST BE IN YOUR
    DJANGO PROJECT FOLDER!):

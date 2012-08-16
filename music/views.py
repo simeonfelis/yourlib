@@ -114,6 +114,16 @@ def context(request, selection):
                     locals(),
                     context_instance=RequestContext(request),
                     )
+        elif selection == "upload":
+            music_session.context = "download"
+            music_session.save()
+            uploads = Upload.objects.filter(user=request.user)
+            form = UploadForm(request.POST)
+            return render_to_response(
+                    "context_upload.html",
+                    locals(),
+                    context_instance=RequestContext(request),
+                    )
         elif selection == "download":
             music_session.context = "download"
             music_session.save()
@@ -252,8 +262,8 @@ class ProgressBarUploadHandler(FileUploadHandler):
             destination.close()
         dbgprint("Uploaded file written to", useruppath)
 
-        from music.tasks import upload_done
-        upload_done.delay(useruppath, userupdir, self.userUploadStatus.id)
+        #from music.tasks import upload_done
+        #upload_done.delay(useruppath, userupdir, self.userUploadStatus.id)
 
 #
 #@csrf_exempt
@@ -271,16 +281,70 @@ class ProgressBarUploadHandler(FileUploadHandler):
 @csrf_exempt
 def upload(request):
     if request.method == 'POST':
-        form = UploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            # so here the upload is already done and processed by a task
+        if request.FILES == None:
+            return HttpResponse("No files received")
 
-            uploads = Upload.objects.filter(user=request.user)
-            return render_to_response(
-                    'upload_status.html',
-                    locals(),
-                    context_instance=RequestContext(request),
+        file = request.FILES[u'file']
+
+        #################################  copying ################################
+        dbgprint("Entering status copying")
+        step_status = 0
+
+        userUploadStatus = Upload(user=request.user, step="copying", step_status=0)
+        userUploadStatus.save()
+
+        # determine user upload dir
+        userupdir = os.path.join(
+                settings.FILE_UPLOAD_USER_DIR,
+                request.user.username
+                )
+        # create user's upload dir
+        if not os.path.isdir(userupdir):
+            os.makedirs(userupdir)
+
+        # move temporary file to users's upload dir determine file name and path,
+        # don't overwrite
+        useruppath = os.path.join(userupdir, file.name)
+        ii = 0
+        while os.path.exists(useruppath):
+            useruppath = os.path.join(
+                    userupdir,
+                    file.name + "_" + str(ii)
                     )
+            ii += 1
+
+        dbgprint("Copy-to location:", useruppath, type(useruppath))
+
+        # now put the upload content to the user's location
+        step_status = 0
+        processed = 0
+        amount = file.size
+        #chunk_size = 64*1024  # 64KB (django default) TODO: read maybe own setting
+        dbgprint("Chunks:", amount)
+        old_status = 0
+        with open(useruppath, 'wb+') as destination:
+            for chunk in file.chunks():
+                processed += file.DEFAULT_CHUNK_SIZE
+                destination.write(chunk)
+                step_status = int(processed*100/amount)
+                if (old_status < step_status) and (step_status % 2 == 0):
+                    dbgprint("Chunks copied:", step_status, "%")
+                    userUploadStatus.step_status = step_status
+                    userUploadStatus.save()
+                    old_status = step_status
+            destination.close()
+        dbgprint("Uploaded file written to", useruppath)
+
+        # so here the upload is already done
+        from music.tasks import upload_done
+        upload_done.delay(useruppath, userupdir, userUploadStatus.id)
+
+        uploads = Upload.objects.filter(user=request.user)
+        return render_to_response(
+                'upload_status.html',
+                locals(),
+                context_instance=RequestContext(request),
+                )
         return HttpResponse("Your upload is invalid. Try refreshing the site.")
 
     uploads = Upload.objects.filter(user=request.user)
