@@ -9,7 +9,7 @@ from django.db.models import Q
 
 from music.models import Song, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
-from music.signals import upload_done, download_start
+from music.signals import download_start #upload_done, 
 from music.helper import dbgprint, get_tags
 
 import os, datetime, time
@@ -161,6 +161,9 @@ class ProgressBarUploadHandler(FileUploadHandler):
     Stuff taken from django.core.files.uploadhandler.TemporaryFileUploadHandler
     """
     def __init__(self, *args, **kwargs):
+        request = args[0]
+        self.userUploadStatus = Upload(user=request.user, step="uploading", step_status=0)
+        self.userUploadStatus.save()
         super(ProgressBarUploadHandler, self).__init__(*args, **kwargs)
 
     def new_file(self, file_name, *args, **kwargs):
@@ -171,26 +174,26 @@ class ProgressBarUploadHandler(FileUploadHandler):
         self.file = TemporaryUploadedFile(self.file_name, self.content_type, 0, self.charset)
 
     def receive_data_chunk(self, raw_data, start):
-        if start == 0:
-            # create upload object, TODO: make recoverable! (but maybe django handles upladFileObjects per upload...)
-            self.userUploadStatus = Upload(user=self.request.user, step="uploading", step_status=0)
-            self.userUploadStatus.save()
-
-            if (self.content_length == None or self.content_length == 0):
-                dbgprint("receive_data_chunk  assuming content_length 200MB")
-                self.amount = 200*1024*1024 # just assume about 100MB
-            else:
-                dbgprint("receive_data_chunk  content_length", self.content_length)
-                self.amount = self.content_length
-
-            self.old_status = 0
-
-        step_status = int(start*100/self.amount)
-        if (self.old_status < step_status) and (step_status % 3 == 0):
-            dbgprint("reveive_data_chunk received:", step_status, "%")
-            self.userUploadStatus.step_status = step_status
-            self.userUploadStatus.save()
-            self.old_status = step_status
+#        if start == 0:
+#            # create upload object, TODO: make recoverable! (but maybe django handles upladFileObjects per upload...)
+#            self.userUploadStatus = Upload(user=self.request.user, step="uploading", step_status=0)
+#            self.userUploadStatus.save()
+#
+#            if (self.content_length == None or self.content_length == 0):
+#                dbgprint("receive_data_chunk  assuming content_length 200MB")
+#                self.amount = 200*1024*1024 # just assume about 100MB
+#            else:
+#                dbgprint("receive_data_chunk  content_length", self.content_length)
+#                self.amount = self.content_length
+#
+#            self.old_status = 0
+#
+#        step_status = int(start*100/self.amount)
+#        if (self.old_status < step_status) and (step_status % 3 == 0):
+#            dbgprint("reveive_data_chunk received:", step_status, "%")
+#            self.userUploadStatus.step_status = step_status
+#            self.userUploadStatus.save()
+#            self.old_status = step_status
 
         self.file.write(raw_data)
 
@@ -200,32 +203,84 @@ class ProgressBarUploadHandler(FileUploadHandler):
         return self.file
 
     def upload_complete(self):
-        upload_done.send(None, handler=self, request=self.request)
 
+        #################################  copying ################################
+        dbgprint("Entering status copying")
+        step_status = 0
+        self.userUploadStatus.step = "copying"
+        self.userUploadStatus.step_status = 0
+        self.userUploadStatus.save()
 
+        # create user's upload dir
+        userupdir = os.path.join(
+                settings.FILE_UPLOAD_USER_DIR,
+                self.request.user.username
+                )
+        if not os.path.isdir(userupdir):
+            os.makedirs(userupdir)
+
+        # move temporary file to users's upload dir determine file name and path,
+        # don't overwrite
+        useruppath = os.path.join(userupdir, self.file.name)
+        ii = 0
+        while os.path.exists(useruppath):
+            useruppath = os.path.join(
+                    userupdir,
+                    self.file.name + "_" + str(ii)
+                    )
+            ii += 1
+
+        dbgprint("Copy-to location:", useruppath, type(useruppath))
+
+        # now put the upload content to the user's location
+        step_status = 0
+        processed = 0
+        amount = self.file.size
+        chunk_size = 64*1024  # 64KB (django default) TODO: read maybe own setting
+        dbgprint("Chunks:", amount)
+        old_status = 0
+        with open(useruppath, 'wb+') as destination:
+            for chunk in self.file.chunks():
+                processed += chunk_size
+                destination.write(chunk)
+                step_status = int(processed*100/amount)
+                if (old_status < step_status) and (step_status % 3 == 0):
+                    dbgprint("Chunks copied:", step_status, "%")
+                    self.userUploadStatus.step_status = step_status
+                    self.userUploadStatus.save()
+                    old_status = step_status
+            destination.close()
+        dbgprint("Uploaded file written to", useruppath)
+
+        from music.tasks import upload_done
+        upload_done.delay(useruppath, userupdir, self.userUploadStatus.id)
+
+#
+#@csrf_exempt
+#def upload_file_view(request):
+#    dbgprint("upload_file_view: Received upload request")
+#    request.upload_handlers.insert(0, ProgressBarUploadHandler())
+#    return _upload_file_view(request)
+#
+#@csrf_protect
+#def _upload_file_view(request):
+#    dbgprint("_upload_file_view: should read from ProgressBarUploadHandler()")
+#    return HttpResponse("Uploading in progress")
+
+#@login_required
 @csrf_exempt
-def upload_file_view(request):
-    dbgprint("upload_file_view: Received upload request")
-    request.upload_handlers.insert(0, ProgressBarUploadHandler())
-    return _upload_file_view(request)
-
-@csrf_protect
-def _upload_file_view(request):
-    dbgprint("_upload_file_view: should read from ProgressBarUploadHandler()")
-    return HttpResponse("Uploading in progress")
-
-@login_required
 def upload(request):
     if request.method == 'POST':
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
-            # so here the upload is already done
-            #upload_done.send(None, request=request)
-            #time.sleep(1) # wait for db writeback before starting the rescan. this should avoid deadlocks
+            # so here the upload is already done and processed by a task
 
-            return HttpResponse("Signal for further processing sent")
-            #handle_uploaded_file(request.FILES['file'])
-            #return HttpResponseRedirect('success/url/')
+            uploads = Upload.objects.filter(user=request.user)
+            return render_to_response(
+                    'upload_status.html',
+                    locals(),
+                    context_instance=RequestContext(request),
+                    )
         return HttpResponse("Your upload is invalid. Try refreshing the site.")
 
     uploads = Upload.objects.filter(user=request.user)
@@ -234,6 +289,7 @@ def upload(request):
             locals(),
             context_instance=RequestContext(request),
             )
+
 @login_required
 def search(request):
 
@@ -565,13 +621,13 @@ def rescan(request):
             col.save()
             return HttpResponse(col.scan_status)
 
-    if col.scan_status == "idle" or col.scan_status == "error":
+    if col.scan_status == "idle" or col.scan_status == "error" or col.scan_status == "":
         if request.method == "POST":
             dbgprint("rescan request accepted from user", request.user)
             from music.tasks import rescan_task
-            col.scan_status = "preparing"
+            col.scan_status = "deleting orphans"
             col.save()
-            stat = rescan_task.delay(request.user, col)
+            stat = rescan_task.delay(request.user.id)
             return HttpResponse("started")
 
     elif col.scan_status == "finished":
