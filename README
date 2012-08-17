@@ -101,7 +101,7 @@ list of the necessary steps to deploy and start your own yourlib instance.
    use the 'start.sh' script for that.
 
  * Recommondation: use rabbitmq as broker for celery. Start rabbitmq e.g. with
-   'su -c "rabbitmq-server -detached" http'
+   'su -c "rabbitmq-server -detached" rabbitmq'
 
  * Start celery with e.g. 'su -c "python2 manage.py celery worker --loglevel=info"
    or as daemon: 
