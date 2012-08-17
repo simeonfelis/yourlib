@@ -3,6 +3,7 @@ import mutagen as tagreader
 
 from django.utils.timezone import utc
 from django.conf import settings
+from django.db import transaction
 
 from music.models import Song
 
@@ -69,6 +70,19 @@ def get_tags(path):
     except:
         artist = "Unknown Artist"
 
+    if "performer" in tags.keys():
+        try:
+            albumartist = tags['performer'][0]
+        except:
+            pass
+    elif "albumartist" in tags.keys():
+        try:
+            albumartist = tags['performer'][0]
+        except:
+            pass
+    else:
+        albumartist = ""
+
     try:
         title     = tags['title'][0] #.encode('utf-8')
         if not len(title)>0:
@@ -82,24 +96,38 @@ def get_tags(path):
         track = 0
 
     try:
+        genre     = tags['genre'][0]
+    except:
+        genre = ""
+
+    try:
+        length = int(tags.info.length)
+    except:
+        length = 0
+
+    try:
         album     = tags['album'][0] #.encode('utf-8')
         if not len(album)>0:
             album = "Unknown Album"
     except:
         album = "Unknown Album"
 
+
     tags = {
             'artist': artist,
             'album' : album,
             'track': track,
             'title': title,
+            'genre': genre,
+            'length': length,
+            'albumartist': albumartist,
             'mime': mime,
             }
 
     return tags
 
 def set_song(tags, timestamp, user, path, song):
-    # if song == None, returns a new Song object
+    # if song == None, returns a new Song object.
     # song must be explicitly saved after that function
     # returns changed or new Song object instance
 
@@ -125,6 +153,7 @@ def set_song(tags, timestamp, user, path, song):
              )
     return song
 
+@transaction.autocommit
 def update_song(song):
     """
     re-reads tags of song and saves it
@@ -146,7 +175,9 @@ def update_song(song):
         song.save()
     except Exception, e:
         dbgprint("update_song: error saving entry", song, ":", e)
+        raise e
 
+@transaction.autocommit
 def add_song(dirname, files, user):
     """
     Takes a directory and one or more file names in that directory, reads tag information
@@ -204,6 +235,7 @@ def add_song(dirname, files, user):
             song.save()
         except Exception, e:
             dbgprint("Database error on file", path, ":", e)
+            raise e
 
         processed += 1
 

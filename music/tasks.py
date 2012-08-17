@@ -5,18 +5,19 @@ Created on 12.08.2012
 '''
 
 import os
+import pyinotify
 import magic
 import zipfile
 import shutil
+
 from celery import task
+import celery.exceptions as CeleryExceptions
+
+from django.conf import settings
+from django.db import transaction
 
 from music.models import Song, Collection, User, Upload
 from music.helper import dbgprint, add_song, update_song, get_tags
-from django.conf import settings
-
-# Filesystem watcher
-import pyinotify
-#from pyinotify import WatchManager, Notifier, ThreadedNotifier, EventsCodes, ProcessEvent
 
 class ProcessInotifyEvent(pyinotify.ProcessEvent):
 
@@ -53,13 +54,12 @@ wm       = pyinotify.WatchManager()
 notifier = pyinotify.ThreadedNotifier(wm, ProcessInotifyEvent())
 notifier.setDaemon(True)
 notifier.start()
-#mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
-mask     = pyinotify.ALL_EVENTS
+mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_DELETE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
+#mask     = pyinotify.ALL_EVENTS
 wdd      = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
-dbgprint("Notifier:", notifier, "status isAlive():", notifier.isAlive())
 
 
-@task()
+@task(ignore_result=True, max_retries=10)
 def fswatch_file_written(event):
     filepath = event.pathname
     filename = event.name
@@ -80,27 +80,40 @@ def fswatch_file_written(event):
 
     # determine what to do with the written file
     # maybe just update tags or add new song to db
+
     try:
-        song = Song.objects.get(user=user, path_orig=filepath)
-    except Song.DoesNotExist:
-        add_song(filedir, [filename], user)
-    else:
-        update_song(song)
+        try:
+            song = Song.objects.get(user=user, path_orig=filepath)
+        except Song.DoesNotExist:
+            add_song(filedir, [filename], user)
+        else:
+            update_song(song)
+    except CeleryExceptions.MaxRetriesExceededError:
+        # well, whorses will have their trinkets
+        return
+    except Exception, exc:
+        raise rescan_task.retry(exc=exc, countdown=10)
 
-    dbgprint("fswatch_file_changed: ADDING SONG FOR USER", username, ":", os.path.join(filedir, filename))
-    add_song(filedir, [filename], user)
 
-@task()
+@task(ignore_result=True, max_retires=10)
+@transaction.autocommit
 def fswatch_file_removed(event):
     try:
         song = Song.objects.get(path_orig=event.pathname)
     except Song.DoesNotExist:
-        pass
-    else:
+        return
+    try:
         dbgprint("fswatch_file_removed: deleting song entry", song)
         song.delete()
 
-@task()
+    except CeleryExceptions.MaxRetriesExceededError:
+        # well, whorses will have their trinkets
+        return
+    except Exception, exc:
+        raise rescan_task.retry(exc=exc, countdown=10)
+
+@task(ignore_result=True, max_retries=3)
+@transaction.autocommit
 def rescan_task(user_id):
 
     user = User.objects.get(id=user_id)
@@ -110,43 +123,63 @@ def rescan_task(user_id):
 
     try:
         userdir = os.path.join(settings.MUSIC_PATH, user.username)
+
+        #############    rescan preparations   ###################
+        # estimating total effort: count users songs on filesystem and in db
         amount = 1  # less accurate, but avoid division by 0
         for root, dirs, files in os.walk(userdir):
             for filename in files:
                 amount += 1
-        dbgprint("Estimating effort:", amount);
 
-        dbgprint("Check for orphans")
-        for s in Song.objects.filter(user=user):
+        songs = Song.objects.filter(user=user)
+
+        amount += len(songs) # absolute amount
+        processed = 0        # absolute progress
+        so_far = 0           # progress in percent
+
+        ##############     check orphans     ##################
+        for s in songs:
             if not os.path.isfile(s.path_orig):
                 dbgprint("Deleting orphan entry", s.path_orig)
                 s.delete()
+            processed += 1
+            if so_far > 0 and so_far % 2 == 0:
+                collection.scan_status = str(so_far)
+                try:
+                    collection.save()
+                except:
+                    pass
 
-        collection.scan_status = "0"
-        collection.save()
-
-        dbgprint("Check existing files in music folder ", userdir)
-        processed = 0
-
+        #############   check entrys in db if files have changed     ##############
         for root, dirs, files in os.walk(userdir):
             processed += add_song(root, files, user)
             so_far = int((processed*100)/amount)
-            #dbgprint("we have processed so far", processed, "files (", so_far, ") from ", amount)
 
             if so_far > 0 and so_far % 2 == 0:
                 collection.scan_status = str(so_far)
-                collection.save()
+                try:
+                    collection.save()
+                except:
+                    pass
 
         collection.scan_status = "finished"
         collection.save()
-        dbgprint("Rescan of music folder", userdir, "done")
 
-    except Exception, e:
-        dbgprint("Error during rescan", e)
-        collection.scan_status = "error"
-        collection.save()
+    except CeleryExceptions.MaxRetriesExceededError:
+        # as stated already, whorses will have their trinkets
+        try:
+            collection.scan_status = "error"
+            collection.save()
+        except:
+            # ah, buckle off.
+            pass
+        return
+    except Exception, exc:
+        dbgprint("Error during rescan", exc)
+        raise rescan_task.retry(exc=exc, countdown=60)
 
-@task()
+@task(ignore_result=True)
+@transaction.autocommit
 def upload_done(useruppath, userupdir, upload_status_id):
 
     upload_status = Upload.objects.get(id=upload_status_id)
@@ -180,7 +213,10 @@ def upload_done(useruppath, userupdir, upload_status_id):
             if (old_status < step_status) and ((step_status % 3) == 0):
                     old_status = step_status
                     upload_status.step_status = step_status
-                    upload_status.save()
+                    try:
+                        upload_status.save()
+                    except:
+                        pass
                     dbgprint("Deflated", step_status, "%")
         todeflate.close()
     else:
@@ -211,7 +247,10 @@ def upload_done(useruppath, userupdir, upload_status_id):
             dbgprint("Structuring:", step_status, "%")
             old_status = step_status
             upload_status.step_status = step_status
-            upload_status.save()
+            try:
+                upload_status.save()
+            except:
+                pass
 
         # there could be subdirectories in zips deflate list
         if os.path.isdir(defl):
