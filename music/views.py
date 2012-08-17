@@ -578,6 +578,8 @@ def rescan(request):
 
     if col.scan_status == "idle" or col.scan_status == "error" or col.scan_status == "":
         if request.method == "POST":
+            col.scan_status = "started"
+            col.save()
             dbgprint("rescan request accepted from user", request.user)
             from music.tasks import rescan_task
             stat = rescan_task.delay(request.user.id)
