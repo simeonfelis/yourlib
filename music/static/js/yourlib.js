@@ -106,9 +106,13 @@ $(document).ready(function () {
     /* collection */
     $(document).on("submit", "#context_collection_search", collection.search);
     $(document).on("click",  ".btn_collection_play_song",  collection.song_play);
-    $(document).on("click",  ".btn_collection_append_to_playlist", collection.append_to_playlist);
+//    $(document).on("click",  ".btn_collection_append_to_playlist", collection.append_to_playlist);
     $(document).on("click",  "#get_more_results",          collection.get_more_results);
     $(document).on("appear", "#get_more_results",          collection.get_more_results, {one: false});
+    $(document).on("mouseenter", ".song_item", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
+    $(document).on("mouseleave", ".song_item", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+    $(document).on("click",   "#btn_collection_toggle_filter", collection.toggle_filter);
+
 
     /* some global ui theming */
     $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});

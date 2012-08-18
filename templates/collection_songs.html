@@ -1,5 +1,12 @@
 <div id="context_collection_songs_container"><!-- required anchor -->
+    <div id="context_collection_filter_container">
+        {% if music_session.filter_show %}
+        {% include "collection_filter.html" %}
+        {% endif %}
+    </div>
     <div id="songs">
+
+        <div id="songs_count" style="visibility:collapse;">{{ songs_count }}</div>
 
         {% if songs|length > 200 %}
             <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>

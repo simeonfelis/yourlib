@@ -51,11 +51,11 @@ class ProcessInotifyEvent(pyinotify.ProcessEvent):
 
 # create filesystem watcher in seperate thread
 wm       = pyinotify.WatchManager()
-notifier = pyinotify.ThreadedNotifier(wm, ProcessInotifyEvent())
+notifier = pyinotify.ThreadedNotifier(wm, ProcessInotifyEvent(), read_freq=0)
 notifier.setDaemon(True)
 notifier.start()
-mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_DELETE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
-#mask     = pyinotify.ALL_EVENTS
+#mask     = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_DELETE | pyinotify.IN_MOVED_TO | pyinotify.IN_MOVED_FROM
+mask     = pyinotify.ALL_EVENTS
 wdd      = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
 
 
@@ -112,14 +112,14 @@ def fswatch_file_removed(event):
     except Exception, exc:
         raise rescan_task.retry(exc=exc, countdown=10)
 
-@task(ignore_result=True, max_retries=3)
-@transaction.autocommit
+#@transaction.autocommit
+@task(ignore_result=True)
 def rescan_task(user_id):
 
     user = User.objects.get(id=user_id)
     collection = Collection.objects.get(user=user)
 
-    dbgprint("rescan requested by", user);
+    print("rescan requested by", user);
 
     try:
         userdir = os.path.join(settings.MUSIC_PATH, user.username)

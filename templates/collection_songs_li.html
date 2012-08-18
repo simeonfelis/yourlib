@@ -1,9 +1,9 @@
 {% for s in songs %}
 <li class="song_item ui-widget-content ui-state-default ui-corner-all" data-song_id="{{ s.id }}" data-playlist_id="{{ playlist.id }}" id="collection_song_id_{{ s.id }}">
     <ul class="ui-widget-reset  ui-helper-clearfix">
-        <li class="btn_collection_play_song song_info artist" data-song_id="{{ s.id }}">{{ s.artist }}</li>
+        <li class="btn_collection_play_song song_info artist" data-song_id="{{ s.id }}">{{ s.artist_set.all.0 }}</li>
         <li class="btn_collection_play_song song_info title" data-song_id="{{ s.id }}">{{ s.title }}</li>
-        <li class="btn_collection_play_song song_info album" data-song_id="{{ s.id }}">{{ s.album }}</li>
+        <li class="btn_collection_play_song song_info album" data-song_id="{{ s.id }}">{{ s.album_set.all.0 }}</li>
         <li class="btn_collection_play_song song_info track" data-song_id="{{ s.id }}">{{ s.track }}</li>
         <li class="btn_collection_play_song song_info mime" data-song_id="{{ s.id }}">{{ s.mime|cut:"audio/" }}</li>
     </ul>

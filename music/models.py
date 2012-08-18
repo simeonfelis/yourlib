@@ -20,29 +20,40 @@ UPLOAD_FILE_STEPS = [
 
 class Song(models.Model):
     class Meta:
-        ordering = ['artist', 'album', 'track', 'title', 'path_orig']
+        ordering = ['track', 'title', 'path_orig']
 
     def __unicode__(self):
-        return self.artist + " - " + self.title
+        return self.title # TODO: include artist name
 
     title = models.CharField(max_length=256)
-    artist = models.CharField(max_length=256)
-    album = models.CharField(max_length=256)
     track = models.IntegerField()
+
+    genre = models.CharField(max_length=256)
     mime = models.CharField(max_length=32)
+
     path_orig = models.FilePathField(unique=True, max_length=2048)
     timestamp_orig = models.DateTimeField()
     user = models.ForeignKey(User)
-    # in planning:
-    # converted = models.ManyToManyField('converted')
-    # rename path_orig to path and timestamp_orig to age
-    # path should be 'BASE_PATH/User/origs/
 
-# In planning:
-# class Converted(models.Model):
-#     mime
-#     path should be 'BASE_PATH/User/conv/mime/id
-#     status 'converting' 'ready'
+class Artist(models.Model):
+    class Meta:
+        ordering = ['name']
+
+    def __unicode__(self):
+        return self.name
+
+    name = models.CharField(max_length=256, unique=True)
+    songs = models.ManyToManyField(Song)
+
+class Album(models.Model):
+    class Meta:
+        ordering = ['name']
+
+    def __unicode__(self):
+        return self.name
+
+    name = models.CharField(max_length=256)
+    songs = models.ManyToManyField(Song)
 
 class Collection(models.Model):
     user = models.ForeignKey(User)
@@ -70,6 +81,9 @@ class Playlist(models.Model):
 class MusicSession(models.Model):
     user = models.ForeignKey(User)
     search_terms      = models.CharField(max_length=255)
+    filter_show       = models.BooleanField(default=False)
+    filter_artists    = models.ManyToManyField(Artist, blank=True, null=True)
+    filter_albums     = models.ManyToManyField(Album, blank=True, null=True)
     currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
     current_song      = models.ForeignKey(Song, blank=True, null=True)
     current_playlist  = models.ForeignKey(Playlist, blank=True, null=True)

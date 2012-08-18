@@ -5,7 +5,7 @@ from django.utils.timezone import utc
 from django.conf import settings
 from django.db import transaction
 
-from music.models import Song
+from music.models import Song, Artist, Album
 
 STACKTRACE = None
 
@@ -132,9 +132,9 @@ def set_song(tags, timestamp, user, path, song):
     # returns changed or new Song object instance
 
     if not song == None:
-        song.artist    = tags['artist'],
+#        song.artist    = tags['artist'],
         song.title     = tags['title'],
-        song.album     = tags['album'],
+        song.genre     = tags['genre'],
         song.track     = tags['track'],
         song.mime      = tags['mime'],
         song.user      = user
@@ -142,9 +142,9 @@ def set_song(tags, timestamp, user, path, song):
         song.timestamp_orig = timestamp
     else:
         song = Song(
-             artist    = tags['artist'],
+#             artist    = tags['artist'],
              title     = tags['title'],
-             album     = tags['album'],
+             genre     = tags['genre'],
              track     = tags['track'],
              mime      = tags['mime'],
              user      = user,
@@ -235,7 +235,22 @@ def add_song(dirname, files, user):
             song.save()
         except Exception, e:
             dbgprint("Database error on file", path, ":", e)
-            raise e
+        else:
+            try:
+                artist = Artist.objects.get(name=tags['artist'])
+            except Artist.DoesNotExist:
+                artist = Artist(name = tags['artist'])
+                artist.save()
+
+            artist.songs.add(song) # auto-save
+
+
+            try:
+                album = Album.objects.get(name=tags['album'])
+            except Album.DoesNotExist:
+                album = Album(name = tags['album'])
+                album.save()
+            album.songs.add(song) # auto-save
 
         processed += 1
 

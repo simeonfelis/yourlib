@@ -8,7 +8,8 @@
                     <input id="collection_search_terms" name="search_terms" type="text" size="20" maxlength="32" value="{{ music_session.search_terms }}">
                 </form>
             </div>
-            <div class="status" id="context_collection_search_status"></div>
+            <div class="status" id="context_collection_search_status">{{ songs_count }}</div>
+            <div class="btn" id="btn_collection_toggle_filter">{% if music_session.filter_show %}Hide filter{% else %}Hide filter{% endif %}</div>
         </div>
 
         <div id="context_collection_container" class="ui-widget-content ui-corner-all">

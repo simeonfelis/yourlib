@@ -21,8 +21,10 @@ function Sidebar() {
         var $data = {
             'csrfmiddlewaretoken': csrf_token
         };
+        $(this).append("<img class='spinner'  height='18' width='18' src='static/css/spinner.gif' />");
         $( "#context_container" ).load("context/collection/", $data, function() {
             collection.bind();
+            $( "#sidebar" ).find( ".spinner" ).fadeOut(500);
         });
     }
 
@@ -31,8 +33,10 @@ function Sidebar() {
             'csrfmiddlewaretoken': csrf_token,
             'playlist_id': $(this).attr("data-playlist_id"),
         };
+        $(this).append("<img class='spinner'  height='18' width='18' src='static/css/spinner.gif' />");
         $( "#context_container" ).load("context/playlist/",  $data, function() {
             playlist.bind(); // for drag n drop
+            $("#sidebar").find(".spinner").fadeOut(500);
         });
 
         return false; // Don't do anything else
@@ -42,16 +46,20 @@ function Sidebar() {
         var $data = {
             'csrfmiddlewaretoken': csrf_token
         };
+        $(this).append("<img class='spinner'  height='18' width='18' src='static/css/spinner.gif' />");
         $( "#context_container" ).load("context/upload/", $data, function() {
             upload.bind(); // for eventually uploads in progress
+            $("#sidebar").find(".spinner").fadeOut(500);
         });
     }
     this.show_download = function() {
         var $data = {
             'csrfmiddlewaretoken': csrf_token
         };
+        $(this).append("<img class='spinner'  height='18' width='18' src='static/css/spinner.gif' />");
         $( "#context_container" ).load("context/download/", $data, function() {
             download.bind(); // for eventually uploads in progress
+            $("#sidebar").find(".spinner").fadeOut(500);
         });
     }
 }

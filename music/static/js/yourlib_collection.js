@@ -1,6 +1,8 @@
 function Collection() {
     this.bind = function(){
 
+        $("#songs_count").remove();
+
         $( ".song_item" ).draggable({
             helper: function(event) {
                 artist = $(this).find(".artist").html();
@@ -20,6 +22,34 @@ function Collection() {
         $( ".song_item").disableSelection();
 
         highlight_playing("Collection.bind()", target="#context_container");
+    }
+    this.bind_filter = function() {
+        $("#selectionArtist").bind("change", function(){
+            var artists = new Array();
+            $(this).find("option:selected").each(function(){
+                artists.push($(this).attr("value"));
+            });
+            if ( artists.length > 0 ) {
+                // make filter
+                $( "#context_collection_songs_container" ).load("filter/artists/", {'artists[]':artists}, function() {
+                    //alert("query albums");
+                    collection.bind_filter();
+                })
+            }
+        });
+        $("#selectionAlbum").bind("change", function(){
+            var albums = new Array();
+            $(this).find("option:selected").each(function(){
+                albums.push($(this).attr("value"));
+            });
+            if ( albums.length > 0 ) {
+                // query filter
+                $( "#context_collection_songs_container" ).load("filter/albums/", {'albums[]':albums}, function() {
+                    //alert("query albums");
+                    collection.bind_filter();
+                })
+            }
+        });
     }
 
     this.song_play = function() {
@@ -45,9 +75,12 @@ function Collection() {
                 $( "#context_collection_search_status" ).html("Error " + xhr.status + " " + xhr.statusText);
             }
             else {
-                $( "#context_collection_search_status" ).html("Finished");
+                var count = $("#songs_count").html();
+                $("#songs_count").remove();
+                $( "#context_collection_search_status" ).html("Finished (" + count + ")");
             }
             collection.bind();
+            collection.bind_filter();
         });
         return false; // Don't do anything else
     }
@@ -61,25 +94,26 @@ function Collection() {
             $.get("context/collection/", $data, function(result) {
                 if (result != "") {
                     $( result ).appendTo( "#collection_song_items" );
+                    collection.bind();
                 }
             });
     }
 
-    this.append_to_playlist = function() {
-        /* $(this) is expected to be a collection song item */
-        var $playlist_id = $(this).attr("data-playlist_id");
-        var $song_id = $(this).attr("data-song_id");
-        var $data = {
-            'csrfmiddlewaretoken': csrf_token,
-            'playlist_id' : $playlist_id,
-            'song_id': $song_id,
-        };
-        /* update number of playlist items in sidebar */
-        // TODO: increase *only* number of playlist items in sidebar
-        $( "#sidebar_playlists_content" ).load("playlist/append/", $data, function() {
-            sidebar.bind();
-        });
-        return false; // don't do anything else
+    this.toggle_filter = function() {
+        if ( $(this).html() == "Show filter" ) {
+            $(this).html("Hide filter");
+            $( "#context_collection_filter_container" ).load("context/filter/", {'filter_show': true}, function() {
+                collection.bind_filter();
+            });
+        }
+        else {
+            $(this).html("Show filter");
+            $("#context_collection_filter").slideUp("slow", function(){
+                $(this).remove();
+                /* tell server we hid the filter. he maybe wants to clear/save states */
+                $.post("context/filter/", {'filter_show': false});
+            });
+        }
     }
 }
 
