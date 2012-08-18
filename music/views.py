@@ -656,8 +656,8 @@ def song_info_response(song, playlist_id=None, item_id=None):
 
             'song_id':     song.id,
             'title':       song.title,
-            'artist':      song.artist,
-            'album':       song.album,
+            'artist':      song.artist_set.all()[0].name,
+            'album':       song.album_set.all()[0].name,
             'track':       song.track,
             'mime':        song.mime,
             'filename':    filename,
@@ -685,15 +685,15 @@ def filter_songs(request, terms=None, artists=None, albums=None):
 
         else:
             term_list = terms.split(" ")
-            songs = Song.objects.filter(Q(artist__name__contains=term_list[0]) | \
-                                        Q(title__contains=term_list[0]) | \
-                                        Q(album__name__contains=term_list[0]) | \
-                                        Q(mime__contains=term_list[0]), user=request.user)
+            songs = Song.objects.filter(Q(artist__name__icontains=term_list[0]) | \
+                                        Q(title__icontains=term_list[0]) | \
+                                        Q(album__name__icontains=term_list[0]) | \
+                                        Q(mime__icontains=term_list[0]), user=request.user)
             for term in term_list[1:]:
-                songs = songs.filter(Q(artist__name__contains=term) | \
-                                     Q(title__contains=term) | \
-                                     Q(album__name__contains=term) | \
-                                     Q(mime__contains=term), user=request.user)
+                songs = songs.filter(Q(artist__name__icontains=term) | \
+                                     Q(title__icontains=term) | \
+                                     Q(album__name__icontains=term) | \
+                                     Q(mime__icontains=term), user=request.user)
                 print("search terms left songs:", songs.count())
         if albums:
             # build a query for albums

@@ -27,7 +27,11 @@ function Yourlib() {
                             yourlib.check_scan_status();
                         })
                         .success()
-                        .error(function() { $( "#rescan_status" ).html("Server Error?"); });
+                        .error(function() {
+                                $( "#rescan_status" ).html("Server Error? Wait...");
+                                yourlib.check_scan_status(1000);
+                        });
+
 
                         $( this ).dialog( "close" );
                     }
@@ -43,25 +47,39 @@ function Yourlib() {
                 yourlib.check_scan_status();
             })
             .success()
-            .error(function() { $( "#rescan_status" ).html("Server Error?"); });
+            .error(function() {
+                $( "#rescan_status" ).html("Server Error? Wait...");
+                yourlib.check_scan_status(15000);
+            });
         }
         return false; // don't do anything else
     }
 
     this.check_scan_status = function() {
-        $.get("rescan", function(rescan_status) {
-            $( "#rescan_status" ).html("Status: " + rescan_status);
-            if ((rescan_status != "idle") && (rescan_status != "error") && (rescan_status != "")) {
-                $("#btn_rescan_library").html("Cancel");
-                yourlib.bind_check_scan_timeout();
+        $.get("rescan", function(rescan_status, status, xhr) {
+            if (status != "success") {
+                yourlib.bind_check_scan_timeout(15000);
             }
             else {
-                $("#btn_rescan_library").html("Rescan");
+                $( "#rescan_status" ).html("Status: " + rescan_status);
+                if ((rescan_status != "idle") && (rescan_status != "error") && (rescan_status != "")) {
+                    $("#btn_rescan_library").html("Cancel");
+                    yourlib.bind_check_scan_timeout();
+                }
+                else {
+                    $("#btn_rescan_library").html("Rescan");
+                }
             }
+        })
+        .error(function() {
+            yourlib.bind_check_scan_timeout(15000);
         });
         return false;
     }
-    this.bind_check_scan_timeout = function() {
-        setTimeout(this.check_scan_status, 5000);
+    this.bind_check_scan_timeout = function(timeout) {
+        if (!timeout) {
+            timout = 5000;
+        }
+        setTimeout(this.check_scan_status, timeout);
     }
 }

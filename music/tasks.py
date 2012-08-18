@@ -92,10 +92,10 @@ def fswatch_file_written(event):
         # well, whorses will have their trinkets
         return
     except Exception, exc:
-        raise rescan_task.retry(exc=exc, countdown=10)
+        raise fswatch_file_removed.retry(exc=exc, countdown=10)
 
 
-@task(ignore_result=True, max_retires=10)
+@task(ignore_result=True, max_retires=10, default_retry_delay=10)
 @transaction.autocommit
 def fswatch_file_removed(event):
     try:
@@ -110,11 +110,11 @@ def fswatch_file_removed(event):
         # well, whorses will have their trinkets
         return
     except Exception, exc:
-        raise rescan_task.retry(exc=exc, countdown=10)
+        raise fswatch_file_removed.retry(exc=exc, countdown=10)
 
 #@transaction.autocommit
 @task(ignore_result=True)
-def rescan_task(user_id):
+def rescan_task(user_id, max_retires=10, default_retry_delay=60):
 
     user = User.objects.get(id=user_id)
     collection = Collection.objects.get(user=user)
@@ -166,16 +166,19 @@ def rescan_task(user_id):
         collection.save()
 
     except CeleryExceptions.MaxRetriesExceededError:
+        print("MaxRetriesExceededError in rescan by user", user)
         # as stated already, whorses will have their trinkets
         try:
             collection.scan_status = "error"
             collection.save()
         except:
+            print("Giving up rescan for user", user)
+
             # ah, buckle off.
             pass
         return
     except Exception, exc:
-        dbgprint("Error during rescan", exc)
+        print("Exception in rescan for", user, exc)
         raise rescan_task.retry(exc=exc, countdown=60)
 
 @task(ignore_result=True)
