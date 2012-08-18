@@ -59,7 +59,7 @@ mask     = pyinotify.ALL_EVENTS
 wdd      = wm.add_watch(settings.MUSIC_PATH, mask, rec=True, auto_add=True) # recursive = True, automaticly add new subdirs to watch
 
 
-@task(ignore_result=True, max_retries=10)
+@task(ignore_result=True, max_retries=10, default_retry_delay=10)
 def fswatch_file_written(event):
     filepath = event.pathname
     filename = event.name
@@ -320,3 +320,4 @@ def upload_done(useruppath, userupdir, upload_status_id):
     # we are done here. inotify signal handler will add a database entry,
     # based on the last filesystem change
     upload_status.delete()
+
