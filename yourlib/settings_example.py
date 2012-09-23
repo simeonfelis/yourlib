@@ -1,6 +1,11 @@
 # Django settings for music project.
 import os
 
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# static and media files that nginx (or whatever) shall deliver, not wsgi
+BASE_SERVER   = os.path.join(os.path.expanduser('~'), 'tmp', 'yourlib')
+
 # task management
 import djcelery
 djcelery.setup_loader()
@@ -9,17 +14,10 @@ BROKER_URL = 'amqp://guest:guest@localhost:5672/'
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
-BASE_PATH  = os.path.join('/', 'path', 'to', 'django', 'project') # not your django app
-
 ADMINS = (
     ('Your Name', 'yourmail@example.com'),
 )
 
-# music app constants
-FILE_UPLOAD_TEMP_DIR = os.path.join('/', 'path', 'to', 'tmp', 'uploads') # all users upload dump
-FILE_UPLOAD_USER_DIR = os.path.join('/', 'path', 'to', 'tmp', 'useruploads') # user specific upload dirs
-BASE_SERVER = os.path.join('/', 'path', 'to', 'server', 'dir' ) # files that nginx (or whatever) shall deliver, not wsgi
-MUSIC_PATH = os.path.join('/', 'path', 'to', 'music' 'base')   # each username must have a subfolder here
 
 FILE_UPLOAD_HANDLERS = (
         # replace standard upload handler
@@ -31,12 +29,12 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': os.path.join(BASE_PATH, 'yourlib.sqlite'),                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'ENGINE': 'django.db.backends.postgresql_psycopg2', # sqlite won't work properly
+        'NAME':   'yourlib',                      # create that db on mysql or whatever you are using.
+        'USER':   'postgres',                     # postgres: the unix account name that is used for.
+        'PASSWORD': 'abcd',                       # My dev system won't expose postgres.
+        'HOST': '',                               # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '',                               # Set to empty string for default. Not used with sqlite3.
     }
 }
 
