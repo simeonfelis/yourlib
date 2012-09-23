@@ -5,7 +5,7 @@ from django.utils.timezone import utc
 from django.conf import settings
 from django.db import transaction
 
-from music.models import Song, Artist, Album
+from music.models import Song, Artist, Album, Genre
 
 STACKTRACE = None
 
@@ -132,24 +132,24 @@ def set_song(tags, timestamp, user, path, song):
     # returns changed or new Song object instance
 
     if not song == None:
-#        song.artist    = tags['artist'],
-        song.title     = tags['title'],
-        song.genre     = tags['genre'],
-        song.track     = tags['track'],
-        song.mime      = tags['mime'],
+        song.title     = tags['title']
+        song.track     = tags['track']
+        song.mime      = tags['mime']
+        song.length    = tags['length']
         song.user      = user
         song.path_orig = path
-        song.timestamp_orig = timestamp
+        song.time_changed = timestamp
+        song.time_added = datetime.datetime.now().replace(tzinfo=utc)
     else:
         song = Song(
-#             artist    = tags['artist'],
              title     = tags['title'],
-             genre     = tags['genre'],
              track     = tags['track'],
              mime      = tags['mime'],
+             length    = tags['length'],
              user      = user,
              path_orig = path,
-             timestamp_orig = timestamp,
+             time_changed = timestamp,
+             time_added = datetime.datetime.now().replace(tzinfo=utc),
              )
     return song
 
@@ -161,7 +161,7 @@ def update_song(song):
 
     timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(song.path_orig)).replace(tzinfo=utc)
 
-    if song.timestamp_orig == timestamp:
+    if song.time_changed == timestamp:
         return
 
     try:
@@ -178,7 +178,7 @@ def update_song(song):
         raise e
 
 @transaction.autocommit
-def add_song(dirname, files, user):
+def add_song(dirname, files, user, force=False):
     """
     Takes a directory and one or more file names in that directory, reads tag information
     and adds the songs to the database for the given user.
@@ -210,7 +210,7 @@ def add_song(dirname, files, user):
             pass
         else:
             # file already in database
-            if song.timestamp_orig == timestamp:
+            if not force and song.time_changed == timestamp:
                 processed += 1
                 continue
             else:
@@ -251,6 +251,13 @@ def add_song(dirname, files, user):
                 album = Album(name = tags['album'])
                 album.save()
             album.songs.add(song) # auto-save
+
+            try:
+                genre = Genre.objects.get(name=tags['genre'])
+            except Genre.DoesNotExist:
+                genre = Genre(name = tags['genre'])
+                genre.save()
+            genre.songs.add(song)
 
         processed += 1
 

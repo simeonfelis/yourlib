@@ -1,23 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-CURRENTLY_PLAYING_CHOICES = (
-        ('none', 'Playing nothing'),
-        ('collection', 'Playing from collection'),
-        ('playlist', 'Playing from playlist'),
-)
-
-UPLOAD_FILE_STEPS = [
-        "idle",
-        "uploading",
-        "copying",     # move to user's upload dir
-        "decompress",  # if zip, deflate to global tmp, delete deflates afterwards
-        "structuring", # if supported file(s), read tags, determine target
-                       # locations and put files file(s) there
-        "error",
-        ]
-
-
 class Song(models.Model):
     class Meta:
         ordering = ['track', 'title', 'path_orig']
@@ -27,13 +10,24 @@ class Song(models.Model):
 
     title = models.CharField(max_length=256)
     track = models.IntegerField()
+    length = models.IntegerField()
 
-    genre = models.CharField(max_length=256)
     mime = models.CharField(max_length=32)
 
     path_orig = models.FilePathField(unique=True, max_length=2048)
-    timestamp_orig = models.DateTimeField()
+    time_changed = models.DateTimeField()
+    time_added   = models.DateTimeField()
     user = models.ForeignKey(User)
+
+class Genre(models.Model):
+    class Meta:
+        ordering = ['name']
+
+    def __unicode__(self):
+        return self.name
+
+    name = models.CharField(max_length=256, unique=True)
+    songs = models.ManyToManyField(Song)
 
 class Artist(models.Model):
     class Meta:
@@ -84,7 +78,7 @@ class MusicSession(models.Model):
     filter_show       = models.BooleanField(default=False)
     filter_artists    = models.ManyToManyField(Artist, blank=True, null=True)
     filter_albums     = models.ManyToManyField(Album, blank=True, null=True)
-    currently_playing = models.CharField(max_length=32, choices=CURRENTLY_PLAYING_CHOICES)
+    currently_playing = models.CharField(max_length=32)
     current_song      = models.ForeignKey(Song, blank=True, null=True)
     current_playlist  = models.ForeignKey(Playlist, blank=True, null=True)
 
@@ -103,17 +97,21 @@ class Download(models.Model):
     user        = models.ForeignKey(User)
     path        = models.FilePathField()
 
-from django.conf import settings
+from music import settings as app_settings
 import os
 
-if not os.path.isdir(settings.MUSIC_PATH):
-    os.makedirs(settings.MUSIC_PATH)
+if not os.path.isdir(app_settings.FILE_DOWNLOAD_USER_DIR):
+    os.makedirs(app_settings.FILE_DOWNLOAD_USER_DIR)
 
-if not os.path.isdir(settings.FILE_UPLOAD_TEMP_DIR):
-    os.makedirs(settings.FILE_UPLOAD_TEMP_DIR)
+if not os.path.isdir(app_settings.FILE_UPLOAD_TEMP_DIR):
+    os.makedirs(app_settings.FILE_UPLOAD_TEMP_DIR)
 
-if not os.path.isdir(settings.FILE_UPLOAD_USER_DIR):
-    os.makedirs(settings.FILE_UPLOAD_USER_DIR)
+if not os.path.isdir(app_settings.FILE_UPLOAD_USER_DIR):
+    os.makedirs(app_settings.FILE_UPLOAD_USER_DIR)
+
+if not os.path.isdir(app_settings.MUSIC_PATH):
+    os.makedirs(app_settings.MUSIC_PATH)
+
 
 from music.signals import connect_all
 

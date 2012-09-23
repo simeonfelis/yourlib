@@ -13,11 +13,11 @@ import shutil
 from celery import task
 import celery.exceptions as CeleryExceptions
 
-from django.conf import settings
 from django.db import transaction
 
 from music.models import Song, Collection, User, Upload
 from music.helper import dbgprint, add_song, update_song, get_tags
+from music import settings
 
 class ProcessInotifyEvent(pyinotify.ProcessEvent):
 
@@ -92,7 +92,8 @@ def fswatch_file_written(event):
         # well, whorses will have their trinkets
         return
     except Exception, exc:
-        raise fswatch_file_removed.retry(exc=exc, countdown=10)
+        print("Exception in fswatch_file_written file", event.pathname)
+        raise fswatch_file_written.retry(exc=exc, countdown=10)
 
 
 @task(ignore_result=True, max_retires=10, default_retry_delay=10)
@@ -152,7 +153,7 @@ def rescan_task(user_id, max_retires=10, default_retry_delay=60):
 
         #############   check entrys in db if files have changed     ##############
         for root, dirs, files in os.walk(userdir):
-            processed += add_song(root, files, user)
+            processed += add_song(root, files, user, force=True)
             so_far = int((processed*100)/amount)
 
             if so_far > 0 and so_far % 2 == 0:

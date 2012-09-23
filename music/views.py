@@ -1,23 +1,25 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext
 from django.shortcuts import render_to_response
+from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.utils import simplejson
-from django.conf import settings
 from django.db.models import Q
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from django.core.urlresolvers import reverse
 
-from music.models import Song, Artist, Album, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
+from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
 from music.helper import dbgprint
+from music import settings
 
 import os
 
 
 @login_required
 @transaction.autocommit
-def home(request):
+def home_view(request):
 
     if request.user.is_authenticated():
         if not os.path.isdir(os.path.join(settings.MUSIC_PATH, request.user.username)):
@@ -62,7 +64,7 @@ def home(request):
             collection = Collection(user=request.user, scan_status="idle")
             collection.save()
 
-        songs = filter_songs(request, terms=music_session.search_terms)
+        [songs, artists, albums] = get_filtered(request.user)
         songs_count = songs.count()
         if len(songs) > 50:
             songs = songs[:50]
@@ -72,117 +74,107 @@ def home(request):
             locals(),
             context_instance=RequestContext(request),
             )
+##################### collection ##########################
+
+@login_required
+def collection_view(request):
+    [songs, artists, albums] = get_filtered(request.user)
+    songs_count = songs.count()
+    if len(songs) > 50:
+        songs = songs[:50]
+    return render_to_response(
+            "context_collection.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+
+def show_context_download(request):
+    downloads = Download.objects.get(user=request.user)
+    return render_to_response(
+            "context_download.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+def show_context_upload(request):
+    uploads = Upload.objects.filter(user=request.user)
+
+    form = UploadForm(request.POST)
+    return render_to_response(
+            "context_upload.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+def show_context_collection(request):
+    [songs, artists, albums] = get_filtered(request.user)
+    songs_count = songs.count()
+    if len(songs) > 50:
+        songs = songs[:50]
+    return render_to_response(
+            "context_collection.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+    # GET request collection
+    begin = int(request.GET.get('begin'), 0)
+    howmany = 50
+    songs = filter_songs(request, terms=music_session.search_terms)
+    available = len(songs)
+    if begin < available:
+        if begin+howmany < available:
+            songs = songs[begin:begin+howmany]
+        else:
+            songs = songs[begin:available]
+    else:
+        return HttpResponse("")
+
+    return render_to_response(
+            "collection_songs_li.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+def show_context_playlist(request):
+    if request.method == "POST":
+        playlist_id = request.POST.get('playlist_id')
+        playlist = Playlist.objects.get(id=playlist_id)
+    else:
+        playlist = Playlist.objects.get(user=request.user)
+
+    return render_to_response(
+            "context_playlist.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
 
 @login_required
 @transaction.autocommit
-def context(request, selection):
+def sidebar_show_view(request, context):
 
     music_session = MusicSession.objects.get(user=request.user)
 
-    if selection == "download":
+    if context == "download":
         if request.method == "POST":
             music_session.context = "download"
             music_session.save()
-        downloads = Download.objects.get(user=request.user)
-        return render_to_response(
-                "context_download.html",
-                locals(),
-                context_instance=RequestContext(request),
-                )
+        return show_context_download(request)
 
-    elif selection == "upload":
+    elif context == "upload":
         if request.method == "POST":
             music_session.context = "upload"
             music_session.save()
+        return show_context_upload(request)
 
-            uploads = Upload.objects.filter(user=request.user)
-
-            form = UploadForm(request.POST)
-            return render_to_response(
-                    "context_upload.html",
-                    locals(),
-                    context_instance=RequestContext(request),
-                    )
-
-    elif selection == "collection":
-        playlists = Playlist.objects.filter(user=request.user)
-
+    elif context == "collection":
         if request.method == "POST":
-            # store context view on POST
             music_session.context = "collection"
             music_session.save()
+        return show_context_collection(request)
 
-            songs = filter_songs(request, terms=music_session.search_terms)
-            songs_count = songs.count()
-            if len(songs) > 50:
-                songs = songs[:50]
-            albums = Album.objects.filter(songs__user=request.user).distinct()
-            artists = Artist.objects.filter(songs__user=request.user).distinct()
-            for term in music_session.search_terms.split(" "):
-                albums = albums.filter(name__contains=term)
-                artists = artists.filter(name__contains=term)
-            return render_to_response(
-                    "context_collection.html",
-                    locals(),
-                    context_instance=RequestContext(request),
-                    )
-        # GET request collection
-        begin = int(request.GET.get('begin'), 0)
-        howmany = 50
-        songs = filter_songs(request, terms=music_session.search_terms)
-        available = len(songs)
-        if begin < available:
-            if begin+howmany < available:
-                songs = songs[begin:begin+howmany]
-            else:
-                songs = songs[begin:available]
-        else:
-            return HttpResponse("")
-
-        return render_to_response(
-                "collection_songs_li.html",
-                locals(),
-                context_instance=RequestContext(request),
-                )
-
-    elif selection == "filter":
-        filter_show = request.POST.get("filter_show", "false")
-        if filter_show == "false":
-            filter_show = False
-        else:
-            filter_show = True
-        music_session.filter_show = filter_show
-
-        if filter_show:
-            terms = music_session.search_terms.split(" ")
-            artists = Artist.objects.filter(songs__user=request.user).distinct()
-            for term in terms:
-                artists = artists.filter(name__contains=term)
-            albums = Album.objects.filter(songs__user=request.user).distinct()
-            for term in terms:
-                albums = albums.filter(name__contains=term)
-        else:
-            artists = None
-            albums = None
-
-        music_session.save()
-        return render_to_response("collection_filter.html",
-                locals(),
-                context_instance=RequestContext(request),
-                )
-
-    elif selection == "playlist":
-        if request.method == "POST":
-            playlist_id = request.POST.get('playlist_id')
-            playlist = Playlist.objects.get(id=playlist_id)
-        else:
-            playlist = Playlist.objects.get(user=request.user)
-
-        return render_to_response(
-                "context_playlist.html",
-                locals(),
-                context_instance=RequestContext(request),
-                )
+    elif context == "playlist":
+        return show_context_playlist(request)
 
     return HttpResponse("")
 
@@ -191,7 +183,7 @@ def context(request, selection):
 @login_required
 @csrf_exempt
 @transaction.autocommit
-def upload(request):
+def upload_view(request):
     if request.method == 'POST':
         if request.FILES == None:
             return HttpResponse("No files received")
@@ -267,32 +259,7 @@ def upload(request):
 
 @login_required
 @transaction.autocommit
-def filter(request, what):
-    music_session = MusicSession.objects.get(user=request.user)
-    if request.method == "POST":
-        if what == "albums":
-            album_ids = request.POST.getlist('albums[]', [])
-            albums = Album.objects.in_bulk(album_ids)
-#            ms.filter_albums.clear()
-#            ms.filter_albums.add(albums)
-            songs = filter_songs(request, terms=music_session.search_terms, albums=albums)
-        elif what == "artists":
-            artist_ids = request.POST.getlist('artists[]', [])
-            artists = Artist.objects.in_bulk(artist_ids)
-#            ms.filter_artists.clear()
-#            ms.filter_artists.add(artists)
-            songs = filter_songs(request, terms=music_session.search_terms, artists=artists)
-
-        albums = Album.objects.filter(songs__user=request.user).distinct()
-        artists = Artist.objects.filter(songs__user=request.user).distinct()
-        for term in music_session.search_terms.split(" "):
-            albums = albums.filter(name__contains=term)
-            artists = artists.filter(name__contains=term)
-        return render_to_response("collection_songs.html",locals())
-
-@login_required
-@transaction.autocommit
-def search(request):
+def collection_search_view(request):
 
     if request.method == "POST":
 
@@ -304,16 +271,11 @@ def search(request):
             music_session.search_terms = terms
             music_session.save()
 
-            songs = filter_songs(request, terms=terms)
+            [songs, artists, albums] = get_filtered(request.user)
             songs_count = songs.count()
             if len(songs) > 50:
                 songs = songs[:50]
-            print "returning", len(songs), "search results"
-            albums = Album.objects.filter(songs__user=request.user).distinct()
-            artists = Artist.objects.filter(songs__user=request.user).distinct()
-            for term in music_session.search_terms.split(" "):
-                albums = albums.filter(name__contains=term)
-                artists = artists.filter(name__contains=term)
+
             return render_to_response(
                     'collection_songs.html',
                     locals(),
@@ -326,7 +288,22 @@ def search(request):
 #############################      playlist stuff     ##################################
 
 @login_required
-def playlists(request):
+def playlist_view(request):
+    if request.method == "POST":
+        playlist_id = request.POST.get('playlist_id')
+        playlist = Playlist.objects.get(id=playlist_id)
+    else:
+        # get first playlist of the user the db gives us
+        playlist = Playlist.objects.get(user=request.user)
+
+    return render_to_response(
+            "context_playlist.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+@login_required
+def playlist_all_view(request):
     """
     return all playlists, e.g. for sidebar
     """
@@ -339,7 +316,7 @@ def playlists(request):
 
 @login_required
 @transaction.autocommit
-def playlist_create(request):
+def playlist_create_view(request):
     if request.method == "POST":
         name = request.POST.get('playlist_name')
         if not len(name) > 0:
@@ -358,7 +335,7 @@ def playlist_create(request):
 
 @login_required
 @transaction.autocommit
-def playlist_delete(request):
+def playlist_delete_view(request):
     if request.method == "POST":
 
         playlist_id = request.POST.get('playlist_id')
@@ -382,7 +359,7 @@ def playlist_delete(request):
 
 @login_required
 @transaction.autocommit
-def playlist_append(request):
+def playlist_append_view(request):
     if request.method == "POST":
         playlist_id = request.POST.get('playlist_id')
         song_id = request.POST.get('song_id')
@@ -415,7 +392,7 @@ def playlist_append(request):
 
 @login_required
 @transaction.autocommit
-def playlist_remove_item(request, playlist_id, item_id):
+def playlist_remove_item_view(request, playlist_id, item_id):
 
     playlist = Playlist.objects.get(id=playlist_id, user=request.user)
 
@@ -440,7 +417,7 @@ def playlist_remove_item(request, playlist_id, item_id):
 
 @login_required
 @transaction.autocommit
-def playlist_reorder(request):
+def playlist_reorder_view(request):
     # reorder algorithm was a saturday afternoon work. althoug sometimes slow,
     # the power of python made it beautiful. read it carefully, as it respects
     # the case if an item was moved to the very top (item_previous_id = "0") by
@@ -519,7 +496,7 @@ def playlist_download(request):
 
 ###############################    player    ##################################
 @login_required
-def play_song(request, song_id):
+def play_song_view(request, song_id):
     """
     deliver a song. better to say: "let nginx deliver the song"
     """
@@ -535,7 +512,7 @@ def play_song(request, song_id):
 
 @login_required
 @transaction.autocommit
-def play(request):
+def play_view(request):
     """
     administrate song request. returns urls for audio player <source> tag and song info
     """
@@ -567,7 +544,7 @@ def play(request):
 
 @login_required
 @transaction.autocommit
-def play_next(request):
+def play_next_view(request):
 
     if request.method == "POST":
 
@@ -609,7 +586,7 @@ def play_next(request):
 
 @login_required
 @transaction.autocommit
-def rescan(request):
+def rescan_view(request):
     """
     on POST requests: starts rescan. If rescan in progress, return rescan status.
     on GET requests: return rescan status
@@ -667,12 +644,122 @@ def song_info_response(song, playlist_id=None, item_id=None):
     response['Cache-Control'] = 'no-cache'
     return response
 
-def login(request):
-    return HttpResponse("Hi")
+def login_view(request):
 
-def filter_songs(request, terms=None, artists=None, albums=None):
+    if request.method == "POST":
 
-    dbgprint("search: ", terms)
+        username = request.POST['username']
+        password = request.POST['password']
+
+        form = auth.forms.AuthenticationForm(request.POST)
+        if not form.is_valid:
+            return render_to_response(
+                    "registration/login.html",
+                    locals(),
+                    context_instance=RequestContext(request),
+                    )
+
+        user = auth.authenticate(username=username, password=password)
+        if user is not None:
+            if user.is_active:
+                auth.login(request, user)
+                return HttpResponseRedirect(reverse("home"))
+            else:
+                return HttpResponse("Your account was disabled.")
+        else:
+            return HttpResponseRedirect(reverse("login_view"))
+
+    form = auth.forms.AuthenticationForm()
+    return render_to_response(
+            "registration/login.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+def logout_view(request):
+    auth.logout(request)
+    return HttpResponseRedirect(reverse('home'))
+
+def get_filtered(user):
+    """
+    returns [songs, artists, albums] queries based on user's music session
+    if .filter_show of music_session is False, returns [songs, None, None], with
+    no respect to the preselected artists or albums
+
+    .search_terms will be split on " " in terms and terms are treated with AND
+    artists in .filter_artists will be treated with OR
+    albums in .filter_albums will be treated with OR
+    result of artists and albums in .filter_artists and .filter_albums will be treated with AND
+
+    The returned artists and albums will contain only the ones based on .search_terms.
+    albums will contain only the albums of the selected artists.
+    """
+
+    music_session = MusicSession.objects.get(user=user)
+    terms = music_session.search_terms
+
+    songs = Song.objects.select_related().filter(user=user).order_by("artist__name", "album__name")
+
+
+
+    if len(terms) > 0:
+        term_list = terms.split(" ")
+
+        songs = songs.filter(Q(artist__name__icontains=term_list[0]) | \
+                                    Q(title__icontains=term_list[0]) | \
+                                    Q(album__name__icontains=term_list[0]) | \
+                                    Q(mime__icontains=term_list[0]))
+        for term in term_list[1:]:
+            songs = songs.filter(Q(artist__name__icontains=term) | \
+                                 Q(title__icontains=term) | \
+                                 Q(album__name__icontains=term) | \
+                                 Q(mime__icontains=term))
+
+        # show artists and albums only for the songs matched by .search_terms
+        # TODO: this is not nice. Isn't it possible to build a querie? Attention:
+        # songs can be many (>10000). So the query must be set up carefully.
+        if music_session.filter_show:
+            from itertools import groupby
+            artists = [ k for k, g in groupby(songs, lambda x: x.artist_set.all()[0:1].get())]
+            albums  = [k for k, g, in groupby(songs, lambda x: x.album_set.all()[0:1].get())]
+
+            # now apply filters for artists from the select boxes (using OR)
+            queries = [Q(artist__pk=artist.pk) for artist in music_session.filter_artists.all()]
+            if len(queries)>0:
+                query = queries.pop()
+                for q in queries:
+                    query |= q
+                songs = songs.filter(query)
+
+            # now apply filters for albums from the select boxes (using OR)
+            queries = [Q(album__pk=album.pk) for album in music_session.filter_albums.all()]
+            if len(queries)>0:
+                query = queries.pop()
+                for q in queries:
+                    query |= q
+                songs = songs.filter(query)
+        else:
+            artists = None
+            albums = None
+
+    else:
+        # For the filter view: the displayed artists and albums should contain
+        # all artists and albums the user has songs of
+        if music_session.filter_show:
+            artists = Artist.objects.select_related('songs').filter(songs__user=user).distinct()
+            albums  = Album.objects.select_related('songs').filter(songs__user=user).distinct()
+
+        else:
+            artists = None
+            albums = None
+
+    return [songs, artists, albums]
+
+
+def filter_songs(request, terms, artists=None, albums=None):
+    """
+    returns songs for user
+    """
 
     if not terms == None:
         if not (type(terms) == unicode or type(terms) == str):
