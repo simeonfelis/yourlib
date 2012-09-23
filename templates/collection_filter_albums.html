@@ -1,0 +1,6 @@
+<select size="3" id="selectionAlbum" multiple="no" style="width:100%;height:100px;" >
+    {% for album in albums %}{% if album in music_session.filter_albums %}
+    <option value="{{ album.id }}" selected >{{ album }}</option>{% else %}
+    <option value="{{ album.id }}" >{{ album }}</option>{% endif %}
+    {% endfor %}
+</select>

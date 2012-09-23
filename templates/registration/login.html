@@ -2,7 +2,9 @@
 <p>Your username and password didn't match. Please try again.</p>
 {% endif %}
 
-<form method="post" action="{% url django.contrib.auth.views.login %}">
+<div align="center">
+<div><img src="{{ STATIC_URL }}audio-x-generic.png" /></div>
+<form method="post" action="{% url login_view %}">
     {% csrf_token %}
     <table>
         <tr>
@@ -18,3 +20,4 @@
     <input type="submit" value="login" />
     <input type="hidden" name="next" value="{{ next }}" />
 </form>
+</div>

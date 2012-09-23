@@ -1,0 +1,6 @@
+<select size="3" id="selectionArtist" multiple="multiple" style="width:100%;height:100px;" > 
+    {% for artist in artists %}{% if artist in music_session.filter_artists.all %}
+    <option value="{{ artist.id }}" selected>{{ artist }}</option>{% else %}
+    <option value="{{ artist.id }}" >{{ artist }}</option>{% endif %}
+    {% endfor %}
+</select>

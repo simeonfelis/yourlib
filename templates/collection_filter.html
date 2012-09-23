@@ -1,19 +1,11 @@
 <div id="context_collection_filter">
     <table width="100%">
         <tr>
-            <td>
-            <select size="3" id="selectionArtist" multiple="multiple" style="width:100%;height:100px;" > 
-                {% for artist in artists %}
-                <option value="{{ artist.id }}" >{{ artist }}</option>
-                {% endfor %}
-            </select>
+            <td id="context_collection_filter_artists">
+                {% include "collection_filter_artists.html" %}
             </td>
-            <td>
-                <select size="3" id="selectionAlbum" multiple="no" style="width:100%;height:100px;" >
-                {% for album in albums %}
-                <option value="{{ album.id }}" >{{ album }}</option>
-                {% endfor %}
-                </select>
+            <td id="context_collection_filter_albums">
+                {% include "collection_filter_albums.html" %}
             </td>
         </tr>
     </table>

@@ -3,6 +3,20 @@
 
         {% if playlist.items.all|length > 0 %}
         <ul class="song_items sortable ui-helper-clearfix" id="playlist_content_{{ playlist.id }}">
+
+<li class="song_item_heading ui-widget-header">
+    <ul class="">
+        <li class="song_info pos" title="Position in playlist">#</li>
+        <li class="song_info artist">Artist</li>
+        <li class="song_info title">Title</li>
+        <li class="song_info album">Album</li>
+        <li class="song_info track" title="Track number in album">#</li>
+        <li class="song_info genre">Genre</li>
+        <li class="song_info mime" title="File type">&nbsp;</li>
+        <li class="func" > </li>
+    </ul>
+</li>
+
             {% include "playlist_songs_li.html" %}
         </ul>
         {% else %}

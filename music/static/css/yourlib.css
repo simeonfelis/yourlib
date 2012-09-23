@@ -101,17 +101,15 @@ body {
 }
 
 .sidebar h2 {
-    font-size: 1.1em;
+    font-size: 1.0em;
     font-style: normal;
     font-weight: normal;
     margin: 1px 0 1px 0;
     padding: 0 0 0 15px;
 }
 
-.sidebar .container {
-    background-color: #f0f0f0;
-    margin-left: 5;
-    margin-right: 5;
+.sidebar .currently_shown {
+    font-weight: bold;
 }
 
 #player1_container {
@@ -211,9 +209,6 @@ body {
 }
 */
 
-.collection .artists li:hover {
-    background-color: #f0f0f0;
-}
 
 #context_collection_container {
     background-color: #00ffff;
@@ -235,11 +230,68 @@ body {
     /* dummy class to get/set currently playing */
 }
 
+.browse_column {
+    height: 90%;
+    width: 33%;
+    float: left;
+    margin: 0;
+    margin-bottom: 10px
+}
+
+.browse_column ul {
+    height: 100%;
+    overflow: auto;
+    overflow-x: hidden;
+    white-space: nowrap;
+
+    list-style-type: none;
+    padding: 0;
+}
+
+#context_browse_container .genre {
+    background-color: #D0D0D0;
+}
+
+#context_browse_container .artist {
+    background-color: #A4ACBF;
+}
+
+#context_browse_container .album {
+    background-color: #008000;
+}
+
+.browse_artist_item {
+    width: 100%;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    position: relative;
+}
+
 .song_items {
     list-style-type: none;
     margin: 0;
     padding: 0;
     margin-bottom: 10px
+}
+
+.song_item_heading {
+    width: 100%;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    position: relative;
+    /*cursor: pointer;*/
+}
+
+.song_item_heading li {
+    list-style-type: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    float: left;
+}
+
+.song_item_heading ul {
+    padding: 0;
 }
 
 .song_item {
@@ -258,13 +310,13 @@ body {
     float: left;
 }
 
+.song_item ul {
+    padding: 0;
+}
+
 .song_info {
     margin-left: 2px;
     margin-right: 2px;
-}
-
-.song_item ul {
-    padding: 0;
 }
 
 /* playlist only */
@@ -288,6 +340,10 @@ body {
 .song_item .track {
     text-align: right;
     width: 20px;
+}
+
+.song_item .genre {
+    width: 250px;
 }
 
 .song_item .mime {

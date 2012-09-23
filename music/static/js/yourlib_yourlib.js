@@ -29,7 +29,7 @@ function Yourlib() {
                         .success()
                         .error(function() {
                                 $( "#rescan_status" ).html("Server Error? Wait...");
-                                yourlib.check_scan_status(1000);
+                                yourlib.check_scan_status(15000);
                         });
 
 
@@ -77,9 +77,12 @@ function Yourlib() {
         return false;
     }
     this.bind_check_scan_timeout = function(timeout) {
-        if (!timeout) {
-            timout = 5000;
+        if (!window.check_scan_timeout_set) {
+            window.check_scan_timeout_set = true;
+            if (!timeout) {
+                timout = 5000;
+            }
+            setTimeout(this.check_scan_status, timeout);
         }
-        setTimeout(this.check_scan_status, timeout);
     }
 }

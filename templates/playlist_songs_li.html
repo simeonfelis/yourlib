@@ -1,13 +1,14 @@
 {% for i in playlist.items.all %}
-<li class="song_item ui-widget-content ui-state-default ui-corner-all" id="playlist_{{ playlist.id }}_item_{{ i.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}">
+<li class="song_item ui-widget-content ui-state-default ui-corner-all btn_playlist_item_play" id="playlist_{{ playlist.id }}_item_{{ i.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">
     <ul class="">
         <li class="song_info pos">{{ i.position }}</li>
-        <li class="btn_playlist_item_play song_info artist" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.artist }}</li>
-        <li class="btn_playlist_item_play song_info title"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.title }}</li>
-        <li class="btn_playlist_item_play song_info album"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.album }}</li>
-        <li class="btn_playlist_item_play song_info track"  data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.track }}</li>
-        <li class="btn_playlist_item_play song_info mime"   data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">{{ i.song.mime|cut:"audio/" }}</li>
-        <li class="btn_playlist_item_remove btn ui-state-default func" data-song_id="{{ i.song.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" title="remove">X</li>
+        <li class="song_info artist">{{ i.song.artist_set.all.0 }}</li>
+        <li class="song_info title">{{ i.song.title }}</li>
+        <li class="song_info album">{{ i.song.album_set.all.0 }}</li>
+        <li class="song_info track">{{ i.song.track }}</li>
+        <li class="song_info genre">{{ i.song.genre_set.all.0 }}</li>
+        <li class="song_info mime">{{ i.song.mime|cut:"audio/" }}</li>
+        <li class="btn ui-state-default func" title="remove">X</li>
     </ul>
 </li>
 {% endfor %}

@@ -1,11 +1,14 @@
 function Playlist() {
     this.bind = function () {
 
+        this.update_viewport();
+
         $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
         $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
 
 
-        $(".sortable").sortable( {
+        $(".sortable").not(".song_item_heading").sortable( {
+            items: "li:not(.song_item_heading, :not(.song_info))",
             start: function(event, ui) {
                 $(ui.helper).addClass("ui-state-active");
             },
@@ -52,13 +55,12 @@ function Playlist() {
     this.item_play = function () {
         /* will be called on clicks on items play btn in playlist */
         var $data = {
-            'csrfmiddlewaretoken': csrf_token,
             'song_id'            : $(this).attr("data-song_id"),
             'playlist_id'        : $(this).attr("data-playlist_id"),
             'item_id'            : $(this).attr("data-item_id"),
             'source'             : 'playlist',
         };
-        $.post("/play/", $data, function(song_info) {
+        $.post("play/", $data, function(song_info) {
             player1.play_song(song_info);
         });
         return false; // Don't do anything else
@@ -143,6 +145,39 @@ function Playlist() {
         .error(function() {alert("Error creating playlist");});
 
         return false; // Don't do anything else
+    }
+
+    /* Will exhibit already fetched content data (playlist.content)
+     * Parameter data will set the (new or initial) content data.
+     */
+    this.exhibit = function(data) {
+        if (data) {
+            playlist.content = data;
+        }
+        if ($("#context_container").find("#context_content").length > 0) {
+            $("#context_content").fadeOut(200, function() {
+                $("#context_container").append($(playlist.content).fadeIn(500));
+                $(this).remove();
+                playlist.bind(); // for drag n drop
+            });
+        }
+        else {
+            $("#context_container").append($(playlist.content).fadeIn(500));
+        }
+    }
+    this.update_viewport = function() {
+        var height = context_content.height - $("#context_header").height() - 1;
+        $("#context_playlist_container").height( height );
+
+        $(".song_items .pos").width(20);
+        $(".song_items .mime").width(35);
+        $(".song_items .track").width(20);
+        $(".song_items .func").width(20); // delete btn
+        var width = context_content.width - 123; // leave 2px to avoid line wrap on some browsers, 25px for scrollbar
+        $(".song_items .artist").width(width*0.24);
+        $(".song_items .title" ).width(width*0.24);
+        $(".song_items .album" ).width(width*0.24);
+        $(".song_items .genre" ).width(width*0.24);
     }
 }
 
