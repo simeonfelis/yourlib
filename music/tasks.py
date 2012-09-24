@@ -90,6 +90,7 @@ def fswatch_file_written(event):
             update_song(song)
     except CeleryExceptions.MaxRetriesExceededError:
         # well, whorses will have their trinkets
+        print("fswatch_file_written giving up on file", event.pathname)
         return
     except Exception, exc:
         print("Exception in fswatch_file_written file", event.pathname)
@@ -115,7 +116,7 @@ def fswatch_file_removed(event):
 
 #@transaction.autocommit
 @task(ignore_result=True)
-def rescan_task(user_id, max_retires=10, default_retry_delay=60):
+def rescan_task(user_id, max_retires=1, default_retry_delay=20):
 
     user = User.objects.get(id=user_id)
     collection = Collection.objects.get(user=user)
@@ -153,7 +154,10 @@ def rescan_task(user_id, max_retires=10, default_retry_delay=60):
 
         #############   check entrys in db if files have changed     ##############
         for root, dirs, files in os.walk(userdir):
-            processed += add_song(root, files, user, force=True)
+            try:
+                processed += add_song(root, files, user, force=True)
+            except Exception, e:
+                print ("Exception during add_song in folder", root, e)
             so_far = int((processed*100)/amount)
 
             if so_far > 0 and so_far % 2 == 0:
@@ -180,7 +184,9 @@ def rescan_task(user_id, max_retires=10, default_retry_delay=60):
         return
     except Exception, exc:
         print("Exception in rescan for", user, exc)
-        raise rescan_task.retry(exc=exc, countdown=60)
+        collection.scan_status = "error"
+        collection.save()
+        raise rescan_task.retry(exc=exc, countdown=10)
 
 @task(ignore_result=True)
 @transaction.autocommit
