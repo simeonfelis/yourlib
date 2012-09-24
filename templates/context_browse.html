@@ -1,36 +1,22 @@
-<div id="context_content" style="height: 100%;">
-    <div id="context_browse" style="height: 100%">
+<div id="context_content">
+    <div id="context_browse">
 
         <div id="context_header" class="ui-widget-header ui-corner-tl ui-corner-tr">
             
         </div>
 
-        <div id="context_browse_container" style="width:100%; height: 90%; padding: 0px; margin: 0px; overflow: auto; overflow-x: hidden;" class="ui-widget-content ui-corner-tl ui-corner-tr">
-            <div style="height: 70%;">
-                <div id="browse_genre_filter" class="browse_column genre">
-                    <div style="text-align: center; line-height:30px; height: 30px;"><input style=" font-size: 0.8em;" type="text" maxlength="32" /></div>
+        <div id="context_browse_container" class="ui-widget-content ui-corner-all">
+
+            {% for column in order%}
+            <div id="context_browse_{{ column }}_container" class="browse_column">
+                <div id="browse_{{ column }}_filter" class="browse_column {{ column }}">
                     <ul>
-                        {% for genre in genres %}<li class="browse_genre_item btn ui-state-default btn_filter_genre" data-genre_id="{{ genre.id }}">{{ genre }}</li>{% endfor %}
-                    </ul>
-                </div>
-                <div id="browse_artist_filter" class="browse_column artist">
-                    <div style="text-align: center; line-height:30px; height: 30px;"><input style=" font-size: 0.8em;" type="text" maxlength="32" /></div>
-                    <ul>
-                        {% for artist in artists %}<li class="browse_artist_item btn ui-state-default btn_filter_artist" data-artist_id="{{ artist.id }}">{{ artist }}</li>{% endfor %}
-                    </ul>
-                </div>
-                <div id="browse_album_filter" class="browse_column album">
-                    <div style="text-align: center; line-height:30px; height: 30px;"><input style="font-size: 0.8em;" type="text" maxlength="32" /></div>
-                    <ul>
-                    {% for album in albums %}<li class="browse_artist_item btn ui-state-default btn_filter_album" data-album_id="{{ album.id }}">{{ album }}</li>{% endfor %}
+                        <li>{{ column }}</li>
+                        {% include 'browse_column.html' %}
                     </ul>
                 </div>
             </div>
-            <div id="collection_browser_songs_container" style="height: 30%; overflow: auto; overflow-x: hidden;">
-                <ul class="song_items ui-helper-clearfix" id="collection_filter_items">
-                    {% include "collection_songs_li.html" %}
-                </ul>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </div>

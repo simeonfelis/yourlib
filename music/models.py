@@ -8,11 +8,14 @@ class Song(models.Model):
     def __unicode__(self):
         return self.title # TODO: include artist name
 
-    title = models.CharField(max_length=256)
-    track = models.IntegerField()
-    length = models.IntegerField()
-
-    mime = models.CharField(max_length=32)
+    title   = models.CharField(max_length=256)
+    length  = models.IntegerField()
+    track   = models.IntegerField(blank=True, null=True)
+    year    = models.IntegerField(blank=True, null=True)
+    genre   = models.ForeignKey('Genre', blank=True, null=True)
+    album   = models.ForeignKey('Album', blank=True, null=True)
+    artist  = models.ForeignKey('Artist', blank=True, null=True)
+    mime    = models.CharField(max_length=32)
 
     path_orig = models.FilePathField(unique=True, max_length=2048)
     time_changed = models.DateTimeField()
@@ -27,7 +30,6 @@ class Genre(models.Model):
         return self.name
 
     name = models.CharField(max_length=256, unique=True)
-    songs = models.ManyToManyField(Song)
 
 class Artist(models.Model):
     class Meta:
@@ -37,7 +39,6 @@ class Artist(models.Model):
         return self.name
 
     name = models.CharField(max_length=256, unique=True)
-    songs = models.ManyToManyField(Song)
 
 class Album(models.Model):
     class Meta:
@@ -46,11 +47,10 @@ class Album(models.Model):
     def __unicode__(self):
         return self.name
 
-    name = models.CharField(max_length=256)
-    songs = models.ManyToManyField(Song)
+    name = models.CharField(max_length=256, unique=True)
 
 class Collection(models.Model):
-    user = models.ForeignKey(User)
+    user        = models.ForeignKey(User)
     scan_status = models.CharField(max_length=32)
 
 class PlaylistItem(models.Model):

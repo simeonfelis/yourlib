@@ -63,30 +63,42 @@ def get_tags(path):
 
     dbgprint("get_tags: analysing file", path)
 
-    try:
-        artist    = tags['artist'][0] #.encode('utf-8')
-        if not len(artist)>0:
-            artist = "Unknown Artist"
-    except:
-        artist = "Unknown Artist"
+    if "artist" in tags:
+        try:
+            artist    = tags['artist'][0] #.encode('utf-8')
+            if not len(artist)>0:
+                artist = None
+        except:
+            artist = None
+    else:
+        artist = None
 
     if "performer" in tags.keys():
         try:
             albumartist = tags['performer'][0]
         except:
-            pass
+            albumartist = None
+
     elif "albumartist" in tags.keys():
         try:
             albumartist = tags['performer'][0]
         except:
-            pass
+            albumartist = None
     else:
-        albumartist = ""
+        albumartist = None
+
+    if "year" in tags.keys():
+        try:
+            year = tags['year'][0]
+        except:
+            year = None
+    else:
+        year = None
 
     try:
         title     = tags['title'][0] #.encode('utf-8')
         if not len(title)>0:
-            title = "Unknown Title"
+            title = os.path.split(path)[-1]
     except:
         title = os.path.split(path)[-1]
 
@@ -98,7 +110,7 @@ def get_tags(path):
     try:
         genre     = tags['genre'][0]
     except:
-        genre = ""
+        genre = None
 
     try:
         length = int(tags.info.length)
@@ -108,19 +120,20 @@ def get_tags(path):
     try:
         album     = tags['album'][0] #.encode('utf-8')
         if not len(album)>0:
-            album = "Unknown Album"
+            album = None
     except:
-        album = "Unknown Album"
+        album = None
 
 
     tags = {
             'artist': artist,
+            'albumartist': albumartist,
             'album' : album,
             'track': track,
             'title': title,
             'genre': genre,
             'length': length,
-            'albumartist': albumartist,
+            'year': year,
             'mime': mime,
             }
 
@@ -130,12 +143,54 @@ def set_song(tags, timestamp, user, path, song):
     # if song == None, returns a new Song object.
     # song must be explicitly saved after that function
     # returns changed or new Song object instance
+    # also creates corresponding foreign key dependencies
+
+    album = None
+    if tags['album']:
+        try:
+            album = Album.objects.get(name=tags['album'])
+        except Album.DoesNotExist:
+            album = Album(name = tags['album'])
+            try:
+                album.save()
+            except:
+                album = None
+        except Exception, e:
+            print("Error checking for existing album:", tags['album'], e)
+
+    genre = None
+    if tags['genre']:
+        try:
+            genre = Genre.objects.get(name=tags['genre'])
+        except Genre.DoesNotExist:
+            genre = Genre(name = tags['genre'])
+            try:
+                genre.save()
+            except:
+                genre = None
+
+    artist = None
+    if tags['artist']:
+        try:
+            artist = Artist.objects.get(name=tags['artist'])
+        except Artist.DoesNotExist:
+            artist = Artist(name = tags['artist'])
+            try:
+                artist.save()
+            except:
+                artist = None
+
+    year = tags['year']
 
     if not song == None:
         song.title     = tags['title']
         song.track     = tags['track']
         song.mime      = tags['mime']
         song.length    = tags['length']
+        song.year      = year
+        song.genre     = genre
+        song.album     = album
+        song.artist    = artist
         song.user      = user
         song.path_orig = path
         song.time_changed = timestamp
@@ -146,6 +201,10 @@ def set_song(tags, timestamp, user, path, song):
              track     = tags['track'],
              mime      = tags['mime'],
              length    = tags['length'],
+             year      = year,
+             artist    = artist,
+             album     = album,
+             genre     = genre,
              user      = user,
              path_orig = path,
              time_changed = timestamp,
@@ -168,6 +227,7 @@ def update_song(song):
         tags = get_tags(song.path_orig)
     except Exception, e:
         dbgprint("update_song: error reading tags on file", song.path_orig, ":", e)
+        return
 
     set_song(tags, timestamp, song.user, song.path_orig, song)
 
@@ -220,7 +280,7 @@ def add_song(dirname, files, user, force=False):
         try:
             tags = get_tags(path)
         except Exception, e:
-            dbgprint("Error reading tags on file", path, e)
+            #dbgprint("Error reading tags on file", path, e)
             processed += 1
             continue
         else:
@@ -229,35 +289,17 @@ def add_song(dirname, files, user, force=False):
                 processed += 1
                 continue
 
-        song = set_song(tags, timestamp, user, path, song)
+        try:
+            song = set_song(tags, timestamp, user, path, song)
+        except Exception, e:
+            print("Error during set_song for file", path, e)
+            processed += 1
+            continue
 
         try:
             song.save()
         except Exception, e:
             dbgprint("Database error on file", path, ":", e)
-        else:
-            try:
-                artist = Artist.objects.get(name=tags['artist'])
-            except Artist.DoesNotExist:
-                artist = Artist(name = tags['artist'])
-                artist.save()
-
-            artist.songs.add(song) # auto-save
-
-
-            try:
-                album = Album.objects.get(name=tags['album'])
-            except Album.DoesNotExist:
-                album = Album(name = tags['album'])
-                album.save()
-            album.songs.add(song) # auto-save
-
-            try:
-                genre = Genre.objects.get(name=tags['genre'])
-            except Genre.DoesNotExist:
-                genre = Genre(name = tags['genre'])
-                genre.save()
-            genre.songs.add(song)
 
         processed += 1
 

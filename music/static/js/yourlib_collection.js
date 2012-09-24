@@ -162,10 +162,10 @@ function Collection() {
         $(".song_items .mime").width(35);
         $(".song_items .track").width(20);
         var width = context_content.width - 83; // leave 2px to avoid line wrap on some browsers, 25px for scrollbar
-        $(".song_items .artist").width(width*0.24);
-        $(".song_items .title" ).width(width*0.24);
-        $(".song_items .album" ).width(width*0.24);
-        $(".song_items .genre" ).width(width*0.24);
+        $(".song_items .artist").width(width*0.3);
+        $(".song_items .title" ).width(width*0.3);
+        $(".song_items .album" ).width(width*0.3);
+        $(".song_items .genre" ).width(width*0.09);
     }
 }
 

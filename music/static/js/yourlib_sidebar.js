@@ -32,6 +32,16 @@ function Sidebar() {
         return false; // Don't do anything else
     }
 
+    this.show_browse = function() {
+        spinner_start();
+        $.post("browse/", {}, function(data) {
+            spinner_stop( "#sidebar");
+            browse.exhibit(data);
+            $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+            $("#btn_context_browse").addClass("currently_shown");
+        });
+    }
+
     this.show_playlist = function() {
         var playlist_id = $(this).attr("data-playlist_id");
         playlist.id = playlist_id;

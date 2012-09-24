@@ -9,7 +9,10 @@ urlpatterns = patterns('music.views',
 
     url(r'^sidebar/show/(?P<context>\w+)/.*$', 'sidebar_show_view'),
 
+    url(r'^browse/$', 'browse_view'),
+
     url(r'^collection/$', 'collection_view'),
+    url(r'^collection/more/$', 'collection_more_view'),
     #url(r'^collection/search/$', 'search_view'),
 
     url(r'^playlist/$', 'playlist_view'),

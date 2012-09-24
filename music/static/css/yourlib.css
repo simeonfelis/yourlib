@@ -209,6 +209,13 @@ body {
 }
 */
 
+#context_browse_artist_container {
+    background-color: #00ffff;
+    width: 100%;
+    height: 500px;
+    overflow: auto;
+    overflow-x: hidden;
+}
 
 #context_collection_container {
     background-color: #00ffff;
@@ -216,6 +223,14 @@ body {
     height: 500px;
     overflow: auto;
     overflow-x: hidden;
+}
+
+#context_browse_container .browse_column {
+    height: 90%;
+    width: 33%;
+    float: left;
+    margin: 0;
+    margin-bottom: 10px
 }
 
 #context_playlist_container {
@@ -230,13 +245,6 @@ body {
     /* dummy class to get/set currently playing */
 }
 
-.browse_column {
-    height: 90%;
-    width: 33%;
-    float: left;
-    margin: 0;
-    margin-bottom: 10px
-}
 
 .browse_column ul {
     height: 100%;

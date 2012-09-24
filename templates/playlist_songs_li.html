@@ -2,12 +2,31 @@
 <li class="song_item ui-widget-content ui-state-default ui-corner-all btn_playlist_item_play" id="playlist_{{ playlist.id }}_item_{{ i.id }}" data-playlist_id="{{ playlist.id }}" data-item_id="{{ i.id }}" data-song_id="{{ i.song.id }}">
     <ul class="">
         <li class="song_info pos">{{ i.position }}</li>
-        <li class="song_info artist">{{ i.song.artist_set.all.0 }}</li>
+
+        {% if i.song.artist %}
+            <li class="song_info artist">{{ i.song.artist }}</li>
+        {% else %}
+            <li class="song_info artist">&nbsp;</li>
+        {% endif %}
+
         <li class="song_info title">{{ i.song.title }}</li>
-        <li class="song_info album">{{ i.song.album_set.all.0 }}</li>
+
+        {% if i.song.album %}
+            <li class="song_info album">{{ i.song.album }}</li>
+        {% else %}
+            <li class="song_info album">&nbsp;</li>
+        {% endif %}
+
         <li class="song_info track">{{ i.song.track }}</li>
-        <li class="song_info genre">{{ i.song.genre_set.all.0 }}</li>
+
+        {% if i.song.genre %}
+            <li class="song_info genre">{{ i.song.genre }}</li>
+        {% else %}
+            <li class="song_info genre">&nbsp;</li>
+        {% endif %}
+
         <li class="song_info mime">{{ i.song.mime|cut:"audio/" }}</li>
+
         <li class="btn ui-state-default func" title="remove">X</li>
     </ul>
 </li>

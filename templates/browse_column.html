@@ -1,0 +1,8 @@
+{% if column == "artist" %}
+    {% for artist in artists %}
+        <li class="artist btn ui-state-default" data-artist_id="{{ artist.id }}">{{ artist }}</li>
+    {% endfor %}
+{% endif %}
+
+{% if column == "album" %}
+{% endif %}

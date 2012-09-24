@@ -88,6 +88,25 @@ def collection_view(request):
             context_instance=RequestContext(request),
             )
 
+@login_required
+def browse_view(request):
+    artists = Artist.objects.filter(song__user=request.user).distinct()
+    order = ['artist', 'album', 'title']
+    return render_to_response(
+            "context_browse.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+@login_required
+def browse_artist_view(request):
+    albums = Album.objects.filter(song__user=request.user).distinct()
+    order = ['artist', 'album', 'title']
+    return render_to_response(
+            "context_browse_album.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
 
 def show_context_download(request):
     downloads = Download.objects.get(user=request.user)
@@ -633,8 +652,9 @@ def song_info_response(song, playlist_id=None, item_id=None):
 
             'song_id':     song.id,
             'title':       song.title,
-            'artist':      song.artist_set.all()[0].name,
-            'album':       song.album_set.all()[0].name,
+            'artist':      song.artist.name,
+            'album':       song.album.name,
+            'genre':       song.genre.name,
             'track':       song.track,
             'mime':        song.mime,
             'filename':    filename,

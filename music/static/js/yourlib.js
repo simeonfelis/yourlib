@@ -66,11 +66,42 @@ function Download() {
     }
 }
 
+function Browse() {
+
+    this.bind = function() {
+        this.update_viewport();
+    }
+
+    this.exhibit = function(data) {
+        if (data) {
+            browse.content = data;
+        }
+        if ($("#context_container").find("#context_content").length > 0) {
+            $("#context_content").fadeOut(200, function() {
+                $("#context_container").append($(browse.content).fadeIn(500));
+                $(this).remove();
+                browse.bind();
+            });
+        }
+        else {
+            $("#context_container").append($(browse.content).fadeIn(500));
+        }
+    }
+
+    this.update_viewport = function() {
+        var height = context_content.height - $("#context_header").height() - 1;
+        $("#context_browse_artist_container").height( height );
+        var width = context_content.width*0.3 - 1;
+        $(".browse_column").width( width );
+
+    }
+}
+
 function ContextContent() {
     this.update_viewport = function() {
         this.width = this.get_width();
-        this.heigth = this.get_height();
-        $("#context_container").height(this.heigth);
+        this.height = this.get_height();
+        $("#context_container").height(this.height);
         $("#context_container").width(this.width);
     }
     this.get_width = function() {
@@ -91,12 +122,15 @@ $(document).ready(function () {
     window.player1     = new Player();
     window.yourlib     = new Yourlib();
     window.collection  = new Collection();
+    window.browse      = new Browse();
     window.playlist    = new Playlist();
     window.upload      = new Upload();
     window.download    = new Download();
     window.sidebar     = new Sidebar(); // must be last?
     window.context_content = new ContextContent();
+
     context_content.update_viewport(); // must be first
+    browse.bind();
     collection.bind();
     playlist.bind();
     sidebar.bind();
