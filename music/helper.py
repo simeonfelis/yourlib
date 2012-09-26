@@ -237,7 +237,7 @@ def update_song(song):
         dbgprint("update_song: error saving entry", song, ":", e)
         raise e
 
-@transaction.autocommit
+@transaction.commit_manually
 def add_song(dirname, files, user, force=False):
     """
     Takes a directory and one or more file names in that directory, reads tag information
@@ -257,11 +257,24 @@ def add_song(dirname, files, user, force=False):
     for filename in files:
         path = os.path.join(dirname, filename)
 
+        try:
+            # To bulletproof the os.walk() call, str is used for paths.
+            # But we need unicode for the db. If conversion fails, the file
+            # path has some funny encoding which I can't understand.
+            # replacing won't help(?), as we need an exact file path
+            # path = path.decode('utf-8', "replace")
+            path = path.decode('utf-8')
+        except UnicodeDecodeError:
+            print("add_song: Ignoring UnicodeDecodeError on", path)
+            processed += 1
+            continue
+
         if not os.path.isfile(path):
             processed += 1
             continue
 
         timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(path)).replace(tzinfo=utc)
+
         # check for duplicates resp. file change. if timestamp has change, re-read tags
         song = None
         try:
@@ -276,6 +289,7 @@ def add_song(dirname, files, user, force=False):
             else:
                 # reread tags and store it to song. Therefore, leave variable song != None
                 pass
+        transaction.commit()
 
         try:
             tags = get_tags(path)
@@ -292,14 +306,20 @@ def add_song(dirname, files, user, force=False):
         try:
             song = set_song(tags, timestamp, user, path, song)
         except Exception, e:
+            transaction.rollback()
             print("Error during set_song for file", path, e)
             processed += 1
             continue
+        else:
+            transaction.commit()
 
         try:
             song.save()
         except Exception, e:
-            dbgprint("Database error on file", path, ":", e)
+            transaction.rollback()
+            print("Exception in add_song: Database error on file", path, ":", e)
+        else:
+            transaction.commit()
 
         processed += 1
 

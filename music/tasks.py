@@ -114,9 +114,8 @@ def fswatch_file_removed(event):
     except Exception, exc:
         raise fswatch_file_removed.retry(exc=exc, countdown=10)
 
-#@transaction.autocommit
 @task(ignore_result=True)
-def rescan_task(user_id, max_retires=1, default_retry_delay=20):
+def rescan_task(user_id, max_retires=2, default_retry_delay=10):
 
     user = User.objects.get(id=user_id)
     collection = Collection.objects.get(user=user)
@@ -124,7 +123,11 @@ def rescan_task(user_id, max_retires=1, default_retry_delay=20):
     print("rescan requested by", user);
 
     try:
-        userdir = os.path.join(settings.MUSIC_PATH, user.username)
+        userdir = os.path.join(settings.MUSIC_PATH, user.username).encode('utf-8')
+        # on filenames with bad encoded characters, os.walk will fail when using 
+        # unicode: os.walk(u'foo').
+        # http://stackoverflow.com/questions/1766669/python-unicodedecodeerror
+        # 
 
         #############    rescan preparations   ###################
         # estimating total effort: count users songs on filesystem and in db
@@ -157,7 +160,7 @@ def rescan_task(user_id, max_retires=1, default_retry_delay=20):
             try:
                 processed += add_song(root, files, user, force=True)
             except Exception, e:
-                print ("Exception during add_song in folder", root, e)
+                print ("Exception during add_song in folder", root, "files", files, e)
             so_far = int((processed*100)/amount)
 
             if so_far > 0 and so_far % 2 == 0:
@@ -178,7 +181,6 @@ def rescan_task(user_id, max_retires=1, default_retry_delay=20):
             collection.save()
         except:
             print("Giving up rescan for user", user)
-
             # ah, buckle off.
             pass
         return
