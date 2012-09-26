@@ -16,6 +16,7 @@ from music import settings
 
 import os
 
+BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
 
 @login_required
 @transaction.autocommit
@@ -89,9 +90,11 @@ def collection_view(request):
             )
 
 @login_required
-def browse_view(request):
+def collection_browse_view(request):
+    global BROWSE_COLUMN_ORDER
+
     artists = Artist.objects.filter(song__user=request.user).distinct()
-    order = ['artist', 'album', 'title']
+    columns = BROWSE_COLUMN_ORDER
     return render_to_response(
             "context_browse.html",
             locals(),
@@ -99,11 +102,49 @@ def browse_view(request):
             )
 
 @login_required
-def browse_artist_view(request):
-    albums = Album.objects.filter(song__user=request.user).distinct()
-    order = ['artist', 'album', 'title']
+def collection_browse_column_view(request, column_from):
+    global BROWSE_COLUMN_ORDER
+
+
+#    if "artist" == column_from:
+    column = BROWSE_COLUMN_ORDER[BROWSE_COLUMN_ORDER.index(column_from)+1]  # next column in order
+
+    if 'items[]' in request.POST:
+        items = request.POST.getlist('items[]')
+    else:
+        items = None
+
+
+    if "album" == column:
+        albums = Album.objects.filter(song__user=request.user).distinct()
+
+        if 'items[]' in request.POST:
+            artist_ids = request.POST.getlist('items[]')
+
+            if len(artist_ids):
+                queries = [ Q(song__artist__id=pk) for pk in artist_ids]
+                query = queries.pop()
+                for q in queries:
+                    query |= q
+
+                albums = albums.filter(query)
+        else:
+            # albums from user already fetched
+            pass
+
+    if "title" == column:
+        songs = Song.objects.filter(user=request.user)
+
+        if items and len(items):
+            queries = [ Q(album__id=pk) for pk in items]
+            query = queries.pop()
+            for q in queries:
+                query |= q
+
+            songs = songs.filter(query)
+
     return render_to_response(
-            "context_browse_album.html",
+            "browse_column.html",
             locals(),
             context_instance=RequestContext(request),
             )
@@ -322,13 +363,13 @@ def playlist_view(request):
             )
 
 @login_required
-def playlist_all_view(request):
+def sidebar_playlists_view(request):
     """
-    return all playlists, e.g. for sidebar
+    return list of all playlists
     """
     playlists = Playlist.objects.filter(user=request.user)
     return render_to_response(
-            'playlists.html',
+            'sidebar_playlists.html',
             locals(),
             context_instance=RequestContext(request),
             )

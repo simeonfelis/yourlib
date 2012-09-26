@@ -54,13 +54,13 @@ function Playlist() {
 
     this.item_play = function () {
         /* will be called on clicks on items play btn in playlist */
-        var $data = {
+        var data = {
             'song_id'            : $(this).attr("data-song_id"),
             'playlist_id'        : $(this).attr("data-playlist_id"),
             'item_id'            : $(this).attr("data-item_id"),
             'source'             : 'playlist',
         };
-        $.post("play/", $data, function(song_info) {
+        $.post("play/", data, function(song_info) {
             player1.play_song(song_info);
         });
         return false; // Don't do anything else
@@ -166,6 +166,10 @@ function Playlist() {
         }
     }
     this.update_viewport = function() {
+        if ($.find("#context_playlist_container").length == 0) {
+            // nothing to update
+            return;
+        }
         var height = context_content.height - $("#context_header").height() - 1;
         $("#context_playlist_container").height( height );
 

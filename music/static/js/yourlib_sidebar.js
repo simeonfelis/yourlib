@@ -20,13 +20,10 @@ function Sidebar() {
     this.show_collection = function() {
         spinner_start($(this));
         $.post("collection/", {}, function(data) {
-            collection.exhibit(data);
             spinner_stop( "#sidebar" );
-            $("#sidebar").find(".currently_shown").removeClass("ui-widget-header");
-            $("#sidebar").find(".currently_shown").addClass("ui-widget-content");
             $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-            $("#btn_context_collection").addClass("ui-widget-header");
             $("#btn_context_collection").addClass("currently_shown");
+            collection.exhibit(data);
         });
 
         return false; // Don't do anything else
@@ -34,7 +31,7 @@ function Sidebar() {
 
     this.show_browse = function() {
         spinner_start();
-        $.post("browse/", {}, function(data) {
+        $.post("collection/browse/", {}, function(data) {
             spinner_stop( "#sidebar");
             browse.exhibit(data);
             $("#sidebar").find(".currently_shown").removeClass("currently_shown");
@@ -52,11 +49,7 @@ function Sidebar() {
             playlist.exhibit(data);
             playlist.bind(); // for drag n drop
             spinner_stop("#sidebar");
-            $("#sidebar").find(".currently_shown").removeClass("ui-widget-header");
-            $("#sidebar").find(".currently_shown").addClass("ui-widget-content");
             $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-
-            $("#sidebar_playlist_" + playlist.id).addClass("ui-widget-header");
             $("#sidebar_playlist_" + playlist.id).addClass("currently_shown");
         });
 

@@ -1,8 +1,8 @@
-{% if column == "artist" %}
-    {% for artist in artists %}
-        <li class="artist btn ui-state-default" data-artist_id="{{ artist.id }}">{{ artist }}</li>
-    {% endfor %}
-{% endif %}
-
-{% if column == "album" %}
-{% endif %}
+<div id="context_browse_{{ column }}_container" class="browse_column">
+    <div id="browse_{{ column }}_filter" class="browse_column {{ column }}">
+        <ul>
+            <li class="ui-widget-header", style="line-height: 1.5em; text-align: center;">{{ column }}</li>
+            {% include 'browse_column_li.html' %}
+        </ul>
+    </div>
+</div>

@@ -8,11 +8,13 @@ urlpatterns = patterns('music.views',
     url(r'^play/song/(?P<song_id>\d+)$', 'play_song_view'),
 
     url(r'^sidebar/show/(?P<context>\w+)/.*$', 'sidebar_show_view'),
-
-    url(r'^browse/$', 'browse_view'),
+    url(r'^sidebar/playlists/$', 'sidebar_playlists_view'),
 
     url(r'^collection/$', 'collection_view'),
-    url(r'^collection/more/$', 'collection_more_view'),
+    #url(r'^collection/more/$', 'collection_more_view'),
+    url(r'^collection/browse/$', 'collection_browse_view'),
+    url(r'^collection/browse/(?P<column_from>\w+)/$', 'collection_browse_column_view'),
+
     #url(r'^collection/search/$', 'search_view'),
 
     url(r'^playlist/$', 'playlist_view'),
@@ -22,7 +24,7 @@ urlpatterns = patterns('music.views',
     url(r'^playlist/reorder/$', 'playlist_reorder_view'),
     #url(r'^playlist/download/$', 'playlist_download_view'),
     url(r'^playlist/remove/(?P<playlist_id>\d+)/(?P<item_id>\d+)$', 'playlist_remove_item_view'),
-    url(r'^playlist/all/$', 'playlist_all_view'),
+    #url(r'^playlist/all/$', 'playlist_all_view'),
 
     url(r'^rescan$', 'rescan_view'),
 

@@ -1,8 +1,6 @@
 function Collection() {
     this.bind = function(){
 
-        collection.update_viewport();
-
         $("#songs_count").remove();
 
         $( ".song_item" ).draggable({
@@ -23,6 +21,8 @@ function Collection() {
             delay: 100,
         });
         $( ".song_item").disableSelection();
+
+        collection.update_viewport();
 
         highlight_playing("Collection.bind()", target="#context_container");
     }
@@ -144,28 +144,36 @@ function Collection() {
             collection.content = data;
         }
         if ($("#context_container").find("#context_content").length > 0) {
-            $("#context_content").fadeOut(200, function() {
+            $("#context_content").fadeOut(300, function() {
                 $("#context_container").append($(collection.content).fadeIn(500));
-                $(this).remove();
                 collection.bind();
+                $(this).remove();
             });
         }
         else {
             $("#context_container").append($(collection.content).fadeIn(500));
+            collection.bind();
         }
     }
 
     this.update_viewport = function() {
+        if ($.find("#context_collection_container").length == 0) {
+            console.log("collection.update_viewport: nothing to update");
+            return;
+        }
+        context_content.update_viewport();
         var height = context_content.height - $("#context_header").height() - 1;
         $("#context_collection_container").height( height );
 
         $(".song_items .mime").width(35);
         $(".song_items .track").width(20);
-        var width = context_content.width - 83; // leave 2px to avoid line wrap on some browsers, 25px for scrollbar
-        $(".song_items .artist").width(width*0.3);
-        $(".song_items .title" ).width(width*0.3);
-        $(".song_items .album" ).width(width*0.3);
-        $(".song_items .genre" ).width(width*0.09);
+        var tmpWidth = context_content.width - 83; // leave 2px to avoid line wrap on some browsers, 25px for scrollbar
+        var bla = tmpWidth*0.25;
+        var blu = tmpWidth*0.15;
+        $(".song_items .artist").width(bla);
+        $(".song_items .title" ).width(bla);
+        $(".song_items .album" ).width(bla);
+        $(".song_items .genre" ).width(blu);
     }
 }
 

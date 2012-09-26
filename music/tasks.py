@@ -157,17 +157,16 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
 
         #############   check entrys in db if files have changed     ##############
         for root, dirs, files in os.walk(userdir):
-            try:
-                processed += add_song(root, files, user, force=True)
-            except Exception, e:
-                print ("Exception during add_song in folder", root, "files", files, e)
-            so_far = int((processed*100)/amount)
 
+            processed += add_song(root, files, user, force=True)
+
+            so_far = int((processed*100)/amount)
             if so_far > 0 and so_far % 2 == 0:
                 collection.scan_status = str(so_far)
                 try:
                     collection.save()
                 except:
+                    # status is not _that_ important
                     pass
 
         collection.scan_status = "finished"

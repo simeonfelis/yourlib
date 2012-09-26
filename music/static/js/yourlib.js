@@ -70,8 +70,117 @@ function Browse() {
 
     this.bind = function() {
         this.update_viewport();
+
+        $(".btn_browse_title").on("click", function(){
+            var $data = {
+                'song_id': $(this).attr("data-title_id"),
+                'source' : 'collection',
+            };
+            $.post("play/", $data, function(song_info) {
+                player1.play_song(song_info);
+            });
+            return false;
+        });
+
+        $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
+        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+
+        // select item after hover delay
+        $("#browse_artist_filter .btn, #browse_album_filter .btn, #browse_genre_filter .btn").on("mouseenter", function() {
+            $this = $(this);
+            if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
+                return;
+            }
+            if ($this.hasClass("selected")) {
+                $this.addClass("pre-unselected");
+                //$this.data('delay', setTimeout(function() {$this.removeClass("selected"); browse.on_artist_clicked()}, 900));
+                $this.data('delay', setTimeout(function() {
+                    var tmp = $this.parent().find(".ui-widget-header");
+                    var column = tmp.html();
+                    $this.removeClass("selected");
+                    browse.on_column_item_clicked(column);
+                }, 900));
+            }
+            else {
+                $this.addClass("pre-selected");
+                //$this.data('delay', setTimeout(function() {$this.removeClass("pre-selected").addClass("selected"); browse.on_artist_clicked()}, 900));
+                $this.data('delay', setTimeout(function() {
+                    var tmp = $this.parent().find(".ui-widget-header");
+                    var column = tmp.html();
+                    $this.removeClass("pre-selected").addClass("selected");
+                    browse.on_column_item_clicked(column);
+                }, 900));
+            }
+        });
+        $("#browse_artist_filter .btn, #browse_album_filter .btn, #browse_genre_filter .btn").on("mouseleave", function() {
+            $this = $(this);
+            if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
+                clearTimeout($this.data("delay"));
+                $this.removeClass("pre-selected");
+                $this.removeClass("pre-unselected");
+            }
+        });
+
     }
 
+    this.on_column_received = function(data) {
+            if ( $(data).attr('id') == "context_browse_album_container" ) {
+                if ($("#context_container").find("#context_browse_album_container").length > 0) {
+                    $("#context_browse_album_container").replaceWith(data);
+                    browse.bind();
+                }
+            }
+            if ( $(data).attr('id') == "context_browse_title_container" ) {
+                if ($("#context_container").find("#context_browse_title_container").length > 0) {
+                    $("#context_browse_title_container").replaceWith(data);
+                    browse.bind();
+                }
+            }
+    }
+
+    this.on_column_item_clicked = function(column_from) {
+        var selected = $("#browse_" + column_from + "_filter .selected").get();
+        var item_ids = [];
+        for (item in selected) {
+            item_ids.push($(selected[item]).attr("data-" + column_from + "_id"));
+        }
+        var ar_name = column_from + '_ids';
+        var data = {
+            'items' : item_ids,
+        }
+
+        $.post('collection/browse/' + column_from + '/', data, browse.on_column_received);
+    }
+/*
+    this.on_artist_clicked = function() {
+        var selected = $("#browse_artist_filter .selected").get();
+        var artist_ids = [];
+        for (artist in selected) {
+            artist_ids.push($(selected[artist]).attr("data-artist_id"));
+        }
+        var data = {
+            'artist_ids'    : artist_ids,
+        }
+
+        $.post('collection/browse/artist/', data, function(data){
+            // handle albums
+            var tmp = $(data).find("#context_browse_album_container").get(0);
+            
+            if ( $(data).attr('id') == "context_browse_album_container" ) {
+                if ($("#context_container").find("#context_browse_album_container").length > 0) {
+                    $("#context_browse_album_container").replaceWith(data);
+                    browse.bind();
+                }
+            }
+
+            // handle song items
+            if ($(data).find("#context_browse_song_container").length > 0) {
+                // TODO
+            }
+
+        });
+    }
+*/
     this.exhibit = function(data) {
         if (data) {
             browse.content = data;
@@ -89,9 +198,16 @@ function Browse() {
     }
 
     this.update_viewport = function() {
+        if ($.find("#context_browse_container").length == 0) {
+            // nothing to update
+            return;
+        }
+
         var height = context_content.height - $("#context_header").height() - 1;
         $("#context_browse_artist_container").height( height );
-        var width = context_content.width*0.3 - 1;
+        $("#context_browse_album_container").height( height );
+        $("#context_browse_title_container").height( height );
+        var width = context_content.width*0.32 - 1;
         $(".browse_column").width( width );
 
     }
@@ -143,6 +259,7 @@ $(document).ready(function () {
 
     /* update viewport */
     $(window).resize(function() {
+        browse.update_viewport();
       context_content.update_viewport();
       collection.update_viewport();
       playlist.update_viewport();
@@ -173,7 +290,10 @@ $(document).ready(function () {
     $(document).on("submit",  "#context_collection_search", collection.search);
     $(document).on("click",   "#get_more_results",          collection.get_more_results);
     $(document).on("appear",  "#get_more_results",          collection.get_more_results, {one: false});
-    $(document).on("click",      ".btn_filter_genre",  collection.filter_genre);
+    $(document).on("click",   ".btn_filter_genre",          collection.filter_genre);
+
+    /* browse */
+    $(document).on("click",   ".btn_browse_artist",         browse.on_artist_clicked);
 
     /* collection & playlist */
     $(document).on("click",      ".song_item",  collection.song_play);

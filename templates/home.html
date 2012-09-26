@@ -24,7 +24,7 @@
             <h1 class="ui-widget-content ui-state-default" id="btn_context_playlists">Playlists</h1>
 
             <div id="sidebar_playlists_content">
-                {% include "playlists.html" %}
+                {% include "sidebar_playlists.html" %}
             </div>
             <h2 style="float:left;">New:</h2>
             <form id="playlist_create">
@@ -44,6 +44,8 @@
             {% with music_session.current_playlist as playlist %}
                 {% include "context_playlist.html" %}
             {% endwith %}
+        {% else %}
+            <div id="context_content">&nbsp;</div>
         {% endif %}
     </div>
 </div>

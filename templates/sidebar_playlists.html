@@ -1,0 +1,8 @@
+<div id="sidebar_playlists" class="playlists">
+    {% for playlist in playlists %}
+    <h2 id="sidebar_playlist_{{ playlist.id }}" class="btn_sidebar_playlist btn ui-state-default ui-helper-clearfix" data-playlist_id="{{ playlist.id }}">
+        <span class="name">{{ playlist.name }}</span> <span class="count" title="Items in playlist">{{ playlist.items.all|length }}</span>
+    </h2>
+    {% endfor %}
+</div>
+
