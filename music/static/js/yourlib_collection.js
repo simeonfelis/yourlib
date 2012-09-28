@@ -10,9 +10,12 @@ function Collection() {
                 title = $(this).find(".title").html();
                 song_id = $(this).attr("data-song_id");
                 console.log("Dragging element with song id " + song_id)
+
                 helper = $("<div class='ui-widget-content ui-state-focus ui-corner-all'></div>");
-                helper.attr("data-song_id", song_id);
                 helper.html(artist + " - " + title);
+
+                helper.attr("data-song_id", song_id);
+                helper.attr("data-source", "collection");
                 return $( helper );
             },
             appendTo: "body",
@@ -88,7 +91,7 @@ function Collection() {
         var $data = {
             "terms": $( "#collection_search_terms" ).val(),
         };
-        $( "#context_collection_songs_container").load("search/", $data, function(response, status, xhr) {
+        $( "#context_collection_songs_container").load("collection/search/", $data, function(response, status, xhr) {
             if (status == "error") {
                 $( "#context_collection_search_status" ).html("Error " + xhr.status + " " + xhr.statusText);
             }

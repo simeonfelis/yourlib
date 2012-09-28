@@ -1,17 +1,25 @@
 {% if column == "artist" %}
     {% for artist in artists %}
-        <li class="artist btn ui-state-default btn_browse_artist" data-artist_id="{{ artist.id }}">{{ artist }}</li>
+        <li class="artist btn ui-state-default btn_browse_artist" data-artist_id="{{ artist.id }}">
+            <span class="name">{{ artist }}</span>
+            <span class="count">{{ artist.song_set.count }}</span>
+        </li>
     {% endfor %}
 {% endif %}
 
 {% if column == "album" %}
     {% for album in albums %}
-        <li class="album btn ui-state-default btn_browse_album" data-album_id="{{ album.id }}">{{ album }}</li>
+        <li class="album btn ui-state-default btn_browse_album" data-album_id="{{ album.id }}">
+            <span class="name">{{ album }}</span>
+            <span class="count">{{ album.song_set.count }}</span>
+        </li>
     {% endfor %}
 {% endif %}
 
 {% if column == "title" %}
     {% for title in songs %}
-        <li class="title btn ui-state-default btn_browse_title" data-title_id="{{ title.id }}">{{ title.track }} - {{ title }}</li>
+        <li class="title btn ui-state-default btn_browse_title" data-title_id="{{ title.id }}">
+            {{ title.track }} - {{ title }}
+        </li>
     {% endfor %}
 {% endif %}

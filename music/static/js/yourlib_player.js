@@ -4,7 +4,7 @@ function Player() {
     }
 
     this.event_ended = function() {
-        $.post("play/next", {"csrfmiddlewaretoken": csrf_token}, function(song_info) {
+        $.post("play/next", function(song_info) {
             if (song_info=="") {
                 return;
             }

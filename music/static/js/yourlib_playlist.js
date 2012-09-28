@@ -68,20 +68,16 @@ function Playlist() {
 
     this.item_remove = function() {
         /* will be called on clicks on items delete btn in playlists */
-        var playlist_id = $(this).attr("data-playlist_id");
-        var item_id = $(this).attr("data-item_id");
+        var playlist_id = $(this).closest(".song_item").attr("data-playlist_id");
+        var item_id     = $(this).closest(".song_item").attr("data-item_id");
 
         var url = "playlist/remove/" + playlist_id + "/" + item_id;
-        var $data = {
-            'csrfmiddlewaretoken': csrf_token,
-        };
 
         // update playlist content. TODO: should be done with only one request!
-        $( "#context_playlist_container" ).load(url, $data, function() {
-            // our context is now document.window
+        $( "#context_playlist_container" ).load(url, {}, function() {
             playlist.bind();
             // update number of playlists
-            $( "#sidebar_playlists_content" ).load("playlist/all/", function() {
+            $( "#sidebar_playlists_content" ).load("sidebar/playlists/", function() {
                 sidebar.bind();
             });
         })
@@ -90,24 +86,49 @@ function Playlist() {
         return false; // Don't do anything else
     }
 
-    this.delete_list = function() {
+    this.delete_list = function($playlist, confirmed) {
         /* will be called on clicks on delete btn of a playlist */
 
-        // TODO: confirmation dialog
-        var $data = {
-            'csrfmiddlewaretoken' : csrf_token,
-            'playlist_id'         : $(this).attr("data-playlist_id"),
-        };
+        if (confirmed === true) {
+            // TODO: confirmation dialog
+            var $data = {
+                'playlist_id' : $playlist.attr("data-playlist_id"),
+            };
 
-        /* get new view for context */
-        $( "#context_content" ).load("playlist/delete/", $data, function() {
-            // our context is now document.window
-            playlist.bind();
-            /* update playlists in sidebar */
-            $( "#sidebar_playlists_content" ).load("playlist/all/", function() {
-                sidebar.bind();
+            /* get new view for context */
+            $( "#context_content" ).load("playlist/delete/", $data, function() {
+
+                /* update playlists in sidebar */
+                $( "#sidebar_playlists_content" ).load("sidebar/playlists/", function() {
+                    sidebar.bind("#sidebar_playlists_content");
+                });
+
+                playlist.bind();
+
             });
-        });
+        }
+        else {
+            $this = $(this);
+            $( "#dialog-confirm-playlist-delete" ).find(".playlist_name").html($(this).attr("data-playlist_name"));
+            $( "#dialog-confirm-playlist-delete" ).dialog({
+                resizable: true,
+                height:300,
+                width:400,
+                modal: true,
+                buttons: {
+                    "Keep playlist": function() {
+                        $( this ).dialog( "close" );
+                    },
+                    "Delete playlist": function() {
+
+                        playlist.delete_list($playlist=$this, confirmed=true);
+
+                        $( this ).dialog( "close" );
+                    }
+                }
+            });
+
+        }
 
         return false; // Don't do anything else
     }
@@ -120,26 +141,34 @@ function Playlist() {
             alert(msg);
         });
     }
-    this.append = function(playlist_id, song_id) {
+    this.append = function(playlist_id, item_id, source) {
         /* $(this) is expected to be a collection song item */
-        var $data = {
-            'csrfmiddlewaretoken': csrf_token,
-            'playlist_id' : playlist_id,
-            'song_id': song_id,
+        var data = {
+            "playlist_id" : playlist_id,
+            "id" :          item_id,
+            "source" :      source,
         };
+
         /* update number of playlist items in sidebar */
         // TODO: increase *only* number of playlist items in sidebar
-        $( "#sidebar_playlists_content" ).load("playlist/append/", $data, function() {
+        $( "#sidebar_playlists_content" ).load("playlist/append/", data, function() {
             sidebar.bind();
         });
     }
     this.create = function() {
         /* will be called on submit of create playlist field forms */
+        var name = $.trim( $( "#playlist_create_name" ).val() );
+
+        if ( !(name.length > 0) ) {
+            console.log("Empty name for playlist");
+            return false;
+        }
+
         var $data = {
-            'csrfmiddlewaretoken': csrf_token,
-            'playlist_name': $( "#playlist_create_name" ).val(),
+            'playlist_name': name,
         };
         $( "#sidebar_playlists_content" ).load("playlist/create/", $data, function() {
+            $( "#playlist_create_name" ).val("");
             sidebar.bind();
         })
         .error(function() {alert("Error creating playlist");});

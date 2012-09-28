@@ -11,7 +11,7 @@ from django.core.urlresolvers import reverse
 
 from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
-from music.helper import dbgprint
+from music.helper import dbgprint, UserStatus, user_status_defaults
 from music import settings
 
 import os
@@ -19,56 +19,62 @@ import os
 BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
 
 @login_required
-@transaction.autocommit
 def home_view(request):
 
-    if request.user.is_authenticated():
-        if not os.path.isdir(os.path.join(settings.MUSIC_PATH, request.user.username)):
-            os.makedirs(os.path.join(settings.MUSIC_PATH, request.user.username))
+    if not os.path.isdir(os.path.join(settings.MUSIC_PATH, request.user.username)):
+        os.makedirs(os.path.join(settings.MUSIC_PATH, request.user.username))
+    playlists = Playlist.objects.filter(user=request.user)
+    # create playlists if not existent for user
+    if 0 == len(playlists):
+        dbgprint("Creating default playlist for user ", request.user)
+        pl = Playlist(name="default", user=request.user, current_position=0)
+        pl.save()
         playlists = Playlist.objects.filter(user=request.user)
-        # create playlists if not existent for user
-        if 0 == len(playlists):
-            dbgprint("Creating default playlist for user ", request.user)
-            pl = Playlist(name="default", user=request.user, current_position=0)
-            pl.save()
-            playlists = Playlist.objects.filter(user=request.user)
 
-        # current status
-        try:
-            music_session = MusicSession.objects.get(user=request.user)
-        except MusicSession.DoesNotExist:
-            dbgprint("Creating music session for user ", request.user)
-            music_session = MusicSession(user=request.user, currently_playing='none', search_terms='', filter_show=False)
-            music_session.save()
+    # current status
+    try:
+        music_session = MusicSession.objects.get(user=request.user)
+        user_status = UserStatus(request)
+    except MusicSession.DoesNotExist:
 
-        if music_session.currently_playing == "playlist":
-            cur_pos = music_session.current_playlist.current_position
+        dbgprint("Creating music session for user ", request.user)
+        music_session = MusicSession(
+            status = user_status_defaults,
+            user=request.user,
+            currently_playing='none',
+            search_terms='',
+            filter_show=False
+        )
+        music_session.save()
 
-            current_item = music_session.current_playlist.items.get(position=cur_pos)
+    if music_session.currently_playing == "playlist":
+        cur_pos = music_session.current_playlist.current_position
 
-            # the following is needed to prefill player data
-            current_song = current_item.song
-            current_item_id = current_item.id
-            current_song_id = current_song.id
-            current_playlist_id = music_session.current_playlist.id
+        current_item = music_session.current_playlist.items.get(position=cur_pos)
 
-        elif music_session.currently_playing == "collection":
-            current_song = music_session.current_song
-            current_song_id = current_song.id
-            current_playlist_id = 0
-            current_item_id = 0
+        # the following is needed to prefill player data
+        current_song = current_item.song
+        current_item_id = current_item.id
+        current_song_id = current_song.id
+        current_playlist_id = music_session.current_playlist.id
 
-        # create collection if not existent
-        try:
-            collection = Collection.objects.get(user=request.user)
-        except Collection.DoesNotExist:
-            collection = Collection(user=request.user, scan_status="idle")
-            collection.save()
+    elif music_session.currently_playing == "collection":
+        current_song = music_session.current_song
+        current_song_id = current_song.id
+        current_playlist_id = 0
+        current_item_id = 0
 
-        [songs, artists, albums] = get_filtered(request.user)
-        songs_count = songs.count()
-        if len(songs) > 50:
-            songs = songs[:50]
+    # create collection if not existent
+    try:
+        collection = Collection.objects.get(user=request.user)
+    except Collection.DoesNotExist:
+        collection = Collection(user=request.user, scan_status="idle")
+        collection.save()
+
+    [songs, artists, albums] = get_filtered(request)
+    songs_count = songs.count()
+    if len(songs) > 50:
+        songs = songs[:50]
 
     return render_to_response(
             'home.html',
@@ -79,7 +85,7 @@ def home_view(request):
 
 @login_required
 def collection_view(request):
-    [songs, artists, albums] = get_filtered(request.user)
+    [songs, dump1, dump2] = get_filtered(request)
     songs_count = songs.count()
     if len(songs) > 50:
         songs = songs[:50]
@@ -93,8 +99,15 @@ def collection_view(request):
 def collection_browse_view(request):
     global BROWSE_COLUMN_ORDER
 
+    songs   = Song.objects.select_related().filter(user=request.user)
+
+    genres  = Genre.objects.filter(song__user=request.user).distinct()
     artists = Artist.objects.filter(song__user=request.user).distinct()
+    albums  = Album.objects.filter(song__user=request.user).distinct()
+
+
     columns = BROWSE_COLUMN_ORDER
+
     return render_to_response(
             "context_browse.html",
             locals(),
@@ -103,11 +116,23 @@ def collection_browse_view(request):
 
 @login_required
 def collection_browse_column_view(request, column_from):
+
     global BROWSE_COLUMN_ORDER
 
 
-#    if "artist" == column_from:
-    column = BROWSE_COLUMN_ORDER[BROWSE_COLUMN_ORDER.index(column_from)+1]  # next column in order
+    try:
+        column_wanted_nr = BROWSE_COLUMN_ORDER.index(column_from)+1
+        if column_wanted_nr >= len(BROWSE_COLUMN_ORDER)-1:
+            # the last possible column exeeded. deliver only song title list
+            column  = "title"
+            columns = ["title"]
+        else:
+            column = BROWSE_COLUMN_ORDER[column_wanted_nr]  # next column in order
+            columns = [column, "title"] # render only the next column and song titles
+    except IndexError:
+        message = "You requested lists for an invalid column: " + column_from # TODO: display that message somehow
+        column  = "title"
+        columns = ["title"]
 
     if 'items[]' in request.POST:
         items = request.POST.getlist('items[]')
@@ -115,24 +140,27 @@ def collection_browse_column_view(request, column_from):
         items = None
 
 
+    songs  = Song.objects.select_related().filter(user=request.user)  # prefetch and cache related, refine rest later
     if "album" == column:
         albums = Album.objects.filter(song__user=request.user).distinct()
 
-        if 'items[]' in request.POST:
-            artist_ids = request.POST.getlist('items[]')
+        if items and len(items):
+            queries_albums = [ Q(song__artist__id=pk) for pk in items]
+            queries_songs  = [ Q(      artist__id=pk) for pk in items]
+            query_albums = queries_albums.pop()
+            query_songs  = queries_songs.pop()
+            for q in queries_albums:
+                query_albums |= q
+            for q in queries_songs:
+                query_songs |= q
 
-            if len(artist_ids):
-                queries = [ Q(song__artist__id=pk) for pk in artist_ids]
-                query = queries.pop()
-                for q in queries:
-                    query |= q
-
-                albums = albums.filter(query)
+            songs  = songs.filter(query_songs)
+            albums = albums.filter(query_albums)
         else:
             # albums from user already fetched
             pass
 
-    if "title" == column:
+    elif "title" == column:
         songs = Song.objects.filter(user=request.user)
 
         if items and len(items):
@@ -142,9 +170,11 @@ def collection_browse_column_view(request, column_from):
                 query |= q
 
             songs = songs.filter(query)
+    else:
+        return HttpResponse("unsupported (next) column requested: " + column)
 
     return render_to_response(
-            "browse_column.html",
+            "context_browse.html",
             locals(),
             context_instance=RequestContext(request),
             )
@@ -168,7 +198,7 @@ def show_context_upload(request):
             )
 
 def show_context_collection(request):
-    [songs, artists, albums] = get_filtered(request.user)
+    [songs, artists, albums] = get_filtered(request)
     songs_count = songs.count()
     if len(songs) > 50:
         songs = songs[:50]
@@ -210,7 +240,6 @@ def show_context_playlist(request):
             )
 
 @login_required
-@transaction.autocommit
 def sidebar_show_view(request, context):
 
     music_session = MusicSession.objects.get(user=request.user)
@@ -318,20 +347,25 @@ def upload_view(request):
             )
 
 @login_required
-@transaction.autocommit
 def collection_search_view(request):
 
     if request.method == "POST":
 
-        playlists = Playlist.objects.filter(user=request.user)
-        music_session = MusicSession.objects.get(user=request.user)
+#        playlists = Playlist.objects.filter(user=request.user)
+        user_status = UserStatus(request)
+#        music_session = MusicSession.objects.get(user=request.user)
 
         if 'terms' in request.POST:
             terms = request.POST.get('terms', '')
-            music_session.search_terms = terms
-            music_session.save()
+#            music_session.search_terms = terms
+#            music_session.save()
 
-            [songs, artists, albums] = get_filtered(request.user)
+#            status = simplejson.loads(music_session.status)
+#            status['search_terms'] = terms
+
+            user_status.set("search_terms", terms)
+
+            [songs, todo1, todo2] = get_filtered(request)
             songs_count = songs.count()
             if len(songs) > 50:
                 songs = songs[:50]
@@ -386,7 +420,7 @@ def playlist_create_view(request):
         playlists = Playlist.objects.filter(user=request.user)
 
         return render_to_response(
-                "playlists.html",
+                "sidebar_playlists.html",
                 locals(),
                 context_instance=RequestContext(request),
                 )
@@ -402,12 +436,12 @@ def playlist_delete_view(request):
         playlist = Playlist.objects.get(id=playlist_id)
 
         if playlist.name == "default":
-            raise Exception("You can't delete the default playlist. it should stay.")
+            return HttpResponse("You can't delete the default playlist. it should stay.") # TODO: make a nice message
 
         playlist.delete()
 
-        # return the first playlist from user
-        playlist = Playlist.objects.filter(user=request.user)[0]
+        # return the first playlist of user
+        [playlist] = Playlist.objects.filter(user=request.user)[0:1]
 
         return render_to_response(
                 "context_playlist.html",
@@ -418,26 +452,35 @@ def playlist_delete_view(request):
     return HttpResponse("")
 
 @login_required
-@transaction.autocommit
 def playlist_append_view(request):
     if request.method == "POST":
-        playlist_id = request.POST.get('playlist_id')
-        song_id = request.POST.get('song_id')
+        playlist_id  = request.POST.get("playlist_id")
+        item_id      = request.POST.get("id")
+        source       = request.POST.get("source")
 
-        song = Song.objects.get(id=song_id)
         playlist = Playlist.objects.get(id=playlist_id)
 
-        item = PlaylistItem(
-                song = song,
-                position = 1 + len(playlist.items.all())
-                )
+        if "song" == source:
+            songs = [Song.objects.get(user=request.user, id=item_id)]
+        elif "artist" == source:
+            songs = Song.objects.filter(user=request.user, artist__id=item_id)
+        else:
+            songs = []
 
-        item.save()
-        playlist.items.add(item)
-        playlist.save()
+        for song in songs:
+            item = PlaylistItem(
+                    song = song,
+                    position = 1 + len(playlist.items.all())
+                    )
+
+            item.save()
+            playlist.items.add(item)
+            playlist.save()
+
         playlists = Playlist.objects.filter(user=request.user)
+
         return render_to_response(
-                'playlists.html',
+                'sidebar_playlists.html',
                 locals(),
                 context_instance=RequestContext(request),
                 )
@@ -451,7 +494,6 @@ def playlist_append_view(request):
             )
 
 @login_required
-@transaction.autocommit
 def playlist_remove_item_view(request, playlist_id, item_id):
 
     playlist = Playlist.objects.get(id=playlist_id, user=request.user)
@@ -687,15 +729,31 @@ def song_info_response(song, playlist_id=None, item_id=None):
 
     filename = os.path.split(song.path_orig)[-1]
     dbg_file_path = "/music" + song.path_orig[len(settings.MUSIC_PATH):]
+
+
+    # Some null field checks
+    try:
+        artist = song.artist.name
+    except AttributeError:
+        artist = "Unknow"
+    try:
+        album = song.album.name
+    except AttributeError:
+        album = "Unknow"
+    try:
+        genre = song.genre.name
+    except AttributeError:
+        genre = "Unknow"
+
     song_info = {
             'playlist_id': playlist_id,
             'item_id':     item_id,
 
             'song_id':     song.id,
             'title':       song.title,
-            'artist':      song.artist.name,
-            'album':       song.album.name,
-            'genre':       song.genre.name,
+            'artist':      artist,
+            'album':       album,
+            'genre':       genre,
             'track':       song.track,
             'mime':        song.mime,
             'filename':    filename,
@@ -741,7 +799,7 @@ def logout_view(request):
     auth.logout(request)
     return HttpResponseRedirect(reverse('home'))
 
-def get_filtered(user):
+def get_filtered(request):
     """
     returns [songs, artists, albums] queries based on user's music session
     if .filter_show of music_session is False, returns [songs, None, None], with
@@ -756,11 +814,13 @@ def get_filtered(user):
     albums will contain only the albums of the selected artists.
     """
 
-    music_session = MusicSession.objects.get(user=user)
-    terms = music_session.search_terms
+    #music_session = MusicSession.objects.get(user=user)
+    #terms = music_session.search_terms
 
-    songs = Song.objects.select_related().filter(user=user).order_by("artist__name", "album__name")
+    user_status = UserStatus(request)
+    terms = user_status.get("search_terms", "")
 
+    songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
 
 
     if len(terms) > 0:
@@ -779,42 +839,44 @@ def get_filtered(user):
         # show artists and albums only for the songs matched by .search_terms
         # TODO: this is not nice. Isn't it possible to build a querie? Attention:
         # songs can be many (>10000). So the query must be set up carefully.
-        if music_session.filter_show:
-            from itertools import groupby
-            artists = [ k for k, g in groupby(songs, lambda x: x.artist_set.all()[0:1].get())]
-            albums  = [k for k, g, in groupby(songs, lambda x: x.album_set.all()[0:1].get())]
-
-            # now apply filters for artists from the select boxes (using OR)
-            queries = [Q(artist__pk=artist.pk) for artist in music_session.filter_artists.all()]
-            if len(queries)>0:
-                query = queries.pop()
-                for q in queries:
-                    query |= q
-                songs = songs.filter(query)
-
-            # now apply filters for albums from the select boxes (using OR)
-            queries = [Q(album__pk=album.pk) for album in music_session.filter_albums.all()]
-            if len(queries)>0:
-                query = queries.pop()
-                for q in queries:
-                    query |= q
-                songs = songs.filter(query)
-        else:
-            artists = None
-            albums = None
-
-    else:
-        # For the filter view: the displayed artists and albums should contain
-        # all artists and albums the user has songs of
-        if music_session.filter_show:
-            artists = Artist.objects.select_related('songs').filter(songs__user=user).distinct()
-            albums  = Album.objects.select_related('songs').filter(songs__user=user).distinct()
-
-        else:
-            artists = None
-            albums = None
-
-    return [songs, artists, albums]
+# deprecated
+#        if music_session.filter_show:
+#            from itertools import groupby
+#            artists = [ k for k, g in groupby(songs, lambda x: x.artist_set.all()[0:1].get())]
+#            albums  = [k for k, g, in groupby(songs, lambda x: x.album_set.all()[0:1].get())]
+#
+#            # now apply filters for artists from the select boxes (using OR)
+#            queries = [Q(artist__pk=artist.pk) for artist in music_session.filter_artists.all()]
+#            if len(queries)>0:
+#                query = queries.pop()
+#                for q in queries:
+#                    query |= q
+#                songs = songs.filter(query)
+#
+#            # now apply filters for albums from the select boxes (using OR)
+#            queries = [Q(album__pk=album.pk) for album in music_session.filter_albums.all()]
+#            if len(queries)>0:
+#                query = queries.pop()
+#                for q in queries:
+#                    query |= q
+#                songs = songs.filter(query)
+#        else:
+#            artists = None
+#            albums = None
+#
+#    else:
+#        # For the filter view: the displayed artists and albums should contain
+#        # all artists and albums the user has songs of
+#        if music_session.filter_show:
+#            artists = Artist.objects.select_related('songs').filter(songs__user=user).distinct()
+#            albums  = Album.objects.select_related('songs').filter(songs__user=user).distinct()
+#
+#        else:
+#            artists = None
+#            albums = None
+#
+#    return [songs, artists, albums]
+    return [songs, None, None]
 
 
 def filter_songs(request, terms, artists=None, albums=None):

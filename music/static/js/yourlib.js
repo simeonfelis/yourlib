@@ -2,7 +2,7 @@
 /* yourlib common stuff, find context specific stuff in subsequent yourlib_<files>.js  */
 
 function spinner_start(elem) {
-    $(elem).append("<img class='spinner'  height='18' width='18' src='/static/css/spinner.gif' />");
+    $(elem).append("<img class='spinner'  height='15' width='15' src='/static/css/spinner.gif' />");
 }
 
 function spinner_stop(sel) {
@@ -68,10 +68,23 @@ function Download() {
 
 function Browse() {
 
-    this.bind = function() {
+    this.bind = function(selector) {
+
+        console.log("binding browse view. selector: " + selector);
+
         this.update_viewport();
 
-        $(".btn_browse_title").on("click", function(){
+        if (!selector) {
+            selector = '';
+            // all columns
+            column_selector = "#browse_artist_filter .btn, #browse_album_filter .btn, #browse_genre_filter .btn";
+        }
+        else {
+            // one column max.
+            column_selector = selector + " .btn";
+        }
+
+        $( selector + " .btn_browse_title").on("click", function(){
             var $data = {
                 'song_id': $(this).attr("data-title_id"),
                 'source' : 'collection',
@@ -82,11 +95,12 @@ function Browse() {
             return false;
         });
 
-        $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
-        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+        $( column_selector ).on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
+        $( column_selector ).on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
 
-        // select item after hover delay
-        $("#browse_artist_filter .btn, #browse_album_filter .btn, #browse_genre_filter .btn").on("mouseenter", function() {
+        // select/deselect items
+        $( column_selector ).not( ".btn_browse_title" )
+        .on("mouseenter", function() {
             $this = $(this);
             if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
                 return;
@@ -95,47 +109,119 @@ function Browse() {
                 $this.addClass("pre-unselected");
                 //$this.data('delay', setTimeout(function() {$this.removeClass("selected"); browse.on_artist_clicked()}, 900));
                 $this.data('delay', setTimeout(function() {
-                    var tmp = $this.parent().find(".ui-widget-header");
-                    var column = tmp.html();
+
+                    var column = $(this).parent().find(".ui-widget-header").html();
+
                     $this.removeClass("selected");
                     browse.on_column_item_clicked(column);
-                }, 900));
+                }, 1500));
             }
             else {
                 $this.addClass("pre-selected");
                 //$this.data('delay', setTimeout(function() {$this.removeClass("pre-selected").addClass("selected"); browse.on_artist_clicked()}, 900));
                 $this.data('delay', setTimeout(function() {
-                    var tmp = $this.parent().find(".ui-widget-header");
-                    var column = tmp.html();
+
+                    var column = $(this).parent().find(".ui-widget-header").html();
+
                     $this.removeClass("pre-selected").addClass("selected");
                     browse.on_column_item_clicked(column);
-                }, 900));
+                }, 1500));
             }
-        });
-        $("#browse_artist_filter .btn, #browse_album_filter .btn, #browse_genre_filter .btn").on("mouseleave", function() {
+        })
+        .on("mouseleave", function() {
             $this = $(this);
             if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
                 clearTimeout($this.data("delay"));
                 $this.removeClass("pre-selected");
                 $this.removeClass("pre-unselected");
             }
-        });
+        })
+        .on("click", function() {
+            console.log("column item clicked");
 
+            var column = $(this).parent().find(".ui-widget-header").html();
+
+            // highlight/unhighlight
+            if ($(this).hasClass("selected")) {
+                $(this).removeClass("selected")
+            }
+            else{
+                $(this).addClass("selected")
+            }
+
+            // prevent ongoing timeouts
+            if ($(this).hasClass("pre-selected") || $(this).hasClass("pre-unselected")) {
+                clearTimeout($(this).data("delay"));
+                $(this).removeClass("pre-selected");
+                $(this).removeClass("pre-unselected");
+            }
+
+            browse.on_column_item_clicked(column);
+
+        })
+        .draggable({
+            items: "li",
+            helper: function(event) {
+                var column = $(this).parent().find(".ui-widget-header").html();
+
+                helper = $("<div class='ui-widget-content ui-state-focus ui-corner-all', align='center'></div>");
+                helper.attr("data-source", "browse");
+                helper.attr("data-column", column);
+
+                if ("artist" == column) {
+                    artist = $(this).find(".name").html();
+                    artist_id = $(this).attr("data-artist_id");
+                    helper.attr("data-artist_id", artist_id);
+                    count = $(this).find(".count").html();
+                    //title = $(this).find(".title").html();
+                    console.log("Dragging element with song id TODO")
+                    helper.html("All songs (" + count + ") from artist <br />" + artist);
+                    return $( helper );
+                }
+                else if ("album" == column) {
+
+                }
+                else if ("genre" == column) {
+
+                }
+
+
+            },
+            appendTo: "body",
+            containment: "document",
+            revert: "invalid",
+            delay: 100,
+        }).disableSelection();
     }
 
     this.on_column_received = function(data) {
-            if ( $(data).attr('id') == "context_browse_album_container" ) {
-                if ($("#context_container").find("#context_browse_album_container").length > 0) {
-                    $("#context_browse_album_container").replaceWith(data);
-                    browse.bind();
-                }
+        var $album_container  = $(data).find("#context_browse_album_container");
+        var $genre_container  = $(data).find("#context_browse_genre_container");
+        var $title_container  = $(data).find("#context_browse_title_container");
+        var $artist_container = $(data).find("#context_browse_artist_container");
+
+        var column_from = $(data).find("#column_from").html();
+
+        if ($album_container.length > 0) {
+            if ($("#context_container").find("#context_browse_album_container").length > 0) {
+                $("#context_browse_album_container").replaceWith($album_container);
+                browse.bind("#context_browse_album_container");
             }
-            if ( $(data).attr('id') == "context_browse_title_container" ) {
-                if ($("#context_container").find("#context_browse_title_container").length > 0) {
-                    $("#context_browse_title_container").replaceWith(data);
-                    browse.bind();
-                }
+        }
+
+        if ($title_container.length > 0) {
+            if ($("#context_container").find("#context_browse_title_container").length > 0) {
+                $("#context_browse_title_container").replaceWith($title_container);
+                browse.bind("#context_browse_title_container");
             }
+        }
+
+        if ($genre_container.length > 0) {
+            console.log("TODO");
+        }
+        if ($artist_container.length > 0) {
+            console.log("TODO");
+        }
     }
 
     this.on_column_item_clicked = function(column_from) {
@@ -151,36 +237,7 @@ function Browse() {
 
         $.post('collection/browse/' + column_from + '/', data, browse.on_column_received);
     }
-/*
-    this.on_artist_clicked = function() {
-        var selected = $("#browse_artist_filter .selected").get();
-        var artist_ids = [];
-        for (artist in selected) {
-            artist_ids.push($(selected[artist]).attr("data-artist_id"));
-        }
-        var data = {
-            'artist_ids'    : artist_ids,
-        }
 
-        $.post('collection/browse/artist/', data, function(data){
-            // handle albums
-            var tmp = $(data).find("#context_browse_album_container").get(0);
-            
-            if ( $(data).attr('id') == "context_browse_album_container" ) {
-                if ($("#context_container").find("#context_browse_album_container").length > 0) {
-                    $("#context_browse_album_container").replaceWith(data);
-                    browse.bind();
-                }
-            }
-
-            // handle song items
-            if ($(data).find("#context_browse_song_container").length > 0) {
-                // TODO
-            }
-
-        });
-    }
-*/
     this.exhibit = function(data) {
         if (data) {
             browse.content = data;

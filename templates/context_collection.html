@@ -5,7 +5,7 @@
             <div>Search:</div>
             <div class="input">
                 <form id="context_collection_search">
-                    <input id="collection_search_terms" name="search_terms" type="text" size="20" maxlength="32" value="{{ music_session.search_terms }}">
+                    <input id="collection_search_terms" name="search_terms" type="text" size="20" maxlength="32" value="{{ user_status.vals.search_terms }}">
                 </form>
             </div>
             <div class="status" id="context_collection_search_status">{{ songs_count }}</div>

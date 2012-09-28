@@ -3,8 +3,8 @@
 
         <div id="context_header" class="ui-widget-content ui-corner-all ui-widget-header">
             <div class="name">Playlist {{ playlist.name }}</div>
-            <div class="btn_playlist_delete btn ui-state-default ui-corner-all" data-playlist_id="{{ playlist.id }}">delete</div>
-            <div class="btn_playlist_download btn ui-state-default ui-corner-all" data-playlist_id="{{ playlist.id }}">download</div>
+            <div class="btn_playlist_delete btn ui-state-default ui-corner-all" data-playlist_name="{{ playlist.name }}" data-playlist_id="{{ playlist.id }}">delete</div>
+            {#<div class="btn_playlist_download btn ui-state-default ui-corner-all" data-playlist_id="{{ playlist.id }}">download</div>#}
         </div>
 
         <div id="context_playlist_container">

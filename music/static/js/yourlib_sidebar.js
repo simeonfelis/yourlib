@@ -3,18 +3,32 @@ function Sidebar() {
         console.log("rebinding sidebar");
 
         $(".btn_sidebar_playlist").droppable( {
-            accept: ".song_item",
+            accept: ".song_item, .btn_browse_artist",
             activeClass: "ui-state-focus",
             hoverClass: "ui-state-highlight",
-            drop: function(event, ui) {
-                song_id = $(ui.draggable).attr("data-song_id");
-                playlist_id = $(this).attr("data-playlist_id");
-
-                playlist.append(playlist_id, song_id);
-            },
+            drop: sidebar.on_item_dropped_playlist,
         });
 
         highlight_playing(by_who='sidebar.bind', target="#sidebar");
+    }
+
+    this.on_item_dropped_playlist = function(event, ui) {
+        var source = $(ui.helper).attr("data-source");
+        var playlist_id = $(this).attr("data-playlist_id");
+
+        if ("browse" == source) {
+            var column = $(ui.helper).attr("data-column");
+
+            if ("artist" == column) {
+                var artist_id = $(ui.helper).attr("data-artist_id");
+                playlist.append(playlist_id, artist_id, column);
+            }
+        }
+        else if ("collection" == source) {
+            song_id = $(ui.helper).attr("data-song_id");
+
+            playlist.append(playlist_id, song_id, source);
+        }
     }
 
     this.show_collection = function() {
@@ -30,12 +44,12 @@ function Sidebar() {
     }
 
     this.show_browse = function() {
-        spinner_start();
+        spinner_start($(this));
         $.post("collection/browse/", {}, function(data) {
             spinner_stop( "#sidebar");
             browse.exhibit(data);
             $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-            $("#btn_context_browse").addClass("currently_shown");
+            $("#btn_sidebar_browse").addClass("currently_shown");
         });
     }
 

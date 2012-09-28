@@ -74,6 +74,7 @@ class Playlist(models.Model):
 
 class MusicSession(models.Model):
     user = models.ForeignKey(User)
+    status            = models.CharField(max_length=4096)
     search_terms      = models.CharField(max_length=255)
     filter_show       = models.BooleanField(default=False)
     filter_artists    = models.ManyToManyField(Artist, blank=True, null=True)

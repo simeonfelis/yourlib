@@ -7,6 +7,11 @@
 
         <div id="context_browse_container" class="ui-widget-content ui-corner-all">
 
+            {% if column_from %}
+                <!-- I keep my javascript code stupid. I need to tell here what column has requested the data -->
+                <div style="visibility: hidden;" id="column_from">{{ column_from }}</div>
+            {% endif %}
+
             {% for column in columns %}
                 {% include "browse_column.html"%}
             {% endfor %}

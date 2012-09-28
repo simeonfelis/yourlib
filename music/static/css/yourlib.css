@@ -244,7 +244,16 @@ body {
     font-weight: bold;
 }
 
+.browse_column .name  { float: left; }
+.browse_column .count { float: right; font-size: smaller; margin-right: 15px; }
+
 .browse_column li {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.browse_column li span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

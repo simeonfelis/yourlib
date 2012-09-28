@@ -2,12 +2,45 @@ import os, datetime
 import mutagen as tagreader
 
 from django.utils.timezone import utc
+from django.utils import simplejson
 from django.conf import settings
 from django.db import transaction
 
-from music.models import Song, Artist, Album, Genre
+from music.models import Song, Artist, Album, Genre, MusicSession
 
 STACKTRACE = None
+
+user_status_defaults = simplejson.dumps({
+    "search_terms": "",
+})
+
+class UserStatus():
+
+    def __init__(self, request):
+        self.music_session = MusicSession.objects.get(user=request.user)
+        self.vals = simplejson.loads(self.music_session.status)  # initial population
+
+    def get(self, key, default=None):
+
+        self.vals = simplejson.loads(self.music_session.status)
+
+        if key in self.vals:
+            return self.vals[key]
+        else:
+            self.vals[key] = default
+            self.music_session.status = simplejson.dumps(self.vals)
+            self.music_session.save()
+
+            return default
+
+    def set(self, key, value):
+        tmp = simplejson.loads(self.music_session.status)
+
+        tmp[key] = value
+        self.music_session.status = simplejson.dumps(tmp)
+        self.music_session.save()
+        self.vals = tmp
+
 
 def dbgprint(*args):
     """
