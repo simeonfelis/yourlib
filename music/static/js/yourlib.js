@@ -1,4 +1,3 @@
-
 /* yourlib common stuff, find context specific stuff in subsequent yourlib_<files>.js  */
 
 function spinner_start(elem) {
@@ -66,12 +65,244 @@ function Download() {
     }
 }
 
+function Pagination(options) {
+    console.log("PAGINATION INITIALIZED");
+
+    // this is somehow useless
+    this.scrollTarget = options.scrollTarget;  // the dom which listen to scroll events
+    this.appendTarget = options.appendTarget;  // the dom where to append data to
+    this.contentUrl   = options.contentUrl;    // where to load data from
+    this.contentData  = options.contentData;   // data to send to server within load request
+    this.beforeLoad   = options.beforeLoad;    // execute this before load
+    this.afterLoad    = options.afterLoad;     // exectute after succesful load
+    this.errorLoad    = options.errorLoad;     // execute this on load errors
+    this.enabled      = options.enabled;       // doh.
+
+    // extend options
+    options.loadContent     = this.loadContent;
+    options.contentReceived = this.contentReceived;
+    //options.loadError       = this.loadError;
+
+    // save options into dom element
+    $(this.scrollTarget).data("pagination", options);
+
+    // bind scroll event
+    $(this.scrollTarget).scroll(function(event){
+        // context: window. `this` is window, `$(this)` is dom element that was scrolled (scrollTarget)
+        // I hate javascript.
+        var pagination = $(this).data("pagination"); // get pagination object
+        console.log("PAGINATION SCROLL EVENT");
+        if (pagination.enabled) {
+            console.log("PAGINATION SCROLL ALLOWED");
+            // determine scroll position
+            var scrolled           = $(pagination.scrollTarget).scrollTop();
+            var scrollTargetHeight = $(pagination.scrollTarget).height();
+            var appendTargetHeight = $(pagination.appendTarget).height();
+            var mayLoadContent = scrolled + scrollTargetHeight + 10 >= appendTargetHeight;
+
+            if (mayLoadContent) {
+                pagination.beforeLoad();
+                $(pagination.appendTarget).children().attr("rel", "loaded"); // mark already loaded data
+                pagination.loadContent(pagination);
+            }
+        }
+    });
+
+    this.loadContent = function(pagination) {
+        // I really don't know the context of this or $(this) here.
+        $this = $(pagination.scrollTarget);
+
+        $.ajax({
+            type:     "POST",
+            url:      pagination.contentUrl,
+            data:     {"so_far" : pagination.contentData},
+            success:  function(data) {
+                // we are in context window again. sigh.
+                pagination = $($this).data("pagination");
+                console.log("PAGINATION LOAD SUCCESS");
+                if (data == "nomoreresults") {
+                    pagination.enabled = false;
+                }
+                else {
+                    $(pagination.appendTarget).append(data);
+                    var newData = $(pagination.appendTarget).children("[rel!=loaded]");
+                    pagination.afterLoad(newData);
+                }
+            },
+            error:    function(data) {
+                // we are in context window again. sigh.
+                pagination = $($this).data("pagination");
+
+                console.log("PAGINATION LOAD ERROR");
+                pagination.errorLoad(data);
+            },
+            datatype: "html"
+        })
+    }
+}
+
 function Browse() {
 
     this.bind = function(selector) {
 
+/*   $(function(){
+        $('#context_browse_artist_container').scrollPagination({
+            'contentPage': 'collection/browse/more/artist/', // the url you are fetching the results
+            'contentData': {"so_far": function() {return $(".btn_browse_artist").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
+            'scrollTarget': $("#context_browse_artist_container"), // who gonna scroll? in this example, the full window
+            'appendTarget': $("#context_browse_artist_column"),  // where to append loaded data
+            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
+            'beforeLoad': function(){ // before load function, you can display a preloader div
+                $('#loading_browse_artists').fadeIn();
+            },
+            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
+                 $('#loading_browse_artist').fadeOut();
+                 //var i = 0;
+                 //$(elementsLoaded).fadeInWithDelay();
+                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
+                 //   $('#nomoreresults').fadeIn();
+                 //   $('#song_items').stopScrollPagination();
+                 //}
+                 browse.update_viewport();
+            }
+        });
+
+        // code for fade in element by element
+        $.fn.fadeInWithDelay = function(){
+            var delay = 0;
+            return this.each(function(){
+                $(this).delay(delay).animate({opacity:1}, 200);
+                delay += 100;
+            });
+        };
+    });
+
+
+   $(function(){
+        $('#context_browse_title_container').scrollPagination({
+            'contentPage': 'collection/browse/more/title/', // the url you are fetching the results
+            'contentData': {"so_far": function() {return $(".btn_browse_title").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
+            'scrollTarget': $("#context_browse_title_container"), // who gonna scroll? in this example, the full window
+            'appendTarget': $("#context_browse_title_column"),  // where to append loaded data
+            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
+            'beforeLoad': function(){ // before load function, you can display a preloader div
+                $('#loading_browse_title').fadeIn();
+            },
+            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
+                 $('#loading_browse_title').fadeOut();
+                 //var i = 0;
+                 //$(elementsLoaded).fadeInWithDelay();
+                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
+                 //   $('#nomoreresults').fadeIn();
+                 //   $('#song_items').stopScrollPagination();
+                 //}
+                 browse.update_viewport();
+            }
+        });
+
+        // code for fade in element by element
+        $.fn.fadeInWithDelay = function(){
+            var delay = 0;
+            return this.each(function(){
+                $(this).delay(delay).animate({opacity:1}, 200);
+                delay += 100;
+            });
+        };
+    });
+
+
+
+   $(function(){
+        $('#context_browse_album_container').scrollPagination({
+            'contentPage': 'collection/browse/more/album/', // the url you are fetching the results
+            'contentData': {"so_far": function() {return $(".btn_browse_album").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
+            'scrollTarget': $("#context_browse_album_container"), // who gonna scroll? in this example, the full window
+            'appendTarget': $("#context_browse_album_column"),  // where to append loaded data
+            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
+            'beforeLoad': function(){ // before load function, you can display a preloader div
+                $('#loading_browse_album').fadeIn();
+            },
+            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
+                 $('#loading_browse_album').fadeOut();
+                 //var i = 0;
+                 //$(elementsLoaded).fadeInWithDelay();
+                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
+                 //   $('#nomoreresults').fadeIn();
+                 //   $('#song_items').stopScrollPagination();
+                 //}
+                 browse.update_viewport();
+            }
+        });
+
+        // code for fade in element by element
+        $.fn.fadeInWithDelay = function(){
+            var delay = 0;
+            return this.each(function(){
+                $(this).delay(delay).animate({opacity:1}, 200);
+                delay += 100;
+            });
+        };
+    });
+*/
         console.log("binding browse view. selector: " + selector);
 
+        artistPagination = Pagination({
+            scrollTarget : '#context_browse_artist_container',
+            appendTarget : "#context_browse_artist_column",
+            contentUrl   : "collection/browse/more/artist/",
+            contentData  : function() {return $(".btn_browse_artist").length;},
+            beforeLoad   : function() {$('#loading_browse_artists').fadeIn();},
+            afterLoad    : function() {$('#loading_browse_artists').fadeOut();},
+            errorLoad    : function() {alert("Pagination load error");},
+            enabled      : true
+        });
+
+        albumPagination = Pagination({
+            scrollTarget : '#context_browse_album_container',
+            appendTarget : "#context_browse_album_column",
+            contentUrl   : "collection/browse/more/album/",
+            contentData  : function() {return $(".btn_browse_album").length;},
+            beforeLoad   : function() {$('#loading_browse_album').fadeIn();},
+            afterLoad    : function() {$('#loading_browse_album').fadeOut();},
+            errorLoad    : function() {alert("Pagination load error");},
+            enabled      : true
+        });
+
+        titlePagination = Pagination({
+            scrollTarget : '#context_browse_title_container',
+            appendTarget : "#context_browse_title_column",
+            contentUrl   : "collection/browse/more/title/",
+            contentData  : function() {return $(".btn_browse_title").length;},
+            beforeLoad   : function() {$('#loading_browse_title').fadeIn();},
+            afterLoad    : function() {$('#loading_browse_title').fadeOut();},
+            errorLoad    : function() {alert("Pagination load error");},
+            enabled      : true
+        });
+
+/*
+        $('#context_browse_artist_container').data("enabled", true);
+        $('#context_browse_artist_container').data("contentUrl", "collection/browse/more/artist/");
+        $('#context_browse_artist_container').data("appendTarget", "#context_browse_artist_column");
+        $('#context_browse_artist_container').data("contentData", function() {
+            return $(".btn_browse_artist").length;
+        });
+        $('#context_browse_artist_container').data("beforeLoad", function() {
+            $('#loading_browse_artists').fadeIn();
+        });
+        $('#context_browse_artist_container').data("afterLoad", function() {
+            $('#loading_browse_artists').fadeOut();
+        });
+        $('#context_browse_artist_container').scroll(function() {
+            var $appendTarget = $("#context_browse_artist_column");
+            var mayLoadContent = $(this).scrollTop() + $(this).height() + 10 >= $appendTarget.height();
+            if (mayLoadContent) {
+                $(this).data("beforeLoad"); // execute beforeLoad function
+                $(this).children().attr("rel", "loaded"); // mark already loaded data
+                $this = $(this); // make current element available in ajax success function
+                browse.pagination($this);
+            }
+        });
+*/
         this.update_viewport();
 
         if (!selector) {
@@ -100,7 +331,7 @@ function Browse() {
 
         // select/deselect items
         $( column_selector ).not( ".btn_browse_title" )
-        .on("mouseenter", function() {
+        /*.on("mouseenter", function() {
             $this = $(this);
             if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
                 return;
@@ -110,7 +341,7 @@ function Browse() {
                 //$this.data('delay', setTimeout(function() {$this.removeClass("selected"); browse.on_artist_clicked()}, 900));
                 $this.data('delay', setTimeout(function() {
 
-                    var column = $(this).parent().find(".ui-widget-header").html();
+                    var column = $this.parent().find(".ui-widget-header").html();
 
                     $this.removeClass("selected");
                     browse.on_column_item_clicked(column);
@@ -121,7 +352,7 @@ function Browse() {
                 //$this.data('delay', setTimeout(function() {$this.removeClass("pre-selected").addClass("selected"); browse.on_artist_clicked()}, 900));
                 $this.data('delay', setTimeout(function() {
 
-                    var column = $(this).parent().find(".ui-widget-header").html();
+                    var column = $this.parent().find(".ui-widget-header").html();
 
                     $this.removeClass("pre-selected").addClass("selected");
                     browse.on_column_item_clicked(column);
@@ -135,7 +366,7 @@ function Browse() {
                 $this.removeClass("pre-selected");
                 $this.removeClass("pre-unselected");
             }
-        })
+        })*/
         .on("click", function() {
             console.log("column item clicked");
 
@@ -192,6 +423,35 @@ function Browse() {
             revert: "invalid",
             delay: 100,
         }).disableSelection();
+    }
+    
+    this.pagination = function(loadElement) {
+        $this = loadElement;
+        beforeLoad = $this.data("beforeLoad");
+        beforeLoad();
+        if ($this.data("enabled")) {
+            $.ajax({
+                type: "POST",
+                url: $this.data("contentUrl"),
+                data: {"so_far": $($this).data("contentData")()},
+                success: function(data) {
+                    if (data == "nomoreresults") {
+                        $this.data("enabled", false);
+                    }
+                    else {
+                        $($this.data("appendTarget")).append(data);
+                        var newData = $($this.data("appendTarget")).children("[rel!=loaded]");
+                        afterLoad = $this.data("afterLoad");
+                        afterLoad(newData);
+                    }
+                },
+                dataType: "html"
+            });
+        }
+        else {
+            afterLoad = $($this).data("afterLoad");
+            afterLoad();
+        }
     }
 
     this.on_column_received = function(data) {

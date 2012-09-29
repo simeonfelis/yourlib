@@ -5,14 +5,19 @@ from django.utils.timezone import utc
 from django.utils import simplejson
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 
 from music.models import Song, Artist, Album, Genre, MusicSession
 
 STACKTRACE = None
 
+DEFAULT_BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
+
 user_status_defaults = simplejson.dumps({
     "search_terms": "",
+    "browse_column_order": DEFAULT_BROWSE_COLUMN_ORDER,
 })
+
 
 class UserStatus():
 
@@ -40,6 +45,70 @@ class UserStatus():
         self.music_session.status = simplejson.dumps(tmp)
         self.music_session.save()
         self.vals = tmp
+
+def browse_column_album(request):
+    """
+    Returns [albums,songs] based on a selection of artists.
+    the selection has to be in the UserStatus.
+    If nothing is selected, returns all songs and albums from user.
+    This function depends on static column order.
+    """
+    songs  = Song.objects.select_related().filter(user=request.user)
+    albums = Album.objects.filter(song__user=request.user).distinct()
+
+    # find out what the user has selected
+    user_status = UserStatus(request)
+    items = user_status.get("browse_selected_artists", None)
+
+    # Build query to retrieve the albums
+    # TODO: find out which other columns to filter. song title might not be the only one
+    if items and len(items):
+        queries_albums = [ Q(song__artist__id=pk) for pk in items]
+        queries_songs  = [ Q(      artist__id=pk) for pk in items]
+        query_albums = queries_albums.pop()
+        query_songs  = queries_songs.pop()
+        for q in queries_albums:
+            query_albums |= q
+        for q in queries_songs:
+            query_songs |= q
+
+        songs  = songs.filter(query_songs)
+        albums = albums.filter(query_albums)
+    else:
+        # already fetched all
+        pass
+
+    return albums, songs
+
+def browse_column_title(request):
+    """
+    Returns songs based on a selection of artists and albums.
+    The selection has to be stored in UserStatus.
+    If nothing is selected, returns all songs from user.
+    This function depends on static column order.
+    """
+    songs   = Song.objects.select_related().filter(user=request.user)
+
+    # find out what the user has selected
+    user_status  = UserStatus(request)
+    album_items  = user_status.get("browse_selected_albums", None)
+    artist_items = user_status.get("browse_selected_artists", None)
+
+    if album_items and len(album_items):
+        queries = [ Q(album__id=pk) for pk in album_items]
+        query = queries.pop()
+        for q in queries:
+            query |= q
+    if artist_items and len(artist_items):
+        queries = [ Q(artist__id=pk) for pk in artist_items]
+        query = queries.pop()
+        for q in queries:
+            query |= q
+
+    songs = songs.filter(query)
+
+    return songs
+
 
 
 def dbgprint(*args):

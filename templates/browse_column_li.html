@@ -1,3 +1,4 @@
+{% spaceless %}
 {% if column == "artist" %}
     {% for artist in artists %}
         <li class="artist btn ui-state-default btn_browse_artist" data-artist_id="{{ artist.id }}">
@@ -23,3 +24,4 @@
         </li>
     {% endfor %}
 {% endif %}
+{% endspaceless %}

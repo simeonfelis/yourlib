@@ -3,8 +3,8 @@ function Playlist() {
 
         this.update_viewport();
 
-        $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
-        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+        $(".btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
+        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
 
 
         $(".sortable").not(".song_item_heading").sortable( {
@@ -38,7 +38,6 @@ function Playlist() {
         var url = "playlist/reorder/";
 
         var $data = {
-            'csrfmiddlewaretoken': csrf_token,
             'playlist_id'        : playlist_id,
             'item_id'            : item_id,
             'item_previous_id'   : item_previous_id,

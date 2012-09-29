@@ -120,8 +120,6 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
     user = User.objects.get(id=user_id)
     collection = Collection.objects.get(user=user)
 
-    print("rescan requested by", user);
-
     try:
         userdir = os.path.join(settings.MUSIC_PATH, user.username).encode('utf-8')
         # on filenames with bad encoded characters, os.walk will fail when using 
@@ -141,6 +139,7 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
         amount += len(songs) # absolute amount
         processed = 0        # absolute progress
         so_far = 0           # progress in percent
+        print ("rescan_task: user", user, "dir", userdir, "absolute amount", amount)
 
         ##############     check orphans     ##################
         for s in songs:

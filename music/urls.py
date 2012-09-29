@@ -11,10 +11,12 @@ urlpatterns = patterns('music.views',
     url(r'^sidebar/playlists/$', 'sidebar_playlists_view'),
 
     url(r'^collection/$', 'collection_view'),
+    url(r'^collection/songs/$', 'collection_songs_view'),
     url(r'^collection/search/$', 'collection_search_view'),
     #url(r'^collection/more/$', 'collection_more_view'),
     url(r'^collection/browse/$', 'collection_browse_view'),
     url(r'^collection/browse/(?P<column_from>\w+)/$', 'collection_browse_column_view'),
+    url(r'^collection/browse/more/(?P<column>\w+)/$', 'collection_browse_more_view'),
 
 
     url(r'^playlist/$', 'playlist_view'),

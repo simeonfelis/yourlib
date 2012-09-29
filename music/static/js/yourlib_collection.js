@@ -1,5 +1,44 @@
+
+
 function Collection() {
     this.bind = function(){
+
+   $(function(){
+        $('#songs').scrollPagination({
+            'contentPage': 'collection/songs/', // the url you are fetching the results
+            'contentData': {"so_far": function() {return $(".song_item").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
+            'scrollTarget': $("#context_collection_container"), // who gonna scroll? in this example, the full window
+            'appendTarget': $("#collection_song_items"),
+            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
+            'beforeLoad': function(){ // before load function, you can display a preloader div
+                console.log("pagination befor load");
+                $('#loading').fadeIn();
+            },
+            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
+                console.log("pagination after load");
+                 $('#loading').fadeOut();
+                 //var i = 0;
+                 //$(elementsLoaded).fadeInWithDelay();
+                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
+                 //   $('#nomoreresults').fadeIn();
+                 //   $('#song_items').stopScrollPagination();
+                 //}
+                 collection.update_viewport();
+            }
+        });
+
+        // code for fade in element by element
+        $.fn.fadeInWithDelay = function(){
+            console.log("pagination fadeInWith delay");
+            var delay = 0;
+            return this.each(function(){
+                $(this).delay(delay).animate({opacity:1}, 200);
+                delay += 100;
+            });
+        };
+    });
+
+
 
         $("#songs_count").remove();
 

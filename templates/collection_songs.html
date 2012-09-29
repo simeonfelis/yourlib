@@ -6,32 +6,30 @@
     </div>{% endcomment %}
     <div id="songs">
 
-
         <div id="songs_count" style="visibility:collapse;">{{ songs_count }}</div>
-
-        {% if songs|length > 200 %}
-            <p>Too many songs to render. Chrome would die or transfer of results is too big (more than 1MB).</p>
-        {% elif songs|length > 0 %}
-            <ul class="song_items ui-helper-clearfix" id="collection_song_items">
-
-
-<li class="song_item_heading ui-widget-header">
-    <ul class="ui-widget-reset ui-helper-clearfix">
-        <li class="song_info artist">Artist</li>
-        <li class="song_info title">Title</li>
-        <li class="song_info album">Album</li>
-        <li class="song_info track" title="Track number in album">#</li>
-        <li class="song_info genre">Genre</li>
-        <li class="song_info mime" title="File type">&nbsp;</li>
-    </ul>
-</li>
-
-                {% include "collection_songs_li.html" %}
-            </ul>
-            <div class="btn" id="get_more_results">more</div>
-        {% else %}
-            <p>No results</p>
-        {% endif %}
-
+        <ul class="song_items ui-helper-clearfix" id="collection_song_items">
+            <!-- header -->
+            <li class="song_item_heading ui-widget-header">
+                <ul class="ui-widget-reset ui-helper-clearfix">
+                    <li class="song_info artist">Artist</li>
+                    <li class="song_info title">Title</li>
+                    <li class="song_info album">Album</li>
+                    <li class="song_info track" title="Track number in album">#</li>
+                    <li class="song_info genre">Genre</li>
+                    <li class="song_info mime" title="File type">&nbsp;</li>
+                </ul>
+            </li>
+            {% include "collection_songs_li.html" %}
+        </ul>
+        <div id="loading" style="{
+background: #C1C39A;
+color: #303030;
+font-size: 20px;
+padding: 5px 10px;
+text-align: center;
+width: 450px;
+margin: 0px auto;
+display: none;
+border-radius: 5px;}">Loading...</div>
     </div>
 </div>

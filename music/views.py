@@ -11,12 +11,12 @@ from django.core.urlresolvers import reverse
 
 from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
-from music.helper import dbgprint, UserStatus, user_status_defaults
+#from music.helper import dbgprint, UserStatus, user_status_defaults
+from music import helper
 from music import settings
 
 import os
 
-BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
 
 @login_required
 def home_view(request):
@@ -26,7 +26,7 @@ def home_view(request):
     playlists = Playlist.objects.filter(user=request.user)
     # create playlists if not existent for user
     if 0 == len(playlists):
-        dbgprint("Creating default playlist for user ", request.user)
+        helper.dbgprint("Creating default playlist for user ", request.user)
         pl = Playlist(name="default", user=request.user, current_position=0)
         pl.save()
         playlists = Playlist.objects.filter(user=request.user)
@@ -34,12 +34,12 @@ def home_view(request):
     # current status
     try:
         music_session = MusicSession.objects.get(user=request.user)
-        user_status = UserStatus(request)
+        user_status = helper.UserStatus(request)
     except MusicSession.DoesNotExist:
 
-        dbgprint("Creating music session for user ", request.user)
+        helper.dbgprint("Creating music session for user ", request.user)
         music_session = MusicSession(
-            status = user_status_defaults,
+            status = helper.user_status_defaults,
             user=request.user,
             currently_playing='none',
             search_terms='',
@@ -73,8 +73,8 @@ def home_view(request):
 
     [songs, artists, albums] = get_filtered(request)
     songs_count = songs.count()
-    if len(songs) > 50:
-        songs = songs[:50]
+    if len(songs) > 10:
+        songs = songs[:10]
 
     return render_to_response(
             'home.html',
@@ -87,8 +87,9 @@ def home_view(request):
 def collection_view(request):
     [songs, dump1, dump2] = get_filtered(request)
     songs_count = songs.count()
-    if len(songs) > 50:
-        songs = songs[:50]
+    user_status = helper.UserStatus(request)
+    if len(songs) > 10:
+        songs = songs[:10]
     return render_to_response(
             "context_collection.html",
             locals(),
@@ -96,17 +97,45 @@ def collection_view(request):
             )
 
 @login_required
+def collection_songs_view(request):
+    so_far = int(request.POST.get("so_far", 0))
+
+    [songs, dump1, dump2] = get_filtered(request)
+    songs_count = songs.count()
+
+    if songs_count > so_far+30:
+        songs = songs[so_far:so_far+30]
+    else:
+        songs = songs[so_far:]
+
+    return render_to_response(
+            "collection_songs_li.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+
+@login_required
 def collection_browse_view(request):
-    global BROWSE_COLUMN_ORDER
 
     songs   = Song.objects.select_related().filter(user=request.user)
+    if songs.count() > 50:
+        songs = songs[:50]
 
     genres  = Genre.objects.filter(song__user=request.user).distinct()
+    if genres.count() > 50:
+        genres = genres[:50]
+
     artists = Artist.objects.filter(song__user=request.user).distinct()
+    if artists.count() > 50:
+        genres = genres[:50]
+
     albums  = Album.objects.filter(song__user=request.user).distinct()
+    if albums.count() > 50:
+        albums = albums[:50]
 
 
-    columns = BROWSE_COLUMN_ORDER
+    columns = helper.DEFAULT_BROWSE_COLUMN_ORDER
 
     return render_to_response(
             "context_browse.html",
@@ -116,65 +145,94 @@ def collection_browse_view(request):
 
 @login_required
 def collection_browse_column_view(request, column_from):
+    """
+    Works in static column order only.
 
-    global BROWSE_COLUMN_ORDER
+    If column_from is artist, returns list of albums and songs.
+    If column_from is album, returns list of songs.
 
+    The returned lists are filtered by the selection of the items in column_from. The item ids
+    have to be transmitted in the POST request in "items[]". The selection will be stored
+    in the user_status.
+    """
 
-    try:
-        column_wanted_nr = BROWSE_COLUMN_ORDER.index(column_from)+1
-        if column_wanted_nr >= len(BROWSE_COLUMN_ORDER)-1:
-            # the last possible column exeeded. deliver only song title list
-            column  = "title"
-            columns = ["title"]
-        else:
-            column = BROWSE_COLUMN_ORDER[column_wanted_nr]  # next column in order
-            columns = [column, "title"] # render only the next column and song titles
-    except IndexError:
-        message = "You requested lists for an invalid column: " + column_from # TODO: display that message somehow
-        column  = "title"
-        columns = ["title"]
-
+    # Get the selected items
     if 'items[]' in request.POST:
         items = request.POST.getlist('items[]')
     else:
         items = None
 
 
-    songs  = Song.objects.select_related().filter(user=request.user)  # prefetch and cache related, refine rest later
-    if "album" == column:
-        albums = Album.objects.filter(song__user=request.user).distinct()
+    user_status = helper.UserStatus(request)
+    if "artist" == column_from:
+        # store selected items
+        user_status.set("browse_selected_artists", items)
 
-        if items and len(items):
-            queries_albums = [ Q(song__artist__id=pk) for pk in items]
-            queries_songs  = [ Q(      artist__id=pk) for pk in items]
-            query_albums = queries_albums.pop()
-            query_songs  = queries_songs.pop()
-            for q in queries_albums:
-                query_albums |= q
-            for q in queries_songs:
-                query_songs |= q
+        # Set the columns to be rendered by templates
+        columns = ["album", "title"]
+        albums, songs = helper.browse_column_album(request)
+        if albums.count() > 50:
+            albums = albums[:50]
 
-            songs  = songs.filter(query_songs)
-            albums = albums.filter(query_albums)
-        else:
-            # albums from user already fetched
-            pass
+    elif "album" == column_from:
+        # store selected items
+        user_status.set("browse_selected_albums", items)
 
-    elif "title" == column:
-        songs = Song.objects.filter(user=request.user)
+        # Set the columns to be rendered by templates
+        columns = ["title"]
+        songs = helper.browse_column_title(request)
 
-        if items and len(items):
-            queries = [ Q(album__id=pk) for pk in items]
-            query = queries.pop()
-            for q in queries:
-                query |= q
-
-            songs = songs.filter(query)
     else:
-        return HttpResponse("unsupported (next) column requested: " + column)
+        return HttpResponse("Unsupported column: " + column_from)
+
+    if songs.count() > 50:
+        songs = songs[:50]
 
     return render_to_response(
             "context_browse.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+
+@login_required
+def collection_browse_more_view(request, column):
+    """
+    Returns more items for `column` based on selection.
+    Selection should be stored in user_settings previously.
+    If nothing is selected, returns all items of list.
+    """
+
+    so_far = int(request.POST.get("so_far"))
+
+    if "artist" == column:
+        items = Artist.objects.filter(song__user = request.user).distinct()
+    elif "album" == column:
+        items, dump = helper.browse_column_album(request)
+    elif "title" == column:
+        items = helper.browse_column_title(request)
+
+    items_count = items.count()
+
+    if items_count > so_far+10:
+        items = items[so_far:so_far+10]
+    else:
+        items = items[so_far:]
+
+    if len(items) == 0:
+        return HttpResponse("nomoreresults")
+
+
+    if "artist" == column:
+        artists = items
+    elif "album" == column:
+        albums = items
+    elif "title" == column:
+        songs = items
+
+
+    return render_to_response(
+            "browse_column_li.html",
             locals(),
             context_instance=RequestContext(request),
             )
@@ -280,7 +338,7 @@ def upload_view(request):
         upfile = request.FILES[u'file']
 
         #################################  copying ################################
-        dbgprint("Entering status copying")
+        helper.dbgprint("Entering status copying")
         step_status = 0
 
         userUploadStatus = Upload(user=request.user, step="copying", step_status=0)
@@ -306,13 +364,13 @@ def upload_view(request):
                     )
             ii += 1
 
-        dbgprint("Copy-to location:", useruppath, type(useruppath))
+        helper.dbgprint("Copy-to location:", useruppath, type(useruppath))
 
         # now put the upload content to the user's location
         step_status = 0
         processed = 0
         amount = upfile.size
-        dbgprint("Chunks:", amount)
+        helper.dbgprint("Chunks:", amount)
         old_status = 0
         with open(useruppath, 'wb+') as destination:
             for chunk in upfile.chunks():
@@ -320,12 +378,12 @@ def upload_view(request):
                 destination.write(chunk)
                 step_status = int(processed*100/amount)
                 if (old_status < step_status) and (step_status % 2 == 0):
-                    dbgprint("Chunks copied:", step_status, "%")
+                    helper.dbgprint("Chunks copied:", step_status, "%")
                     userUploadStatus.step_status = step_status
                     userUploadStatus.save()
                     old_status = step_status
             destination.close()
-        dbgprint("Uploaded file written to", useruppath)
+        helper.dbgprint("Uploaded file written to", useruppath)
 
         # so here the upload is done and can be analyzed
         from music.tasks import upload_done
@@ -352,7 +410,7 @@ def collection_search_view(request):
     if request.method == "POST":
 
 #        playlists = Playlist.objects.filter(user=request.user)
-        user_status = UserStatus(request)
+        user_status = helper.UserStatus(request)
 #        music_session = MusicSession.objects.get(user=request.user)
 
         if 'terms' in request.POST:
@@ -705,7 +763,7 @@ def rescan_view(request):
         if request.method == "POST":
             col.scan_status = "started"
             col.save()
-            dbgprint("rescan request accepted from user", request.user)
+            helper.dbgprint("rescan request accepted from user", request.user)
             from music.tasks import rescan_task
             stat = rescan_task.delay(request.user.id)
             return HttpResponse("started")
@@ -817,7 +875,7 @@ def get_filtered(request):
     #music_session = MusicSession.objects.get(user=user)
     #terms = music_session.search_terms
 
-    user_status = UserStatus(request)
+    user_status = helper.UserStatus(request)
     terms = user_status.get("search_terms", "")
 
     songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
@@ -886,7 +944,7 @@ def filter_songs(request, terms, artists=None, albums=None):
 
     if not terms == None:
         if not (type(terms) == unicode or type(terms) == str):
-            dbgprint("Invalid type for terms:", type(terms), terms)
+            helper.dbgprint("Invalid type for terms:", type(terms), terms)
             songs = Song.objects.filter(user=request.user)
 
         elif len(terms) == 0:
