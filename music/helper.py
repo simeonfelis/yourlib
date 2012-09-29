@@ -156,11 +156,13 @@ def search(request, browse=False):
         songs = songs.filter(Q(artist__name__icontains=term_list[0]) | \
                                     Q(title__icontains=term_list[0]) | \
                                     Q(album__name__icontains=term_list[0]) | \
+                                    Q(genre__name__icontains=term_list[0]) | \
                                     Q(mime__icontains=term_list[0]))
         for term in term_list[1:]:
             songs = songs.filter(Q(artist__name__icontains=term) | \
                                  Q(title__icontains=term) | \
                                  Q(album__name__icontains=term) | \
+                                 Q(genre__name__icontains=term) | \
                                  Q(mime__icontains=term))
 
     return songs

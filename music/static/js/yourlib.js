@@ -324,10 +324,12 @@ function Browse() {
                 player1.play_song(song_info);
             });
             return false;
-        });
+        })
+        .on("mousenter", function() {$(this).addClass("ui-state-hover");})
+        .on("mouseleave", function() {$(this).removeClass("ui-state-hover");});
 
-        $( column_selector ).on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
-        $( column_selector ).on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+        $( column_selector ).on("mouseenter", function(){$(this).addClass("ui-state-hover")});
+        $( column_selector ).on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
 
         // select/deselect items
         $( column_selector ).not( ".btn_browse_title" )
