@@ -17,6 +17,8 @@ from music import settings
 
 import os
 
+INITIAL_ITEMS_LOAD_COUNT = 50
+SUBSEQUENT_ITEMS_LOAD_COUNT = 50
 
 @login_required
 def home_view(request):
@@ -71,7 +73,7 @@ def home_view(request):
         collection = Collection(user=request.user, scan_status="idle")
         collection.save()
 
-    [songs, artists, albums] = get_filtered(request)
+    songs = helper.search(request)
     songs_count = songs.count()
     if len(songs) > 10:
         songs = songs[:10]
@@ -85,11 +87,13 @@ def home_view(request):
 
 @login_required
 def collection_view(request):
-    [songs, dump1, dump2] = get_filtered(request)
-    songs_count = songs.count()
     user_status = helper.UserStatus(request)
-    if len(songs) > 10:
-        songs = songs[:10]
+
+    songs = helper.search(request)
+    songs_count = songs.count()
+
+    if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
+        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
     return render_to_response(
             "context_collection.html",
             locals(),
@@ -98,13 +102,14 @@ def collection_view(request):
 
 @login_required
 def collection_songs_view(request):
+
     so_far = int(request.POST.get("so_far", 0))
 
-    [songs, dump1, dump2] = get_filtered(request)
+    songs = helper.search(request)
     songs_count = songs.count()
 
-    if songs_count > so_far+30:
-        songs = songs[so_far:so_far+30]
+    if songs_count > so_far+SUBSEQUENT_ITEMS_LOAD_COUNT:
+        songs = songs[so_far:so_far+SUBSEQUENT_ITEMS_LOAD_COUNT]
     else:
         songs = songs[so_far:]
 
@@ -119,20 +124,20 @@ def collection_songs_view(request):
 def collection_browse_view(request):
 
     songs   = Song.objects.select_related().filter(user=request.user)
-    if songs.count() > 50:
-        songs = songs[:50]
+    if songs.count() > INITIAL_ITEMS_LOAD_COUNT:
+        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
     genres  = Genre.objects.filter(song__user=request.user).distinct()
-    if genres.count() > 50:
-        genres = genres[:50]
+    if genres.count() > INITIAL_ITEMS_LOAD_COUNT:
+        genres = genres[:INITIAL_ITEMS_LOAD_COUNT]
 
     artists = Artist.objects.filter(song__user=request.user).distinct()
-    if artists.count() > 50:
-        genres = genres[:50]
+    if artists.count() > INITIAL_ITEMS_LOAD_COUNT:
+        artists = artists[:INITIAL_ITEMS_LOAD_COUNT]
 
     albums  = Album.objects.filter(song__user=request.user).distinct()
-    if albums.count() > 50:
-        albums = albums[:50]
+    if albums.count() > INITIAL_ITEMS_LOAD_COUNT:
+        albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
 
     columns = helper.DEFAULT_BROWSE_COLUMN_ORDER
@@ -171,8 +176,8 @@ def collection_browse_column_view(request, column_from):
         # Set the columns to be rendered by templates
         columns = ["album", "title"]
         albums, songs = helper.browse_column_album(request)
-        if albums.count() > 50:
-            albums = albums[:50]
+        if albums.count() > INITIAL_ITEMS_LOAD_COUNT:
+            albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
     elif "album" == column_from:
         # store selected items
@@ -185,8 +190,8 @@ def collection_browse_column_view(request, column_from):
     else:
         return HttpResponse("Unsupported column: " + column_from)
 
-    if songs.count() > 50:
-        songs = songs[:50]
+    if songs.count() > INITIAL_ITEMS_LOAD_COUNT:
+        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
     return render_to_response(
             "context_browse.html",
@@ -214,8 +219,8 @@ def collection_browse_more_view(request, column):
 
     items_count = items.count()
 
-    if items_count > so_far+10:
-        items = items[so_far:so_far+10]
+    if items_count > so_far+SUBSEQUENT_ITEMS_LOAD_COUNT:
+        items = items[so_far:so_far+SUBSEQUENT_ITEMS_LOAD_COUNT]
     else:
         items = items[so_far:]
 
@@ -255,34 +260,34 @@ def show_context_upload(request):
             context_instance=RequestContext(request),
             )
 
-def show_context_collection(request):
-    [songs, artists, albums] = get_filtered(request)
-    songs_count = songs.count()
-    if len(songs) > 50:
-        songs = songs[:50]
-    return render_to_response(
-            "context_collection.html",
-            locals(),
-            context_instance=RequestContext(request),
-            )
-    # GET request collection
-    begin = int(request.GET.get('begin'), 0)
-    howmany = 50
-    songs = filter_songs(request, terms=music_session.search_terms)
-    available = len(songs)
-    if begin < available:
-        if begin+howmany < available:
-            songs = songs[begin:begin+howmany]
-        else:
-            songs = songs[begin:available]
-    else:
-        return HttpResponse("")
-
-    return render_to_response(
-            "collection_songs_li.html",
-            locals(),
-            context_instance=RequestContext(request),
-            )
+#def show_context_collection(request):
+#    [songs, artists, albums] = get_filtered(request)
+#    songs_count = songs.count()
+#    if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
+#        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+#    return render_to_response(
+#            "context_collection.html",
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
+#    # GET request collection
+#    begin = int(request.GET.get('begin'), 0)
+#    howmany = SUBSEQUENT_ITEMS_LOAD_COUNT
+#    songs = filter_songs(request, terms=music_session.search_terms)
+#    available = len(songs)
+#    if begin < available:
+#        if begin+howmany < available:
+#            songs = songs[begin:begin+howmany]
+#        else:
+#            songs = songs[begin:available]
+#    else:
+#        return HttpResponse("")
+#
+#    return render_to_response(
+#            "collection_songs_li.html",
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
 
 def show_context_playlist(request):
     if request.method == "POST":
@@ -409,24 +414,18 @@ def collection_search_view(request):
 
     if request.method == "POST":
 
-#        playlists = Playlist.objects.filter(user=request.user)
         user_status = helper.UserStatus(request)
-#        music_session = MusicSession.objects.get(user=request.user)
 
         if 'terms' in request.POST:
             terms = request.POST.get('terms', '')
-#            music_session.search_terms = terms
-#            music_session.save()
-
-#            status = simplejson.loads(music_session.status)
-#            status['search_terms'] = terms
 
             user_status.set("search_terms", terms)
 
-            [songs, todo1, todo2] = get_filtered(request)
+            songs = helper.search(request)
+
             songs_count = songs.count()
-            if len(songs) > 50:
-                songs = songs[:50]
+            if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
+                songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
             return render_to_response(
                     'collection_songs.html',

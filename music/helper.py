@@ -99,17 +99,47 @@ def browse_column_title(request):
         query = queries.pop()
         for q in queries:
             query |= q
+
+        songs = songs.filter(query)
+
     if artist_items and len(artist_items):
         queries = [ Q(artist__id=pk) for pk in artist_items]
         query = queries.pop()
         for q in queries:
             query |= q
 
-    songs = songs.filter(query)
+        songs = songs.filter(query)
 
     return songs
 
+def search(request):
+    """
+    Returns songs based on search terms in user_status. search_terms will be split 
+    on " " in terms and terms are treated with AND
 
+    the following fields will be search:
+    song.artist, song.title, song.album, song.mime, song.genre
+    """
+
+    user_status = UserStatus(request)
+    terms = user_status.get("search_terms", "").strip()
+
+    songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+
+    if len(terms) > 0:
+        term_list = terms.split(" ")
+
+        songs = songs.filter(Q(artist__name__icontains=term_list[0]) | \
+                                    Q(title__icontains=term_list[0]) | \
+                                    Q(album__name__icontains=term_list[0]) | \
+                                    Q(mime__icontains=term_list[0]))
+        for term in term_list[1:]:
+            songs = songs.filter(Q(artist__name__icontains=term) | \
+                                 Q(title__icontains=term) | \
+                                 Q(album__name__icontains=term) | \
+                                 Q(mime__icontains=term))
+
+    return songs
 
 def dbgprint(*args):
     """
