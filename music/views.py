@@ -128,7 +128,7 @@ def collection_browse_view(request):
     user_status.set("browse_selected_albums", [])
     user_status.set("browse_selected_artists", [])
 
-    songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+    songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
     if songs.count() > INITIAL_ITEMS_LOAD_COUNT:
         songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
@@ -919,7 +919,7 @@ def get_filtered(request):
     user_status = helper.UserStatus(request)
     terms = user_status.get("search_terms", "")
 
-    songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+    songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
 
 
     if len(terms) > 0:

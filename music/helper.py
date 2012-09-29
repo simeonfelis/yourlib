@@ -55,7 +55,7 @@ def browse_column_album(request):
     If nothing is selected, returns all songs and albums from user.
     This function depends on static column order.
     """
-    songs  = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+    songs  = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
     albums = Album.objects.filter(song__user=request.user).distinct().order_by("name")
 
     # find out what the user has selected
@@ -89,7 +89,7 @@ def browse_column_title(request):
     If nothing is selected, returns all songs from user.
     This function depends on static column order.
     """
-    songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+    songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
 
     # find out what the user has selected
     user_status  = UserStatus(request)
@@ -102,7 +102,7 @@ def browse_column_title(request):
         for q in queries:
             query |= q
 
-        songs = songs.filter(query).order_by("artist__name", "album__name")
+        songs = songs.filter(query).order_by("artist__name", "album__name", "track")
 
     if artist_items and len(artist_items):
         queries = [ Q(artist__id=pk) for pk in artist_items]
@@ -110,7 +110,7 @@ def browse_column_title(request):
         for q in queries:
             query |= q
 
-        songs = songs.filter(query).order_by("artist__name", "album__name")
+        songs = songs.filter(query).order_by("artist__name", "album__name", "track")
 
     return songs
 
@@ -128,7 +128,7 @@ def search(request, browse=False):
     user_status = UserStatus(request)
     terms = user_status.get("search_terms", "").strip()
 
-    songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+    songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
 
     if browse:
         album_items  = user_status.get("browse_selected_albums", None)
