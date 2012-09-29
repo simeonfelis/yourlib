@@ -16,6 +16,8 @@ DEFAULT_BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
 user_status_defaults = simplejson.dumps({
     "search_terms": "",
     "browse_column_order": DEFAULT_BROWSE_COLUMN_ORDER,
+    "browse_selected_albums": [],
+    "browse_selected_artists": [],
 })
 
 
@@ -53,8 +55,8 @@ def browse_column_album(request):
     If nothing is selected, returns all songs and albums from user.
     This function depends on static column order.
     """
-    songs  = Song.objects.select_related().filter(user=request.user)
-    albums = Album.objects.filter(song__user=request.user).distinct()
+    songs  = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+    albums = Album.objects.filter(song__user=request.user).distinct().order_by("name")
 
     # find out what the user has selected
     user_status = UserStatus(request)
@@ -87,7 +89,7 @@ def browse_column_title(request):
     If nothing is selected, returns all songs from user.
     This function depends on static column order.
     """
-    songs   = Song.objects.select_related().filter(user=request.user)
+    songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
 
     # find out what the user has selected
     user_status  = UserStatus(request)
@@ -100,7 +102,7 @@ def browse_column_title(request):
         for q in queries:
             query |= q
 
-        songs = songs.filter(query)
+        songs = songs.filter(query).order_by("artist__name", "album__name")
 
     if artist_items and len(artist_items):
         queries = [ Q(artist__id=pk) for pk in artist_items]
@@ -108,23 +110,45 @@ def browse_column_title(request):
         for q in queries:
             query |= q
 
-        songs = songs.filter(query)
+        songs = songs.filter(query).order_by("artist__name", "album__name")
 
     return songs
 
-def search(request):
+def search(request, browse=False):
     """
     Returns songs based on search terms in user_status. search_terms will be split 
     on " " in terms and terms are treated with AND
 
-    the following fields will be search:
+    The following fields will be search:
     song.artist, song.title, song.album, song.mime, song.genre
+
+    If browse = True the selection of browse fields will be respected.
     """
 
     user_status = UserStatus(request)
     terms = user_status.get("search_terms", "").strip()
 
     songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
+
+    if browse:
+        album_items  = user_status.get("browse_selected_albums", None)
+        artist_items = user_status.get("browse_selected_artists", None)
+    
+        if album_items and len(album_items):
+            queries = [ Q(album__id=pk) for pk in album_items]
+            query = queries.pop()
+            for q in queries:
+                query |= q
+    
+            songs = songs.filter(query)
+    
+        if artist_items and len(artist_items):
+            queries = [ Q(artist__id=pk) for pk in artist_items]
+            query = queries.pop()
+            for q in queries:
+                query |= q
+    
+            songs = songs.filter(query)
 
     if len(terms) > 0:
         term_list = terms.split(" ")

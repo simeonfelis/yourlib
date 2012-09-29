@@ -318,7 +318,7 @@ function Browse() {
         $( selector + " .btn_browse_title").on("click", function(){
             var $data = {
                 'song_id': $(this).attr("data-title_id"),
-                'source' : 'collection',
+                'source' : 'browse',
             };
             $.post("play/", $data, function(song_info) {
                 player1.play_song(song_info);

@@ -123,19 +123,24 @@ def collection_songs_view(request):
 @login_required
 def collection_browse_view(request):
 
-    songs   = Song.objects.select_related().filter(user=request.user)
+    # reset selections
+    user_status = helper.UserStatus(request)
+    user_status.set("browse_selected_albums", [])
+    user_status.set("browse_selected_artists", [])
+
+    songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name")
     if songs.count() > INITIAL_ITEMS_LOAD_COUNT:
         songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
-    genres  = Genre.objects.filter(song__user=request.user).distinct()
+    genres  = Genre.objects.filter(song__user=request.user).distinct().order_by("name", "name")
     if genres.count() > INITIAL_ITEMS_LOAD_COUNT:
         genres = genres[:INITIAL_ITEMS_LOAD_COUNT]
 
-    artists = Artist.objects.filter(song__user=request.user).distinct()
+    artists = Artist.objects.filter(song__user=request.user).distinct().order_by("name")
     if artists.count() > INITIAL_ITEMS_LOAD_COUNT:
         artists = artists[:INITIAL_ITEMS_LOAD_COUNT]
 
-    albums  = Album.objects.filter(song__user=request.user).distinct()
+    albums  = Album.objects.filter(song__user=request.user).distinct().order_by("name")
     if albums.count() > INITIAL_ITEMS_LOAD_COUNT:
         albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
@@ -670,66 +675,77 @@ def play_song_view(request, song_id):
     return response
 
 @login_required
-@transaction.autocommit
 def play_view(request):
     """
     administrate song request. returns urls for audio player <source> tag and song info
     """
     song = None
+
     if request.method == "POST":
-        ms = MusicSession.objects.get(user=request.user)
-        song_id = request.POST.get('song_id')
-        song = Song.objects.get(id=song_id)
+        user_status = helper.UserStatus(request)
+
+        #ms = MusicSession.objects.get(user=request.user)
         source = request.POST.get('source')
+        if "playlist" == source:
+            playlist_id = request.POST.get("playlist_id")
+            item_id     = request.POST.get("item_id")
 
-        if "collection" == source:
-            ms.currently_playing = "collection"
-            ms.current_song = song
-            ms.save()
-            return song_info_response(song)
+            user_status.set("playing_source", "playlist")
+            user_status.set("playing_playlist_id", playlist_id)
+            user_status.set("playing_playlist_item_id", playlist_id)
 
-        elif "playlist" == source:
-            playlist = Playlist.objects.get(id=request.POST.get('playlist_id'))
-            item = PlaylistItem.objects.get(id=request.POST.get('item_id'))
+            playlist = Playlist.objects.get(id=playlist_id)
+            item     = PlaylistItem.objects.get(id=item_id)
             playlist.current_position = item.position
             playlist.save()
 
-            ms.currently_playing = "playlist"
-            ms.current_playlist = playlist
-            ms.save()
-            return song_info_response(song, playlist_id=playlist.id, item_id=item.id)
+            song = item.song
 
-    return song_info_response(song)
+            return song_info_response(song, playlist=playlist, item_id=item.id)
+
+        elif "browse" == source:
+            song_id = request.POST.get("song_id")
+
+            user_status.set("playing_song_id", song_id)
+            user_status.set("playing_source", "browse")
+
+            song = Song.objects.get(id=song_id)
+
+            return song_info_response(song)
+
+        else:
+            song_id = request.POST.get('song_id')
+
+            user_status.set("playing_source", "collection")
+            user_status.set("playing_song_id", song_id)
+
+            song = Song.objects.get(id=song_id)
+
+            return song_info_response(song)
+
+    return HttpResponse("Only POST request implemented so far")
 
 @login_required
-@transaction.autocommit
 def play_next_view(request):
 
     if request.method == "POST":
 
-        ms = MusicSession.objects.get(user=request.user)
+        #ms = MusicSession.objects.get(user=request.user)
+        user_status = helper.UserStatus(request)
         song = None
 
-        if "collection" == ms.currently_playing:
-            # determin next song based on last search term
-            # songs are unique in a collection or a filtered collection
-            songs = filter_songs(request, terms=ms.search_terms)
-            current_song = ms.current_song
-            found = False
-            song = None
-            for s in songs:
-                if found == True:
-                    song = s
-                    ms.current_song = s
-                    ms.save()
-                    break
-                if s == current_song:
-                    found = True
-            return song_info_response(song)
+        source = user_status.get("playing_source", "collection")
 
-        elif "playlist" == ms.currently_playing:
+        if "playlist" == source:
             # attention: multiple songs with same song.id can be in playlist.items
-            pl = ms.current_playlist
+            pl_id = user_status.get("playing_playlist_id", "")
+
+            if "" == pl_id:
+                # this could happen when library is empty
+                return song_info_response(Song.objects.filter(user=request.user)[0:1])
+
+            pl = Playlist.objects.get(id=pl_id)
+
             current_position = pl.current_position + 1
             if current_position <= len(pl.items.all()):
                 pl.current_position = current_position
@@ -737,6 +753,32 @@ def play_next_view(request):
                 item = pl.items.get(position=current_position)
                 song = item.song
             return song_info_response(song, playlist_id=pl.id, item_id=item.id)
+
+        elif "browse" == source:
+            songs = helper.search(request, browse=True)
+
+        else:
+            # assuming "collection" as source
+            songs = helper.search(request)
+
+        current_song_id = user_status.get("playing_song_id", "")
+
+        if "" == current_song_id:
+            # this could happen when library is empty
+            return song_info_response(Song.objects.filter(user=request.user)[0:1])
+
+        current_song = Song.objects.get(id=current_song_id, user=request.user)
+        found = False
+        song = None
+        for s in songs:
+            if found == True:
+                song = s
+                user_status.set("playing_song_id", str(song.pk))
+                break
+            if s == current_song:
+                found = True
+        return song_info_response(song)
+
 
     return song_info_response(song)
 
