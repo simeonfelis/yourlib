@@ -9,13 +9,8 @@ body {
     /*background-color: #d0d0d0;*/
 }
 
-.bar {
-    height: 18px;
-    background: green;
-}
 
 .btn:hover {
-    background-color: #a4acbf;
     cursor: pointer;
 }
 
@@ -227,6 +222,34 @@ body {
     /*height: 500px;*/
     overflow: auto;
     overflow-x: hidden;
+}
+
+/* upload stuff */
+#context_upload_container {
+    overflow: auto;
+    overflow-x: hidden;
+}
+
+#context_upload_ui {
+    padding : 20px;
+}
+
+#upload_form_container form {
+    padding: 20px;
+}
+
+#upload_status_content {
+    margin-left: 20px;
+}
+
+.bar {
+    height: 18px;
+    background: green;
+}
+
+.progress {
+    width: 300px;
+    display: none;
 }
 
 #context_browse_container .browse_column {

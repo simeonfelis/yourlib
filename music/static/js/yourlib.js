@@ -232,6 +232,7 @@ $(document).ready(function () {
       context_content.update_viewport();
       collection.update_viewport();
       playlist.update_viewport();
+      upload.update_viewport();
     });
     /* global header */
     $(document).on("click",  "#logout",                   yourlib.logout);
@@ -244,7 +245,7 @@ $(document).ready(function () {
     $(document).on("click",  "#btn_context_collection",   sidebar.show_collection);
     $(document).on("click",  "#btn_sidebar_browse",       sidebar.show_browse);
     $(document).on("click",  ".btn_sidebar_playlist",     sidebar.show_playlist);
-    $(document).on("click",  "#btn_context_upload",       sidebar.show_upload);
+    $(document).on("click",  "#btn_sidebar_upload",       sidebar.show_upload);
     //$(document).on("click",  "#btn_context_download",     sidebar.show_download);
     $(document).on("submit", "#playlist_create",          playlist.create);
 

@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.core.urlresolvers import reverse
+from celery.result import AsyncResult
 
 from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
 from music.forms import UploadForm
@@ -15,7 +16,7 @@ from music.forms import UploadForm
 from music import helper
 from music import settings
 
-import os
+import os, time
 
 INITIAL_ITEMS_LOAD_COUNT = 50
 SUBSEQUENT_ITEMS_LOAD_COUNT = 100
@@ -255,15 +256,15 @@ def show_context_download(request):
             context_instance=RequestContext(request),
             )
 
-def show_context_upload(request):
-    uploads = Upload.objects.filter(user=request.user)
-
-    form = UploadForm(request.POST)
-    return render_to_response(
-            "context_upload.html",
-            locals(),
-            context_instance=RequestContext(request),
-            )
+#def show_context_upload(request):
+#    uploads = Upload.objects.filter(user=request.user)
+#
+#    form = UploadForm(request.POST)
+#    return render_to_response(
+#            "context_upload.html",
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
 
 #def show_context_collection(request):
 #    [songs, artists, albums] = get_filtered(request)
@@ -338,9 +339,25 @@ def sidebar_show_view(request, context):
 #############################      upload     ##################################
 
 @login_required
+def upload_show_view(request):
+
+    user_status = helper.UserStatus(request)
+    user_status.set("current_context", "upload")
+
+
+    uploads = Upload.objects.filter(user=request.user)
+
+    form = UploadForm(request.POST)
+    return render_to_response(
+            "context_upload.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+
+@login_required
 @csrf_exempt
-@transaction.autocommit
-def upload_view(request):
+def upload_file_view(request):
     if request.method == 'POST':
         if request.FILES == None:
             return HttpResponse("No files received")
@@ -397,7 +414,13 @@ def upload_view(request):
 
         # so here the upload is done and can be analyzed
         from music.tasks import upload_done
-        upload_done.delay(useruppath, userupdir, userUploadStatus.id)
+        stat = upload_done.delay(useruppath, userupdir, userUploadStatus.id)
+
+        time.sleep(1) #give celery 1 second to accept the task
+        res = AsyncResult(stat.task_id).state
+        if res == "PENDING":
+            userUploadStatus.step = "pending"
+            userUploadStatus.save()
 
         uploads = Upload.objects.filter(user=request.user)
         return render_to_response(
@@ -408,6 +431,27 @@ def upload_view(request):
 
     # return status on GET requests
     uploads = Upload.objects.filter(user=request.user)
+    return render_to_response(
+            'upload_status.html',
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+@login_required
+def upload_status_view(request):
+    uploads = Upload.objects.filter(user=request.user)
+    return render_to_response(
+            'upload_status.html',
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+@login_required
+def upload_clearpending_view(request):
+    to_clear = Upload.objects.filter(step__icontains="pending").delete()
+
+    uploads = Upload.objects.filter(user=request.user)
+
     return render_to_response(
             'upload_status.html',
             locals(),

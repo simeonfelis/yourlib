@@ -15,6 +15,7 @@ DEFAULT_BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
 
 user_status_defaults = simplejson.dumps({
     "search_terms": "",
+    "current_view": "collection",
     "browse_column_order": DEFAULT_BROWSE_COLUMN_ORDER,
     "browse_selected_albums": [],
     "browse_selected_artists": [],

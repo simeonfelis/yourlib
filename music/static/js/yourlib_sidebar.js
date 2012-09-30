@@ -52,11 +52,9 @@ function Sidebar() {
     }
 
     this.show_upload = function() {
-        $(this).append("<img class='spinner'  height='18' width='18' src='static/css/spinner.gif' />");
-        $( "#context_container" ).load("sidebar/show/upload/", {}, function() {
-            upload.bind(); // for eventually uploads in progress
-            $("#sidebar").find(".spinner").fadeOut(500);
-        });
+        spinner_start($(this));
+        upload.exhibit(function() {spinner_stop( "#sidebar")});
+        //$(this).append("<img class='spinner'  height='18' width='18' src='static/css/spinner.gif' />");
     }
 }
 

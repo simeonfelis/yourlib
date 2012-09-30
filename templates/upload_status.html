@@ -5,5 +5,8 @@
         <li>{{ u.file.name }}: {{ u.step }}, {{ u.step_status }}</li>
         {% endfor %}
     </ul>
+    <div id="upload_clear_pending" class="btn">Clear pending</div>
+    {% else %}
+    <div>No uploads processing.</div>
     {% endif %}
 </div>

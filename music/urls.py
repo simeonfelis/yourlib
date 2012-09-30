@@ -7,6 +7,7 @@ urlpatterns = patterns('music.views',
     url(r'^play/next$', 'play_next_view'),
     url(r'^play/song/(?P<song_id>\d+)$', 'play_song_view'),
 
+    # this url is deprecating...
     url(r'^sidebar/show/(?P<context>\w+)/.*$', 'sidebar_show_view'),
     url(r'^sidebar/playlists/$', 'sidebar_playlists_view'),
 
@@ -29,7 +30,10 @@ urlpatterns = patterns('music.views',
     #url(r'^playlist/all/$', 'playlist_all_view'),
 
     url(r'^rescan$', 'rescan_view'),
-    url(r'^upload/$', 'upload_view'),
+    url(r'^upload/file/$', 'upload_file_view'),
+    url(r'^upload/show/$', 'upload_show_view'),
+    url(r'^upload/status/$', 'upload_file_view'),
+    url(r'^upload/clearpending/$', 'upload_clearpending_view'),
 
     #url(r'^filter/set/(?P<what>\w+)/$', 'filter_set_view'),
 
