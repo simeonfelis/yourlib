@@ -133,24 +133,24 @@ def search(request, browse=False):
     if browse:
         album_items  = user_status.get("browse_selected_albums", None)
         artist_items = user_status.get("browse_selected_artists", None)
-    
+
         if album_items and len(album_items):
             queries = [ Q(album__id=pk) for pk in album_items]
             query = queries.pop()
             for q in queries:
                 query |= q
-    
+
             songs = songs.filter(query)
-    
+
         if artist_items and len(artist_items):
             queries = [ Q(artist__id=pk) for pk in artist_items]
             query = queries.pop()
             for q in queries:
                 query |= q
-    
+
             songs = songs.filter(query)
 
-    if len(terms) > 0:
+    elif len(terms) > 0:
         term_list = terms.split(" ")
 
         songs = songs.filter(Q(artist__name__icontains=term_list[0]) | \

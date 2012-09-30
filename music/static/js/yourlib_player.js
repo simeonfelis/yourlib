@@ -47,6 +47,7 @@ function Player() {
         $( "#player1" ).attr("data-playlist_id", song_info['playlist_id']);
         $( "#player1" ).attr("data-item_id", song_info['item_id']);
         $( "#player1" ).attr("data-song_id", song_info['song_id']);
+        $( "#player1" ).attr("data-source", song_info['source']);
 
         highlight_playing("Player.play_song()", target="#content");
     }

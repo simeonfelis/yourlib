@@ -62,7 +62,8 @@ function Browse() {
         // will bind effects only for items in columnElements
         console.log("bindColumnElements for " +  $(columnElements).length + " items");
 
-        $( columnElements ).on("click", function() {
+        $( columnElements )
+        .on("click", function(e) {
 
             var column = $(this).parent().find(".ui-widget-header").html();
 
@@ -83,11 +84,34 @@ function Browse() {
             }
             else {
                 // mark/unmark for selection
-                if ($(this).hasClass("selected")) {
-                    $(this).removeClass("selected")
+                if (!e.ctrlKey) {
+                    was_selected = $(this).hasClass("selected");
+                    amount = $(this).parent().find(".selected").length
+
+                    // remove other selections in column
+                    $(this).parent().find(".selected").removeClass("selected");
+
+                    if (!was_selected) {
+                        // if it was not selected, make it the new selected item
+                        $(this).addClass("selected");
+                    }
+                    else {
+                        // if it was selected, keep it selected, but only if multiple
+                        // items were selected
+                        if (amount > 1) {
+                            $(this).addClass("selected");
+                        }
+                    }
                 }
-                else{
-                    $(this).addClass("selected")
+                else {
+                    $(this).toggleClass("selected");
+                    // toggle selection
+                    //if ($(this).hasClass("selected")) {
+                    //    $(this).removeClass("selected")
+                    //}
+                    //else{
+                    //    $(this).addClass("selected")
+                    //}
                 }
 
                 // prevent ongoing timeouts
@@ -263,20 +287,39 @@ function Browse() {
         $.post('collection/browse/' + column_from + '/', data, browse.on_column_received);
     }
 
-    this.exhibit = function(data) {
-        if (data) {
-            browse.content = data;
-        }
-        if ($("#context_container").find("#context_content").length > 0) {
-            $("#context_content").fadeOut(200, function() {
-                $("#context_container").append($(browse.content).fadeIn(500));
-                $(this).remove();
-                browse.bind();
+    this.exhibit = function(exhibit_finished_cb) {
+
+        this.exhibit_finished = exhibit_finished_cb;
+
+        is_loaded = $("#context_browse").length > 0;
+
+        if (is_loaded) {
+            $("#context_content").children().fadeOut("fast");
+            $("#context_content").children().promise().done(function() {
+                $("#context_browse").fadeIn("fast", function() {
+                    // the exhibit process is finished here
+                    browse.exhibit_finished();
+                });
                 browse.update_viewport();
             });
         }
         else {
-            $("#context_container").append($(browse.content).fadeIn(500));
+            $.post("collection/browse/", {}, function(data) {
+                $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+                $("#btn_sidebar_browse").addClass("currently_shown");
+
+                browse.view = $(data).find("#context_browse");
+
+                $("#context_content").children(":first").fadeOut("slow");
+                $("#context_content").children(":first").promise().done(function() {
+                    $("#context_content").append($(browse.view).fadeIn("slow", function() {
+                        // the exhibit process is finished here
+                        browse.exhibit_finished();
+                    }));
+                    browse.update_viewport();
+                    browse.bind();
+                });
+            });
         }
     }
 

@@ -11,7 +11,7 @@ function spinner_stop(sel) {
 function highlight_playing(by_who, target) {
 
     if (by_who) {
-        console.log("highligth_playling by", by_who);
+        console.log("highlight_playling by", by_who);
     }
     else {
         console.log("highlight_playling by unknown");
@@ -20,8 +20,36 @@ function highlight_playing(by_who, target) {
     var playlist_id = $( "#player1" ).attr("data-playlist_id");
     var item_id     = $( "#player1" ).attr("data-item_id");
     var song_id     = $( "#player1" ).attr("data-song_id");
+    var source      = $( "#player1" ).attr("data-source");
+
+    $( ".currently_playing" ).find(".playing_icon").remove();
+    $( ".currently_playing" ).removeClass("currently_playing");
+
+    if ("playlist" == source) {
+        sidebar_sel = "#sidebar_playlist_" + playlist_id;
+        context_sel = "#playlist_" + playlist_id + "_item_" + item_id;
+    }
+    else if ("browse" == source) {
+        sidebar_sel = "#btn_sidebar_browse";
+        context_sel = "[data-title_id=" + song_id + "]";
+    }
+    else if ("collection" == source) {
+        sidebar_sel = "#btn_context_collection";
+        context_sel = "#collection_song_id_" + song_id;
+    }
+    else {
+        console.log("Cannot highlight: unknow source");
+        return;
+    }
+
+    $(sidebar_sel)
+        .addClass("currently_playing")
+        .append("<span class='playing_icon'>♬</span>");
+
+    $(context_sel).addClass("currently_playing");
 
     /* sidebar */
+   /*
     if (playlist_id != 0) {
         // eventually update sidebar; create selector for sidebar playlist item
         var sb_sel = '#sidebar_playlist_' + playlist_id;
@@ -44,19 +72,19 @@ function highlight_playing(by_who, target) {
         $( "#btn_context_collection" ).addClass("currently_playing");
         $( "#btn_context_collection" ).append("<span class='playing_icon'>♬</span>");
     }
-
+*/
     /* context content. sel was created either for playlist or collection */
-    if ( $( sel ).hasClass("currently_playing") ) {
+  //  if ( $( sel ).hasClass("currently_playing") ) {
         // don't re-apply
-    }
-    else {
+ //   }
+  //  else {
         //$( "#context_content" ).find( ".currently_playing" ).find(".playing_icon");
         //$( "#context_content" ).find( ".currently_playing" ).addClass("ui-state-default");
         //$( "#context_content" ).find( ".currently_playing" ).removeClass("currently_playing");
         //$( sel ).removeClass("ui-state-default");
         //$( sel ).addClass("currently_playing");
         //$( sel ).addClass("ui-state-highlight");
-    }
+    //}
 }
 
 
@@ -86,7 +114,7 @@ function Pagination(options) {
         // Pagination() object.
         $this = $(paginator.scrollTarget);
 
-        console.log("PAGINATOR LOAD: SO_FAR:" + paginator.contentData())
+        //console.log("PAGINATOR LOAD: SO_FAR:" + paginator.contentData())
 
         $(paginator.appendTarget).children().attr('rel', 'loaded');
 
@@ -112,7 +140,7 @@ function Pagination(options) {
                 // we are in context window again. sigh.
                 paginator = $($this).data("pagination");
 
-                console.log("PAGINATION LOAD ERROR");
+                //console.log("PAGINATION LOAD ERROR");
                 paginator.errorLoad(data);
                 paginator.loading = false;
                 $($this).data("pagination", paginator);
@@ -238,12 +266,12 @@ $(document).ready(function () {
 
     /* collection & playlist */
     $(document).on("click",      ".song_item",  collection.song_play);
-    $(document).on("mouseenter", ".song_item", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
-    $(document).on("mouseleave", ".song_item", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+    $(document).on("mouseenter", ".song_item", function(){$(this).addClass("ui-state-hover")});
+    $(document).on("mouseleave", ".song_item", function(){$(this).removeClass("ui-state-hover")});
 
     /* some global ui theming */
-    $(".btn").on("mouseenter", function(){$(this).removeClass("ui-state-default").addClass("ui-state-focus")});
-    $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-focus").addClass("ui-state-default")});
+    $(".btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
+    $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
 
     /* check document state, maybe there are ongoing actions in progress */
     if ( $( "#rescan_status" ).html() != "" ) {

@@ -29,40 +29,24 @@ function Sidebar() {
     }
 
     this.show_collection = function() {
+
         spinner_start($(this));
-        $.post("collection/", {}, function(data) {
-            spinner_stop( "#sidebar" );
-            $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-            $("#btn_context_collection").addClass("currently_shown");
-            collection.exhibit(data);
-        });
+        collection.exhibit(function() {spinner_stop( "#sidebar");});
 
         return false; // Don't do anything else
     }
 
     this.show_browse = function() {
         spinner_start($(this));
-        $.post("collection/browse/", {}, function(data) {
-            spinner_stop( "#sidebar");
-            browse.exhibit(data);
-            $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-            $("#btn_sidebar_browse").addClass("currently_shown");
-        });
+        browse.exhibit(function() {spinner_stop( "#sidebar");})
     }
 
     this.show_playlist = function() {
-        var playlist_id = $(this).attr("data-playlist_id");
-        playlist.id = playlist_id;
+        playlist_id = $(this).attr("data-playlist_id");
+        //playlist.id = playlist_id;
 
         spinner_start($(this));
-
-        $.post("playlist/",  {'playlist_id': playlist_id}, function(data) {
-            playlist.exhibit(data);
-            playlist.bind(); // for drag n drop
-            spinner_stop("#sidebar");
-            $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-            $("#sidebar_playlist_" + playlist.id).addClass("currently_shown");
-        });
+        playlist.exhibit(playlist_id, function() {spinner_stop( "#sidebar");})
 
         return false; // Don't do anything else
     }

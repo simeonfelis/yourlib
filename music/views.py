@@ -18,7 +18,7 @@ from music import settings
 import os
 
 INITIAL_ITEMS_LOAD_COUNT = 50
-SUBSEQUENT_ITEMS_LOAD_COUNT = 50
+SUBSEQUENT_ITEMS_LOAD_COUNT = 100
 
 @login_required
 def home_view(request):
@@ -705,7 +705,7 @@ def play_view(request):
 
             song = item.song
 
-            return song_info_response(song, playlist=playlist, item_id=item.id)
+            return song_info_response(song, playlist_id=playlist.id, item_id=item.id, source=source)
 
         elif "browse" == source:
             song_id = request.POST.get("song_id")
@@ -715,7 +715,7 @@ def play_view(request):
 
             song = Song.objects.get(id=song_id)
 
-            return song_info_response(song)
+            return song_info_response(song, source=source)
 
         else:
             song_id = request.POST.get('song_id')
@@ -725,7 +725,7 @@ def play_view(request):
 
             song = Song.objects.get(id=song_id)
 
-            return song_info_response(song)
+            return song_info_response(song, source="collection")
 
     return HttpResponse("Only POST request implemented so far")
 
@@ -746,7 +746,7 @@ def play_next_view(request):
 
             if "" == pl_id:
                 # this could happen when library is empty
-                return song_info_response(Song.objects.filter(user=request.user)[0:1])
+                return song_info_response(Song.objects.filter(user=request.user)[0:1], source=source)
 
             pl = Playlist.objects.get(id=pl_id)
 
@@ -756,20 +756,21 @@ def play_next_view(request):
                 pl.save()
                 item = pl.items.get(position=current_position)
                 song = item.song
-            return song_info_response(song, playlist_id=pl.id, item_id=item.id)
+            return song_info_response(song, playlist_id=pl.id, item_id=item.id, source=source)
 
         elif "browse" == source:
             songs = helper.search(request, browse=True)
 
         else:
             # assuming "collection" as source
+            source = "collection"
             songs = helper.search(request)
 
         current_song_id = user_status.get("playing_song_id", "")
 
         if "" == current_song_id:
             # this could happen when library is empty
-            return song_info_response(Song.objects.filter(user=request.user)[0:1])
+            return song_info_response(Song.objects.filter(user=request.user)[0:1], source=source)
 
         current_song = Song.objects.get(id=current_song_id, user=request.user)
         found = False
@@ -781,10 +782,10 @@ def play_next_view(request):
                 break
             if s == current_song:
                 found = True
-        return song_info_response(song)
+        return song_info_response(song, source=source)
 
 
-    return song_info_response(song)
+    return HttpResponse("GET request not implemented")
 
 
 #######################      internals     ##################################
@@ -819,7 +820,7 @@ def rescan_view(request):
 
     return HttpResponse(col.scan_status)
 
-def song_info_response(song, playlist_id=None, item_id=None):
+def song_info_response(song, playlist_id=None, item_id=None, source=""):
 
     if song == None:
         return HttpResponse("")
@@ -859,6 +860,7 @@ def song_info_response(song, playlist_id=None, item_id=None):
             'genre':       genre,
             'track':       song.track,
             'mime':        song.mime,
+            'source':      source,
             'filename':    filename,
             'dbg_file_path': dbg_file_path,
             }

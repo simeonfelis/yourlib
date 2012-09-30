@@ -1,4 +1,7 @@
 function Playlist() {
+    
+    this.views = [];
+    
     this.bind = function () {
 
         this.update_viewport();
@@ -175,10 +178,98 @@ function Playlist() {
         return false; // Don't do anything else
     }
 
-    /* Will exhibit already fetched content data (playlist.content)
-     * Parameter data will set the (new or initial) content data.
-     */
-    this.exhibit = function(data) {
+    this.exhibit = function(playlist_id, exhibit_finished_cb) {
+        console.log("PLAYLIST EXHIBIT CALLED FOR PL " + playlist_id);
+
+        this.exhibit_finished = exhibit_finished_cb;
+
+        //this.active = "#context_playlist_id_" + playlist_id;
+        this.active_id = playlist_id;
+        //this.active_sidebar = "#sidebar_playlist_" + playlist_id;
+
+        //is_loaded = $(this.active).length > 0;
+
+        // fetch playlist
+        $.post("playlist/", {"playlist_id": playlist.active_id}, function(data) {
+
+            // store fetched data
+            playlist.view = $(data).find("#context_playlist");
+
+            // fade out whatever is just viewed
+            $("#context_content").children().fadeOut("slow");
+            // as there is usually more than one child in context_content,
+            // wait until all fadeOuts are finished 
+            $("#context_content").children().promise().done(function() {
+
+                // remove eventually displayed playlist
+                $("#context_playlist").remove();
+
+                // highlight current in sidebar
+                $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+                $(playlist.active_sidebar).addClass("currently_shown");
+
+                // insert
+                $("#context_content").append($(playlist.view).fadeIn("slow", function() {
+                    // the exhibit process is finished here
+                    playlist.exhibit_finished();
+                }));
+
+                // before fadeIn finishes, update the inserted effects
+                playlist.update_viewport();
+                playlist.bind();
+            })
+        });
+/*
+        if (is_loaded) {
+            $("#context_content").children().fadeOut("slow", function() {
+                $(playlist.active).fadeIn("slow", function() {playlist.exhibit_finished();});
+                playlist.update_viewport();
+            });
+        }
+        else {
+            $.post("playlist/", {"playlist_id": playlist.active_id}, function(data) {
+                $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+                $(playlist.active_sidebar).addClass("currently_shown");
+
+                playlist.views["id_" + playlist.active_id] = $(data).find("#context_playlist");
+
+                $("#context_content").children(":first").fadeOut("slow");
+
+                setTimeout(function() {
+                    $("#context_content").append(
+                        $(playlist.views["id_" + playlist.active_id]).fadeIn("slow", function(){
+                            playlist.exhibit_finished();
+                        })
+                    );
+                }, 600);
+
+                /*setTimeout(function() {
+                    $("#context_content").append(
+                        $(playlist.views["id_" + playlist.active_id])
+                        .fadeIn("slow", function() {
+                            playlist.exhibit_finished();
+                        }
+                    )});
+                    
+                    playlist.update_viewport();
+                    playlist.bind();
+                }); //*
+            });
+        }
+        */
+/*
+        spinner_start($(this));
+
+        $.post("playlist/",  {'playlist_id': playlist_id}, function(data) {
+            playlist.exhibit(data);
+            playlist.bind(); // for drag n drop
+            spinner_stop("#sidebar");
+            $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+            $("#sidebar_playlist_" + playlist.id).addClass("currently_shown");
+        });
+
+
+
         if (data) {
             playlist.content = data;
         }
@@ -192,6 +283,7 @@ function Playlist() {
         else {
             $("#context_container").append($(playlist.content).fadeIn(500));
         }
+        */
     }
     this.update_viewport = function() {
         if ($.find("#context_playlist_container").length == 0) {
