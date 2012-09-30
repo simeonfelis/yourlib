@@ -76,8 +76,8 @@ def home_view(request):
 
     songs = helper.search(request)
     songs_count = songs.count()
-    if len(songs) > 10:
-        songs = songs[:10]
+    if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
+        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
     return render_to_response(
             'home.html',
@@ -567,7 +567,9 @@ def playlist_append_view(request):
         playlist = Playlist.objects.get(id=playlist_id)
 
         if "song" == source:
-            songs = Song.objects.get(user=request.user, id=item_id)[0:1]
+            songs = [Song.objects.get(user=request.user, id=item_id)]
+        elif "collection" == source:
+            songs = [Song.objects.get(user=request.user, id=item_id)]
         elif "artist" == source:
             songs = Song.objects.filter(user=request.user, artist__id=item_id)
         elif "album" == source:

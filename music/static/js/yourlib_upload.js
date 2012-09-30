@@ -43,7 +43,7 @@ function Upload() {
                 progress.slideUp("fast");
                 //var received_status = $(xhr.responseText).find("#upload_status");
                 //$('#upload_status').replaceWith(xhr.responseText);
-                //upload.bind_check_status_timeout();
+                upload.bind_check_status_timeout();
                 //status.html(xhr.responseText);
             }
         }); 
@@ -70,6 +70,7 @@ function Upload() {
                     // the exhibit process is finished here
                     upload.exhibit_finished();
                 });
+                upload.bind_check_status_timeout();
                 upload.update_viewport();
             });
         }

@@ -114,7 +114,7 @@ function Pagination(options) {
         // Pagination() object.
         $this = $(paginator.scrollTarget);
 
-        //console.log("PAGINATOR LOAD: SO_FAR:" + paginator.contentData())
+        console.log("PAGINATOR LOAD: SO_FAR:" + paginator.contentData())
 
         $(paginator.appendTarget).children().attr('rel', 'loaded');
 
@@ -158,6 +158,7 @@ function Pagination(options) {
 
     // bind scroll event
     $(this.scrollTarget).scroll(function(event){
+        //console.log("PAGINATION SCROLL EVENT");
         // context: window. `this` is window, `$(this)` is dom element that was scrolled (scrollTarget)
         // I hate javascript.
         var pagination = $(this).data("pagination"); // get pagination object
@@ -166,7 +167,7 @@ function Pagination(options) {
             var scrolled           = $(pagination.scrollTarget).scrollTop();
             var scrollTargetHeight = $(pagination.scrollTarget).height();
             var appendTargetHeight = $(pagination.appendTarget).height();
-            var mayLoadContent = scrolled + scrollTargetHeight + 10 >= appendTargetHeight;
+            var mayLoadContent = scrolled + scrollTargetHeight + 50 >= appendTargetHeight;
 
             if (mayLoadContent) {
                 pagination.loading = true;               // block further loading until this one is done
@@ -200,6 +201,44 @@ function ContextContent() {
 }
 
 $(document).ready(function () {
+
+    /* add csrf cookie to every POST */
+    $(document).ajaxSend(function(event, xhr, settings) {
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie != '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        function sameOrigin(url) {
+            // url could be relative or scheme relative or absolute
+            var host = document.location.host; // host + port
+            var protocol = document.location.protocol;
+            var sr_origin = '//' + host;
+            var origin = protocol + sr_origin;
+            // Allow absolute or scheme relative URLs to same origin
+            return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+                (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+                // or any other URL that isn't scheme relative or absolute i.e relative.
+                !(/^(\/\/|http:|https:).*/.test(url));
+        }
+        function safeMethod(method) {
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        }
+
+        if (!safeMethod(settings.type) && sameOrigin(settings.url)) {
+            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+        }
+    });
 
     /*
      * Global variables. They are available without the window namespace, too.
@@ -256,17 +295,17 @@ $(document).ready(function () {
     $(document).on("click",  ".btn_playlist_download",    playlist.download);
 
     /* collection */
-    $(document).on("click",   "#btn_collection_toggle_filter", collection.toggle_filter);
+    //$(document).on("click",   "#btn_collection_toggle_filter", collection.toggle_filter);
     $(document).on("submit",  "#context_collection_search", collection.search);
-    $(document).on("click",   "#get_more_results",          collection.get_more_results);
-    $(document).on("appear",  "#get_more_results",          collection.get_more_results, {one: false});
-    $(document).on("click",   ".btn_filter_genre",          collection.filter_genre);
+    //$(document).on("click",   "#get_more_results",          collection.get_more_results);
+    //$(document).on("appear",  "#get_more_results",          collection.get_more_results, {one: false});
+    //$(document).on("click",   ".btn_filter_genre",          collection.filter_genre);
 
     /* browse */
     $(document).on("click",   ".btn_browse_artist",         browse.on_artist_clicked);
 
     /* collection & playlist */
-    $(document).on("click",      ".song_item",  collection.song_play);
+    //$(document).on("click",      ".song_item",  collection.song_play);
     $(document).on("mouseenter", ".song_item", function(){$(this).addClass("ui-state-hover")});
     $(document).on("mouseleave", ".song_item", function(){$(this).removeClass("ui-state-hover")});
 
@@ -278,44 +317,6 @@ $(document).ready(function () {
     if ( $( "#rescan_status" ).html() != "" ) {
         yourlib.check_scan_status();
     }
-
-    /* add csrf cookie to every POST */
-    $(document).ajaxSend(function(event, xhr, settings) {
-        function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie != '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = jQuery.trim(cookies[i]);
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        function sameOrigin(url) {
-            // url could be relative or scheme relative or absolute
-            var host = document.location.host; // host + port
-            var protocol = document.location.protocol;
-            var sr_origin = '//' + host;
-            var origin = protocol + sr_origin;
-            // Allow absolute or scheme relative URLs to same origin
-            return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
-                (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
-                // or any other URL that isn't scheme relative or absolute i.e relative.
-                !(/^(\/\/|http:|https:).*/.test(url));
-        }
-        function safeMethod(method) {
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        }
-
-        if (!safeMethod(settings.type) && sameOrigin(settings.url)) {
-            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
-        }
-    });
 
 });
 

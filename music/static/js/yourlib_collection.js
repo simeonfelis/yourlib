@@ -2,7 +2,37 @@
 
 function Collection() {
     this.bind = function(){
+        // call this only once !!!
 
+        // TODO: what is this for?
+        $("#songs_count").remove();
+
+
+        this.bindPagination = function() {
+            this.pagination = new Pagination({
+                scrollTarget : '#context_collection_container',
+                appendTarget : "#collection_song_items",
+                contentUrl   : "collection/songs/",
+                contentData  : function() {return $(".song_item").length;},
+                beforeLoad   : function() {$('#loading_collection').fadeIn();},
+                afterLoad    : function(newData) {$('#loading_collection').fadeOut(); collection.bindElements(newData)},
+                errorLoad    : function() {alert("Pagination load error title");},
+                enabled      : true
+            });
+        }
+
+        this.bindPagination();
+
+        // bind existing items
+        this.bindElements($(".song_item"));
+
+        this.update_viewport();
+
+        highlight_playing("Collection.bind()", target="#context_container");
+
+    }
+
+/*
    $(function(){
         $('#songs').scrollPagination({
             'contentPage': 'collection/songs/', // the url you are fetching the results
@@ -11,11 +41,9 @@ function Collection() {
             'appendTarget': $("#collection_song_items"),
             'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
             'beforeLoad': function(){ // before load function, you can display a preloader div
-                console.log("pagination befor load");
                 $('#loading').fadeIn();
             },
             'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
-                console.log("pagination after load");
                  $('#loading').fadeOut();
                  //var i = 0;
                  //$(elementsLoaded).fadeInWithDelay();
@@ -37,18 +65,17 @@ function Collection() {
             });
         };
     });
+*/
 
-
-
-        $("#songs_count").remove();
-
-        $( ".song_item" ).draggable({
+    this.bindElements = function(elements) {
+        $( elements )
+        .on("click", this.song_play)
+        .draggable({
             items: "li:not(.song_item_heading, :not(.song_info))",
             helper: function(event) {
                 artist = $(this).find(".artist").html();
                 title = $(this).find(".title").html();
                 song_id = $(this).attr("data-song_id");
-                console.log("Dragging element with song id " + song_id)
 
                 helper = $("<div class='ui-widget-content ui-state-focus ui-corner-all'></div>");
                 helper.html(artist + " - " + title);
@@ -61,13 +88,14 @@ function Collection() {
             containment: "document",
             revert: "invalid",
             delay: 100,
-        });
-        $( ".song_item").disableSelection();
+        })
+        .disableSelection();
 
-        collection.update_viewport();
-
-        highlight_playing("Collection.bind()", target="#context_container");
+        // we need to align everything probably
+        this.update_viewport();
     }
+
+/* deprecated?
     this.bind_filter_artists = function(by_who) {
         if (by_who) {
             console.log("bind_filter_artists by", by_who);
@@ -113,7 +141,7 @@ function Collection() {
             console.log("genre filter set");
         });
     }
-
+*/
     this.song_play = function() {
         var $data = {
             'song_id': $(this).attr("data-song_id"),
@@ -127,9 +155,10 @@ function Collection() {
 
     this.search = function() {
         $( "#context_collection_search_status" ).html("Started");
-        var $data = {
+        var data = {
             "terms": $( "#collection_search_terms" ).val(),
         };
+
         $( "#context_collection_songs_container").load("collection/search/", $data, function(response, status, xhr) {
             if (status == "error") {
                 $( "#context_collection_search_status" ).html("Error " + xhr.status + " " + xhr.statusText);
@@ -138,17 +167,19 @@ function Collection() {
                 var count = $("#songs_count").html();
                 $("#songs_count").remove();
                 $( "#context_collection_search_status" ).html("Finished (" + count + ")");
+                collection.bindElements($(".song_item"));
+                collection.update_viewport();
             }
-            collection.bind();
-            collection.bind_filter_artists("collection search");
+
+            //collection.bind_filter_artists("collection search");
         });
         return false; // Don't do anything else
     }
-
+/* deprecated?
     this.get_more_results = function() {
             var so_far = $( ".song_item" ).length;
             var $data = {
-                /* 'csrfmiddlewaretoken': csrf_token, */ // not required for $.get()
+                // 'csrfmiddlewaretoken': csrf_token,  // not required for $.get()
                 'begin' : so_far,
             };
             $.get("context/collection/", $data, function(result) {
@@ -170,14 +201,14 @@ function Collection() {
             $(this).html("Show filter");
             $("#context_collection_filter").slideUp("slow", function(){
                 $(this).remove();
-                /* tell server we hid the filter. he maybe wants to clear/save states */
+                // tell server we hid the filter. he maybe wants to clear/save states 
                 $.post("context/filter/", {'filter_show': false}, function(){
                     console.log("hid filter");
                 });
             });
         }
     }
-
+*/
     this.exhibit = function(exhibit_finished_cb) {
 
         this.exhibit_finished = exhibit_finished_cb;
