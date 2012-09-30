@@ -29,6 +29,7 @@ urlpatterns = patterns('music.views',
     #url(r'^playlist/all/$', 'playlist_all_view'),
 
     url(r'^rescan$', 'rescan_view'),
+    url(r'^upload/$', 'upload_view'),
 
     #url(r'^filter/set/(?P<what>\w+)/$', 'filter_set_view'),
 
