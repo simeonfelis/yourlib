@@ -3,7 +3,7 @@ function Sidebar() {
         console.log("rebinding sidebar");
 
         $(".btn_sidebar_playlist").droppable( {
-            accept: ".song_item, .btn_browse_artist",
+            accept: ".song_item, .btn_browse_artist, .btn_browse_album, .btn_browse_title, .btn_browse_genre",
             activeClass: "ui-state-focus",
             hoverClass: "ui-state-highlight",
             drop: sidebar.on_item_dropped_playlist,
@@ -18,16 +18,13 @@ function Sidebar() {
 
         if ("browse" == source) {
             var column = $(ui.helper).attr("data-column");
-
-            if ("artist" == column) {
-                var artist_id = $(ui.helper).attr("data-artist_id");
-                playlist.append(playlist_id, artist_id, column);
-            }
+            var item_id = $(ui.helper).attr("data-item_id");
+            playlist.append(playlist_id, item_id, column);
         }
         else if ("collection" == source) {
-            song_id = $(ui.helper).attr("data-song_id");
+            item_id = $(ui.helper).attr("data-song_id");
 
-            playlist.append(playlist_id, song_id, source);
+            playlist.append(playlist_id, item_id, source);
         }
     }
 

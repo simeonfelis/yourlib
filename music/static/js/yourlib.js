@@ -66,7 +66,7 @@ function Download() {
 }
 
 function Pagination(options) {
-    console.log("PAGINATION INITIALIZED");
+    //console.log("PAGINATION INITIALIZED");
 
     // this is somehow useless
     this.scrollTarget = options.scrollTarget;  // the dom which listen to scroll events
@@ -78,10 +78,52 @@ function Pagination(options) {
     this.errorLoad    = options.errorLoad;     // execute this on load errors
     this.enabled      = options.enabled;       // doh.
 
+    // some functions have to be defined on top
+    this.loadContent = function(paginator) {
+        var tmp = this;
+        // I really don't know the context of this or $(this) here.
+        // So I need to know what context I am. paginator has to be a
+        // Pagination() object.
+        $this = $(paginator.scrollTarget);
+
+        console.log("PAGINATOR LOAD: SO_FAR:" + paginator.contentData())
+
+        $(paginator.appendTarget).children().attr('rel', 'loaded');
+
+        $.ajax({
+            type:     "POST",
+            url:      paginator.contentUrl,
+            data:     {"so_far" : paginator.contentData},
+            success:  function(data) {
+                // we are in context window again. sigh.
+                paginator = $($this).data("pagination");
+                if (data == "nomoreresults") {
+                    paginator.enabled = false;
+                }
+                else {
+                    $(paginator.appendTarget).append(data);
+                    var newData = $(paginator.appendTarget).children("[rel!=loaded]");
+                }
+                paginator.afterLoad(newData);
+                paginator.loading = false;
+                $($this).data("pagination", paginator);
+            },
+            error:    function(data) {
+                // we are in context window again. sigh.
+                paginator = $($this).data("pagination");
+
+                console.log("PAGINATION LOAD ERROR");
+                paginator.errorLoad(data);
+                paginator.loading = false;
+                $($this).data("pagination", paginator);
+            },
+            datatype: "html"
+        })
+    }
+
     // extend options
     options.loadContent     = this.loadContent;
-    options.contentReceived = this.contentReceived;
-    //options.loadError       = this.loadError;
+    options.loading         = false;
 
     // save options into dom element
     $(this.scrollTarget).data("pagination", options);
@@ -91,9 +133,7 @@ function Pagination(options) {
         // context: window. `this` is window, `$(this)` is dom element that was scrolled (scrollTarget)
         // I hate javascript.
         var pagination = $(this).data("pagination"); // get pagination object
-        console.log("PAGINATION SCROLL EVENT");
-        if (pagination.enabled) {
-            console.log("PAGINATION SCROLL ALLOWED");
+        if (pagination.enabled && !pagination.loading) {
             // determine scroll position
             var scrolled           = $(pagination.scrollTarget).scrollTop();
             var scrollTargetHeight = $(pagination.scrollTarget).height();
@@ -101,435 +141,17 @@ function Pagination(options) {
             var mayLoadContent = scrolled + scrollTargetHeight + 10 >= appendTargetHeight;
 
             if (mayLoadContent) {
+                pagination.loading = true;               // block further loading until this one is done
+                $(this).data("pagination", pagination);
                 pagination.beforeLoad();
                 $(pagination.appendTarget).children().attr("rel", "loaded"); // mark already loaded data
                 pagination.loadContent(pagination);
             }
         }
+        else if (pagination.loading) {
+            console.log("PAGINATION BLOCK BECAUSE OF ONGOING LOAD (scrolling to fast?)");
+        }
     });
-
-    this.loadContent = function(pagination) {
-        // I really don't know the context of this or $(this) here.
-        $this = $(pagination.scrollTarget);
-
-        $.ajax({
-            type:     "POST",
-            url:      pagination.contentUrl,
-            data:     {"so_far" : pagination.contentData},
-            success:  function(data) {
-                // we are in context window again. sigh.
-                pagination = $($this).data("pagination");
-                console.log("PAGINATION LOAD SUCCESS");
-                if (data == "nomoreresults") {
-                    pagination.enabled = false;
-                }
-                else {
-                    $(pagination.appendTarget).append(data);
-                    var newData = $(pagination.appendTarget).children("[rel!=loaded]");
-                    pagination.afterLoad(newData);
-                }
-            },
-            error:    function(data) {
-                // we are in context window again. sigh.
-                pagination = $($this).data("pagination");
-
-                console.log("PAGINATION LOAD ERROR");
-                pagination.errorLoad(data);
-            },
-            datatype: "html"
-        })
-    }
-}
-
-function Browse() {
-
-    this.bind = function(selector) {
-
-/*   $(function(){
-        $('#context_browse_artist_container').scrollPagination({
-            'contentPage': 'collection/browse/more/artist/', // the url you are fetching the results
-            'contentData': {"so_far": function() {return $(".btn_browse_artist").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
-            'scrollTarget': $("#context_browse_artist_container"), // who gonna scroll? in this example, the full window
-            'appendTarget': $("#context_browse_artist_column"),  // where to append loaded data
-            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
-            'beforeLoad': function(){ // before load function, you can display a preloader div
-                $('#loading_browse_artists').fadeIn();
-            },
-            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
-                 $('#loading_browse_artist').fadeOut();
-                 //var i = 0;
-                 //$(elementsLoaded).fadeInWithDelay();
-                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
-                 //   $('#nomoreresults').fadeIn();
-                 //   $('#song_items').stopScrollPagination();
-                 //}
-                 browse.update_viewport();
-            }
-        });
-
-        // code for fade in element by element
-        $.fn.fadeInWithDelay = function(){
-            var delay = 0;
-            return this.each(function(){
-                $(this).delay(delay).animate({opacity:1}, 200);
-                delay += 100;
-            });
-        };
-    });
-
-
-   $(function(){
-        $('#context_browse_title_container').scrollPagination({
-            'contentPage': 'collection/browse/more/title/', // the url you are fetching the results
-            'contentData': {"so_far": function() {return $(".btn_browse_title").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
-            'scrollTarget': $("#context_browse_title_container"), // who gonna scroll? in this example, the full window
-            'appendTarget': $("#context_browse_title_column"),  // where to append loaded data
-            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
-            'beforeLoad': function(){ // before load function, you can display a preloader div
-                $('#loading_browse_title').fadeIn();
-            },
-            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
-                 $('#loading_browse_title').fadeOut();
-                 //var i = 0;
-                 //$(elementsLoaded).fadeInWithDelay();
-                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
-                 //   $('#nomoreresults').fadeIn();
-                 //   $('#song_items').stopScrollPagination();
-                 //}
-                 browse.update_viewport();
-            }
-        });
-
-        // code for fade in element by element
-        $.fn.fadeInWithDelay = function(){
-            var delay = 0;
-            return this.each(function(){
-                $(this).delay(delay).animate({opacity:1}, 200);
-                delay += 100;
-            });
-        };
-    });
-
-
-
-   $(function(){
-        $('#context_browse_album_container').scrollPagination({
-            'contentPage': 'collection/browse/more/album/', // the url you are fetching the results
-            'contentData': {"so_far": function() {return $(".btn_browse_album").length;}}, // these are the variables you can pass to the request, for example: children().size() to know which page you are
-            'scrollTarget': $("#context_browse_album_container"), // who gonna scroll? in this example, the full window
-            'appendTarget': $("#context_browse_album_column"),  // where to append loaded data
-            'heightOffset': 10, // it gonna request when scroll is 10 pixels before the page ends
-            'beforeLoad': function(){ // before load function, you can display a preloader div
-                $('#loading_browse_album').fadeIn();
-            },
-            'afterLoad': function(elementsLoaded){ // after loading content, you can use this function to animate your new elements
-                 $('#loading_browse_album').fadeOut();
-                 //var i = 0;
-                 //$(elementsLoaded).fadeInWithDelay();
-                 //if ($('#song_items').children().size() > 100){ // if more than 100 results already loaded, then stop pagination (only for testing)
-                 //   $('#nomoreresults').fadeIn();
-                 //   $('#song_items').stopScrollPagination();
-                 //}
-                 browse.update_viewport();
-            }
-        });
-
-        // code for fade in element by element
-        $.fn.fadeInWithDelay = function(){
-            var delay = 0;
-            return this.each(function(){
-                $(this).delay(delay).animate({opacity:1}, 200);
-                delay += 100;
-            });
-        };
-    });
-*/
-        console.log("binding browse view. selector: " + selector);
-
-        artistPagination = Pagination({
-            scrollTarget : '#context_browse_artist_container',
-            appendTarget : "#context_browse_artist_column",
-            contentUrl   : "collection/browse/more/artist/",
-            contentData  : function() {return $(".btn_browse_artist").length;},
-            beforeLoad   : function() {$('#loading_browse_artists').fadeIn();},
-            afterLoad    : function() {$('#loading_browse_artists').fadeOut();},
-            errorLoad    : function() {alert("Pagination load error");},
-            enabled      : true
-        });
-
-        albumPagination = Pagination({
-            scrollTarget : '#context_browse_album_container',
-            appendTarget : "#context_browse_album_column",
-            contentUrl   : "collection/browse/more/album/",
-            contentData  : function() {return $(".btn_browse_album").length;},
-            beforeLoad   : function() {$('#loading_browse_album').fadeIn();},
-            afterLoad    : function() {$('#loading_browse_album').fadeOut();},
-            errorLoad    : function() {alert("Pagination load error");},
-            enabled      : true
-        });
-
-        titlePagination = Pagination({
-            scrollTarget : '#context_browse_title_container',
-            appendTarget : "#context_browse_title_column",
-            contentUrl   : "collection/browse/more/title/",
-            contentData  : function() {return $(".btn_browse_title").length;},
-            beforeLoad   : function() {$('#loading_browse_title').fadeIn();},
-            afterLoad    : function() {$('#loading_browse_title').fadeOut();},
-            errorLoad    : function() {alert("Pagination load error");},
-            enabled      : true
-        });
-
-/*
-        $('#context_browse_artist_container').data("enabled", true);
-        $('#context_browse_artist_container').data("contentUrl", "collection/browse/more/artist/");
-        $('#context_browse_artist_container').data("appendTarget", "#context_browse_artist_column");
-        $('#context_browse_artist_container').data("contentData", function() {
-            return $(".btn_browse_artist").length;
-        });
-        $('#context_browse_artist_container').data("beforeLoad", function() {
-            $('#loading_browse_artists').fadeIn();
-        });
-        $('#context_browse_artist_container').data("afterLoad", function() {
-            $('#loading_browse_artists').fadeOut();
-        });
-        $('#context_browse_artist_container').scroll(function() {
-            var $appendTarget = $("#context_browse_artist_column");
-            var mayLoadContent = $(this).scrollTop() + $(this).height() + 10 >= $appendTarget.height();
-            if (mayLoadContent) {
-                $(this).data("beforeLoad"); // execute beforeLoad function
-                $(this).children().attr("rel", "loaded"); // mark already loaded data
-                $this = $(this); // make current element available in ajax success function
-                browse.pagination($this);
-            }
-        });
-*/
-        this.update_viewport();
-
-        if (!selector) {
-            selector = '';
-            // all columns
-            column_selector = "#browse_artist_filter .btn, #browse_album_filter .btn, #browse_genre_filter .btn";
-        }
-        else {
-            // one column max.
-            column_selector = selector + " .btn";
-        }
-
-        $( selector + " .btn_browse_title").on("click", function(){
-            var $data = {
-                'song_id': $(this).attr("data-title_id"),
-                'source' : 'browse',
-            };
-            $.post("play/", $data, function(song_info) {
-                player1.play_song(song_info);
-            });
-            return false;
-        })
-        .on("mousenter", function() {$(this).addClass("ui-state-hover");})
-        .on("mouseleave", function() {$(this).removeClass("ui-state-hover");});
-
-        $( column_selector ).on("mouseenter", function(){$(this).addClass("ui-state-hover")});
-        $( column_selector ).on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
-
-        // select/deselect items
-        $( column_selector ).not( ".btn_browse_title" )
-        /*.on("mouseenter", function() {
-            $this = $(this);
-            if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
-                return;
-            }
-            if ($this.hasClass("selected")) {
-                $this.addClass("pre-unselected");
-                //$this.data('delay', setTimeout(function() {$this.removeClass("selected"); browse.on_artist_clicked()}, 900));
-                $this.data('delay', setTimeout(function() {
-
-                    var column = $this.parent().find(".ui-widget-header").html();
-
-                    $this.removeClass("selected");
-                    browse.on_column_item_clicked(column);
-                }, 1500));
-            }
-            else {
-                $this.addClass("pre-selected");
-                //$this.data('delay', setTimeout(function() {$this.removeClass("pre-selected").addClass("selected"); browse.on_artist_clicked()}, 900));
-                $this.data('delay', setTimeout(function() {
-
-                    var column = $this.parent().find(".ui-widget-header").html();
-
-                    $this.removeClass("pre-selected").addClass("selected");
-                    browse.on_column_item_clicked(column);
-                }, 1500));
-            }
-        })
-        .on("mouseleave", function() {
-            $this = $(this);
-            if ($this.hasClass("pre-selected") || $this.hasClass("pre-unselected")) {
-                clearTimeout($this.data("delay"));
-                $this.removeClass("pre-selected");
-                $this.removeClass("pre-unselected");
-            }
-        })*/
-        .on("click", function() {
-            console.log("column item clicked");
-
-            var column = $(this).parent().find(".ui-widget-header").html();
-
-            // highlight/unhighlight
-            if ($(this).hasClass("selected")) {
-                $(this).removeClass("selected")
-            }
-            else{
-                $(this).addClass("selected")
-            }
-
-            // prevent ongoing timeouts
-            if ($(this).hasClass("pre-selected") || $(this).hasClass("pre-unselected")) {
-                clearTimeout($(this).data("delay"));
-                $(this).removeClass("pre-selected");
-                $(this).removeClass("pre-unselected");
-            }
-
-            browse.on_column_item_clicked(column);
-
-        })
-        .draggable({
-            items: "li",
-            helper: function(event) {
-                var column = $(this).parent().find(".ui-widget-header").html();
-
-                helper = $("<div class='ui-widget-content ui-state-focus ui-corner-all', align='center'></div>");
-                helper.attr("data-source", "browse");
-                helper.attr("data-column", column);
-
-                if ("artist" == column) {
-                    artist = $(this).find(".name").html();
-                    artist_id = $(this).attr("data-artist_id");
-                    helper.attr("data-artist_id", artist_id);
-                    count = $(this).find(".count").html();
-                    //title = $(this).find(".title").html();
-                    console.log("Dragging element with song id TODO")
-                    helper.html("All songs (" + count + ") from artist <br />" + artist);
-                    return $( helper );
-                }
-                else if ("album" == column) {
-
-                }
-                else if ("genre" == column) {
-
-                }
-
-
-            },
-            appendTo: "body",
-            containment: "document",
-            revert: "invalid",
-            delay: 100,
-        }).disableSelection();
-    }
-    
-    this.pagination = function(loadElement) {
-        $this = loadElement;
-        beforeLoad = $this.data("beforeLoad");
-        beforeLoad();
-        if ($this.data("enabled")) {
-            $.ajax({
-                type: "POST",
-                url: $this.data("contentUrl"),
-                data: {"so_far": $($this).data("contentData")()},
-                success: function(data) {
-                    if (data == "nomoreresults") {
-                        $this.data("enabled", false);
-                    }
-                    else {
-                        $($this.data("appendTarget")).append(data);
-                        var newData = $($this.data("appendTarget")).children("[rel!=loaded]");
-                        afterLoad = $this.data("afterLoad");
-                        afterLoad(newData);
-                    }
-                },
-                dataType: "html"
-            });
-        }
-        else {
-            afterLoad = $($this).data("afterLoad");
-            afterLoad();
-        }
-    }
-
-    this.on_column_received = function(data) {
-        var $album_container  = $(data).find("#context_browse_album_container");
-        var $genre_container  = $(data).find("#context_browse_genre_container");
-        var $title_container  = $(data).find("#context_browse_title_container");
-        var $artist_container = $(data).find("#context_browse_artist_container");
-
-        var column_from = $(data).find("#column_from").html();
-
-        if ($album_container.length > 0) {
-            if ($("#context_container").find("#context_browse_album_container").length > 0) {
-                $("#context_browse_album_container").replaceWith($album_container);
-                browse.bind("#context_browse_album_container");
-            }
-        }
-
-        if ($title_container.length > 0) {
-            if ($("#context_container").find("#context_browse_title_container").length > 0) {
-                $("#context_browse_title_container").replaceWith($title_container);
-                browse.bind("#context_browse_title_container");
-            }
-        }
-
-        if ($genre_container.length > 0) {
-            console.log("TODO");
-        }
-        if ($artist_container.length > 0) {
-            console.log("TODO");
-        }
-    }
-
-    this.on_column_item_clicked = function(column_from) {
-        var selected = $("#browse_" + column_from + "_filter .selected").get();
-        var item_ids = [];
-        for (item in selected) {
-            item_ids.push($(selected[item]).attr("data-" + column_from + "_id"));
-        }
-        var ar_name = column_from + '_ids';
-        var data = {
-            'items' : item_ids,
-        }
-
-        $.post('collection/browse/' + column_from + '/', data, browse.on_column_received);
-    }
-
-    this.exhibit = function(data) {
-        if (data) {
-            browse.content = data;
-        }
-        if ($("#context_container").find("#context_content").length > 0) {
-            $("#context_content").fadeOut(200, function() {
-                $("#context_container").append($(browse.content).fadeIn(500));
-                $(this).remove();
-                browse.bind();
-            });
-        }
-        else {
-            $("#context_container").append($(browse.content).fadeIn(500));
-        }
-    }
-
-    this.update_viewport = function() {
-        if ($.find("#context_browse_container").length == 0) {
-            // nothing to update
-            return;
-        }
-
-        var height = context_content.height - $("#context_header").height() - 1;
-        $("#context_browse_artist_container").height( height );
-        $("#context_browse_album_container").height( height );
-        $("#context_browse_title_container").height( height );
-        var width = context_content.width*0.32 - 1;
-        $(".browse_column").width( width );
-
-    }
 }
 
 function ContextContent() {
@@ -578,7 +200,7 @@ $(document).ready(function () {
 
     /* update viewport */
     $(window).resize(function() {
-        browse.update_viewport();
+      browse.update_viewport();
       context_content.update_viewport();
       collection.update_viewport();
       playlist.update_viewport();
@@ -595,7 +217,7 @@ $(document).ready(function () {
     $(document).on("click",  "#btn_sidebar_browse",       sidebar.show_browse);
     $(document).on("click",  ".btn_sidebar_playlist",     sidebar.show_playlist);
     $(document).on("click",  "#btn_context_upload",       sidebar.show_upload);
-    $(document).on("click",  "#btn_context_download",     sidebar.show_download);
+    //$(document).on("click",  "#btn_context_download",     sidebar.show_download);
     $(document).on("submit", "#playlist_create",          playlist.create);
 
     /* playlist */
