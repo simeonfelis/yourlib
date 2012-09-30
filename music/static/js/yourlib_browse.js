@@ -136,9 +136,9 @@ function Browse() {
                     console.log("TODO");
                 }
                 else if ("title" == column) {
-                    song_id = $(this).attr("data-item_id");
+                    song_id = $(this).attr("data-title_id");
                     helper.html("Song: " + $(this).html());
-                    helper.attr("data-song_id", song_id);
+                    helper.attr("data-item_id", song_id);
 
                     return $( helper );
                 }

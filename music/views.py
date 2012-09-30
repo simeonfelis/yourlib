@@ -523,11 +523,13 @@ def playlist_append_view(request):
         playlist = Playlist.objects.get(id=playlist_id)
 
         if "song" == source:
-            songs = [Song.objects.get(user=request.user, id=item_id)]
+            songs = Song.objects.get(user=request.user, id=item_id)[0:1]
         elif "artist" == source:
             songs = Song.objects.filter(user=request.user, artist__id=item_id)
         elif "album" == source:
             songs = Song.objects.filter(user=request.user, album__id=item_id)
+        elif "title" == source:
+            songs = Song.objects.filter(user=request.user, id=item_id)
         else:
             songs = []
 
