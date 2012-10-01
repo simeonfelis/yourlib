@@ -278,8 +278,8 @@ $(document).ready(function () {
     // update viewport
     var resizeTimer = 0;
     $(window).resize(function() {
-        clearTimer(resizeTimer);
-        resizeTimer = setTimeOut(yourlib_resize_cb, 100);
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(yourlib_resize_cb, 100);
     });
     /* global header */
     $(document).on("click",  "#logout",                   yourlib.logout);
