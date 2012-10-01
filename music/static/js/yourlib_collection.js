@@ -159,7 +159,7 @@ function Collection() {
             "terms": $( "#collection_search_terms" ).val(),
         };
 
-        $( "#context_collection_songs_container").load("collection/search/", $data, function(response, status, xhr) {
+        $( "#context_collection_songs_container").load("collection/search/", data, function(response, status, xhr) {
             if (status == "error") {
                 $( "#context_collection_search_status" ).html("Error " + xhr.status + " " + xhr.statusText);
             }

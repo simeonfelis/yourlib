@@ -37,6 +37,9 @@ function Upload() {
                 var percentVal = percentComplete + '%';
                 bar.width(percentVal)
                 percent.html(percentVal);
+                if (percentComplete == 100) {
+                    upload.check_status(); // force checking
+                }
                 //$("#upload_progress_bar").progressbar("value", percentComplete);
             },
             complete: function(xhr) {
@@ -103,6 +106,7 @@ function Upload() {
 
     this.check_status = function() {
         if ($("#context_upload").is(":visible")) {
+            this.checking = true;
             $( "#upload_status_content" ).load("upload/status/", function() {
                 upload.checking = false;
                 // attention: we are now not in Upload, but document.window!

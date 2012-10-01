@@ -191,13 +191,23 @@ function ContextContent() {
         $("#context_container").width(this.width);
     }
     this.get_width = function() {
-        return $(document).width() - 300 - 20; // sidebar and paddings
+        return $(window).width() - 300 - 20; // sidebar and paddings
     }
     this.get_height = function() {
-        return $(document).height() - 50 - 20; // topbar and paddings
+        return $(window).height() - 50 - 20; // topbar and paddings
     }
     this.width = this.get_width();
     this.height = this.get_height();
+}
+
+function yourlib_resize_cb() {
+
+      context_content.update_viewport();
+
+      browse.update_viewport();
+      collection.update_viewport();
+      playlist.update_viewport();
+      upload.update_viewport();
 }
 
 $(document).ready(function () {
@@ -265,13 +275,11 @@ $(document).ready(function () {
      * manually with <object>.bind(), e.g. sidebar.bind()
      */
 
-    /* update viewport */
+    // update viewport
+    var resizeTimer = 0;
     $(window).resize(function() {
-      browse.update_viewport();
-      context_content.update_viewport();
-      collection.update_viewport();
-      playlist.update_viewport();
-      upload.update_viewport();
+        clearTimer(resizeTimer);
+        resizeTimer = setTimeOut(yourlib_resize_cb, 100);
     });
     /* global header */
     $(document).on("click",  "#logout",                   yourlib.logout);
@@ -302,7 +310,7 @@ $(document).ready(function () {
     //$(document).on("click",   ".btn_filter_genre",          collection.filter_genre);
 
     /* browse */
-    $(document).on("click",   ".btn_browse_artist",         browse.on_artist_clicked);
+    //$(document).on("click",   ".btn_browse_artist",         browse.on_artist_clicked);
 
     /* collection & playlist */
     //$(document).on("click",      ".song_item",  collection.song_play);
