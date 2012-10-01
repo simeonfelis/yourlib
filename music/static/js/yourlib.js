@@ -11,7 +11,7 @@ function spinner_stop(sel) {
 function highlight_playing(by_who, target) {
 
     if (by_who) {
-        console.log("highlight_playling by", by_who);
+        console.log("highlight_playling by", by_who, " for ", target);
     }
     else {
         console.log("highlight_playling by unknown");
@@ -22,8 +22,8 @@ function highlight_playing(by_who, target) {
     var song_id     = $( "#player1" ).attr("data-song_id");
     var source      = $( "#player1" ).attr("data-source");
 
-    $( ".currently_playing" ).find(".playing_icon").remove();
-    $( ".currently_playing" ).removeClass("currently_playing");
+    $( target + " .currently_playing" ).find(".playing_icon").remove();
+    $( target + " .currently_playing" ).removeClass("currently_playing").removeClass("ui-state-active");
 
     if ("playlist" == source) {
         sidebar_sel = "#sidebar_playlist_" + playlist_id;
@@ -42,11 +42,11 @@ function highlight_playing(by_who, target) {
         return;
     }
 
-    $(sidebar_sel)
+    $(target + " " + sidebar_sel)
         .addClass("currently_playing")
         .append("<span class='playing_icon'>♬</span>");
 
-    $(context_sel).addClass("currently_playing");
+    $(target + " " + context_sel).addClass("currently_playing").addClass("ui-state-active");
 
     /* sidebar */
    /*
