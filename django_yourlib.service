@@ -1,0 +1,14 @@
+[Unit]
+Description=Yourlib web environment
+After=nginx.service
+After=postgresql.service
+After=rabbitmq.service
+
+[Service]
+Type=forking
+PIDFile=/tmp/yourlib.pid
+ExecStart=/bin/su http -l -c "/bin/bash /home/http/webapps/yourlib/yourlib.sh"
+ExecStop=kill -9 `cat /tmp/yourlib.pid`
+
+[Install]
+WantedBy=multi-user.target

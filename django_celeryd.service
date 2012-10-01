@@ -1,0 +1,11 @@
+[Unit]
+Description=A Task queue management for django yourlib project
+After=rabbitmq.service
+
+[Service]
+Type=forking
+ExecStart=/bin/su http -l -c '/bin/bash /home/http/webapps/yourlib/celery.sh start'
+ExecStop=/bin/su http -l -c '/bin/bash /home/http/webapps/yourlib/celery.sh stop'
+
+[Install]
+WantedBy=multi-user.target
