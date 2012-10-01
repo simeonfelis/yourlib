@@ -10,8 +10,9 @@ function Playlist() {
         $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
 
 
-        $(".sortable").not(".song_item_heading").sortable( {
-            items: "li:not(.song_item_heading, :not(.song_info))",
+        //console.log("MAKING PLAYLIST SORTABLE"); //.not(".song_item_heading")  //
+        $(".sortable").sortable( {
+            items: "li:not(.song_item_heading):not(.song_info)",
             start: function(event, ui) {
                 $(ui.helper).addClass("ui-state-active");
             },
@@ -19,36 +20,32 @@ function Playlist() {
             //activeClass: "ui-state-active",
             delay: 100,
         });
-        $( ".sortable").disableSelection();
-
-        highlight_playing("Playlist.bind()", target="#context_content");
+        $(".sortable").disableSelection();
     }
 
     this.reorder = function (event, ui) {
         /* callback when dragndrop stoped */
         /* when an element was reordered, this is called */
 
-        // TODO: why is this not a jquery element?
-        var $pl_item         = ui.item.get(0);
-        var playlist_id      = $pl_item.getAttribute("data-playlist_id");
-        var item_id          = $pl_item.getAttribute("data-item_id");
-        if ($pl_item.previousElementSibling == null) {
-            var item_previous_id = 0;
-        }
-        else {
-            var item_previous_id = $pl_item.previousElementSibling.getAttribute("data-item_id");
-        }
-        var url = "playlist/reorder/";
+        var playlist_id = $(ui.item).attr("data-playlist_id");
+        var item_id     = $(ui.item).attr("data-item_id");
 
-        var $data = {
+        var $prev = $(ui.item).prev();
+        var prev_item_id = $prev.attr("data-item_id");
+
+        if (typeof prev_item_id == "undefined") {
+            prev_item_id = 0;
+        }
+
+        var data = {
             'playlist_id'        : playlist_id,
             'item_id'            : item_id,
-            'item_previous_id'   : item_previous_id,
+            'item_previous_id'   : prev_item_id,
         };
 
         // update playlist content. TODO: should be done with only one request!
-        $( "#context_playlist_container" ).load(url, $data, function() {
-            // our context is now document.window
+        $( "#context_playlist_container" ).load("playlist/reorder/", data, function() {
+            highlight_playing("playlist.reorder()", "#context_playlist");
             playlist.bind();
         })
         .error(function() {alert("error ordering playlist item");});
@@ -80,6 +77,7 @@ function Playlist() {
             playlist.bind();
             // update number of playlists
             $( "#sidebar_playlists_content" ).load("sidebar/playlists/", function() {
+                highlight_playing("playlist.item_remove()", "#context_playlist");
                 sidebar.bind();
             });
         })
@@ -102,6 +100,7 @@ function Playlist() {
 
                 /* update playlists in sidebar */
                 $( "#sidebar_playlists_content" ).load("sidebar/playlists/", function() {
+                    highlight_playing("playlist.delete_list()", "#context_playlist");
                     sidebar.bind("#sidebar_playlists_content");
                 });
 
@@ -154,7 +153,8 @@ function Playlist() {
         /* update number of playlist items in sidebar */
         // TODO: increase *only* number of playlist items in sidebar
         $( "#sidebar_playlists_content" ).load("playlist/append/", data, function() {
-            sidebar.bind();
+            highlight_playing("playlist.append()", "#context_playlist");
+            sidebar.bind_playlists();
         });
     }
     this.create = function() {
@@ -216,6 +216,7 @@ function Playlist() {
 
                 // before fadeIn finishes, update the inserted effects
                 playlist.update_viewport();
+                highlight_playing("playlist.exhibit()", "#context_playlist");
                 playlist.bind();
             })
         });

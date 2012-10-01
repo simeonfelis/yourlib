@@ -1,7 +1,16 @@
 function Sidebar() {
     this.bind = function() {
-        console.log("rebinding sidebar");
 
+        highlight_playing('sidebar.bind()', "#sidebar");
+
+        this.bind_playlists();
+
+        $(".btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
+        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
+
+    }
+
+    this.bind_playlists = function() {
         $(".btn_sidebar_playlist").droppable( {
             accept: ".song_item, .btn_browse_artist, .btn_browse_album, .btn_browse_title, .btn_browse_genre",
             activeClass: "ui-state-focus",
@@ -9,7 +18,10 @@ function Sidebar() {
             drop: sidebar.on_item_dropped_playlist,
         });
 
-        highlight_playing(by_who='sidebar.bind', target="#sidebar");
+        $("#sidebar_playlists .btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
+        $("#sidebar_playlists .btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
+
+        highlight_playing('sidebar.bind_playlists()', "#sidebar_playlists");
     }
 
     this.on_item_dropped_playlist = function(event, ui) {

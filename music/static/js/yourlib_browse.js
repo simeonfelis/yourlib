@@ -43,8 +43,6 @@ function Browse() {
     this.bind = function(selector) {
         // must be called only once the browse view is created!
 
-        console.log("binding browse view. selector: " + selector);
-
         // this.update_viewport();  // make this explicitly only when needed!
 
         // bind all existing column elements
@@ -58,9 +56,9 @@ function Browse() {
     }
 
     this.bindColumnElements = function(columnElements) {
-
         // will bind effects only for items in columnElements
-        console.log("bindColumnElements for " +  $(columnElements).length + " items");
+
+        highlight_playing("browse.bindColumnElements()", "#context_browse");
 
         $( columnElements )
         .on("click", function(e) {
@@ -300,6 +298,7 @@ function Browse() {
                     // the exhibit process is finished here
                     browse.exhibit_finished();
                 });
+                highlight_playing("browse.exhibit()", "#context_browse");
                 browse.update_viewport();
             });
         }
@@ -316,6 +315,7 @@ function Browse() {
                         // the exhibit process is finished here
                         browse.exhibit_finished();
                     }));
+                    highlight_playing("browse.exhibit()", "#context_browse");
                     browse.update_viewport();
                     browse.bind();
                 });

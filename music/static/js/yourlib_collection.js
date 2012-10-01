@@ -26,10 +26,6 @@ function Collection() {
         // bind existing items
         this.bindElements($(".song_item"));
 
-        this.update_viewport();
-
-        highlight_playing("Collection.bind()", target="#context_container");
-
     }
 
 /*
@@ -90,6 +86,8 @@ function Collection() {
             delay: 100,
         })
         .disableSelection();
+
+        highlight_playing("collection.bindElements()", "#context_collection");
 
         // we need to align everything probably
         this.update_viewport();
@@ -222,6 +220,7 @@ function Collection() {
                     collection.exhibit_finished();
                 });
                 collection.update_viewport();
+                highlight_playing("collection.exhibit()", "#context_collection");
             });
         }
         else {
@@ -237,6 +236,7 @@ function Collection() {
                         collection.exhibit_finished();
                     }));
                     collection.update_viewport();
+                    highlight_playing("collection.exhibit()", "#context_collection");
                     collection.bind();
                 });
             });
