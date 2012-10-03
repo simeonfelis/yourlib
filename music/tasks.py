@@ -187,9 +187,60 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
 
 @task(ignore_result=True)
 @transaction.autocommit
-def upload_done(useruppath, userupdir, upload_status_id):
+def upload_done(user_id, upload_status_id, uploaded_file_path):
+#def upload_done(useruppath, userupdir, upload_status_id):
 
+    user = User.objects.get(id=user_id)
     upload_status = Upload.objects.get(id=upload_status_id)
+
+    print("Entering status copying")
+    step_status = 0
+
+
+    # determine user upload dir
+    userupdir = os.path.join(
+                settings.FILE_UPLOAD_USER_DIR,
+                user.username
+                )
+    # create user's upload dir
+#    if not os.path.isdir(userupdir):
+#        os.makedirs(userupdir)
+
+    # move temporary file to users's upload dir determine file name and path,
+    # don't overwrite
+#    useruppath = os.path.join(userupdir, uploaded_file_name)
+#    ii = 0
+#    while os.path.exists(useruppath):
+#        useruppath = os.path.join(
+#                userupdir,
+#                uploaded_file_name + "_" + str(ii)
+#                )
+#        ii += 1
+
+#    print("Copy-to location:", useruppath, type(useruppath))
+#    shutil.move(uploaded_file_path, uploaded_file_name)
+
+    # now put the upload content to the user's location
+#    step_status = 0
+#    processed = 0
+#    amount = upfile.size
+#        helper.dbgprint("Chunks:", amount)
+#        old_status = 0
+#        with open(useruppath, 'wb+') as destination:
+#            for chunk in upfile.chunks():
+#                processed += upfile.DEFAULT_CHUNK_SIZE
+#                destination.write(chunk)
+#                step_status = int(processed*100/amount)
+#                if (old_status < step_status) and (step_status % 2 == 0):
+#                    helper.dbgprint("Chunks copied:", step_status, "%")
+#                    userUploadStatus.step_status = step_status
+#                    userUploadStatus.save()
+#                    old_status = step_status
+#            destination.close()
+#        helper.dbgprint("Uploaded file written to", useruppath)
+
+
+
 
     ################################# decompress ################################
     # determine file type, unzip or untar (.zip, .7z, [.tar].[gz|bz2|xz|lzma])
@@ -202,10 +253,10 @@ def upload_done(useruppath, userupdir, upload_status_id):
 
     deflates = []
     magic_mime = magic.Magic(mime=True)
-    mime = magic_mime.from_file(useruppath.encode('utf-8')) # Magic has problems with unicode?
+    mime = magic_mime.from_file(uploaded_file_path.encode('utf-8')) # Magic has problems with unicode?
     if "application/zip" == mime:
         # deflate
-        todeflate = zipfile.ZipFile(useruppath, 'r')
+        todeflate = zipfile.ZipFile(uploaded_file_path, 'r')
         processed = 0
         step_status = 0
         old_status = 0
@@ -227,7 +278,7 @@ def upload_done(useruppath, userupdir, upload_status_id):
                     dbgprint("Deflated", step_status, "%")
         todeflate.close()
     else:
-        deflates.append(useruppath)
+        deflates.append(uploaded_file_path)
 
     # Suppose we have decompressed a zip, so there multiple files now, and
     # their paths will be stored as list in ''deflates''.
@@ -295,30 +346,37 @@ def upload_done(useruppath, userupdir, upload_status_id):
 
 
         # this filedir does not have to be unique
+        if tags['artist']: artist = tags['artist'].replace(os.path.sep, '_')
+        else:              artist = "UNKNOWN ARTIST"
+        if tags['album']:  album  = tags['album'].replace(os.path.sep, '_')
+        else:              album  = "UNKNOWN ALBUM"
+
         filedir = os.path.join(
-                musicuploaddir.encode('utf-8'),
-                tags['artist'].replace(os.path.sep, '_'),
-                tags['album'].replace(os.path.sep, '_')
+                musicuploaddir, #.encode('utf-8'),
+                artist,
+                album
                 )
 
         if not os.path.isdir(filedir):
             # this could fail if filedir exists and is a file
             os.makedirs(filedir)
 
-        filename = str(tags['track']) + ". " + \
-                tags['title'].replace(os.path.sep, '_') + '.' + \
+        if tags['track']:  track = str(tags['track'])
+        else:              track = '0'
+        if tags ['title']: title = tags['title'].replace(os.path.sep, '_')
+        else:              title = "UNKNOWN TITLE"
+        filename = track + ". " + \
+                title + '.' + \
                 f_extension
 
         filepath = os.path.join(filedir, filename)
         jj = 0
-        exists = os.path.exists(filepath)
-        while exists:
-            filename = str(tags['track']) + ". " + \
-                    tags['title'].replace(os.path.sep, '_') + str(jj) + '.' + \
+        while os.path.exists(filepath):
+            filename = track + ". " + \
+                    title + str(jj) + '.' + \
                     f_extension
 
             filepath = os.path.join(filedir, filename)
-            exists = os.path.exists(filepath)
             jj += 1
 
         #dbgprint("Moving deflate", defl, "to", filepath)

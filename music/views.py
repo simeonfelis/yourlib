@@ -355,8 +355,8 @@ def upload_show_view(request):
             )
 
 
+#@csrf_exempt
 @login_required
-@csrf_exempt
 def upload_file_view(request):
     if request.method == 'POST':
         if request.FILES == None:
@@ -365,12 +365,12 @@ def upload_file_view(request):
         upfile = request.FILES[u'file']
 
         #################################  copying ################################
-        helper.dbgprint("Entering status copying")
-        step_status = 0
-
-        userUploadStatus = Upload(user=request.user, step="copying", step_status=0)
+#        helper.dbgprint("Entering status copying")
+#        step_status = 0
+#
+        userUploadStatus = Upload(user=request.user, step="received", step_status=0)
         userUploadStatus.save()
-
+#
         # determine user upload dir
         userupdir = os.path.join(
                 settings.FILE_UPLOAD_USER_DIR,
@@ -390,33 +390,36 @@ def upload_file_view(request):
                     upfile.name + "_" + str(ii)
                     )
             ii += 1
-
-        helper.dbgprint("Copy-to location:", useruppath, type(useruppath))
-
-        # now put the upload content to the user's location
-        step_status = 0
-        processed = 0
-        amount = upfile.size
-        helper.dbgprint("Chunks:", amount)
-        old_status = 0
-        with open(useruppath, 'wb+') as destination:
-            for chunk in upfile.chunks():
-                processed += upfile.DEFAULT_CHUNK_SIZE
-                destination.write(chunk)
-                step_status = int(processed*100/amount)
-                if (old_status < step_status) and (step_status % 2 == 0):
-                    helper.dbgprint("Chunks copied:", step_status, "%")
-                    userUploadStatus.step_status = step_status
-                    userUploadStatus.save()
-                    old_status = step_status
-            destination.close()
-        helper.dbgprint("Uploaded file written to", useruppath)
+        import shutil
+        shutil.move(upfile.file.name, useruppath)
+#
+#        helper.dbgprint("Copy-to location:", useruppath, type(useruppath))
+#
+#        # now put the upload content to the user's location
+#        step_status = 0
+#        processed = 0
+#        amount = upfile.size
+#        helper.dbgprint("Chunks:", amount)
+#        old_status = 0
+#        with open(useruppath, 'wb+') as destination:
+#            for chunk in upfile.chunks():
+#                processed += upfile.DEFAULT_CHUNK_SIZE
+#                destination.write(chunk)
+#                step_status = int(processed*100/amount)
+#                if (old_status < step_status) and (step_status % 2 == 0):
+#                    helper.dbgprint("Chunks copied:", step_status, "%")
+#                    userUploadStatus.step_status = step_status
+#                    userUploadStatus.save()
+#                    old_status = step_status
+#            destination.close()
+#        helper.dbgprint("Uploaded file written to", useruppath)
 
         # so here the upload is done and can be analyzed
         from music.tasks import upload_done
-        stat = upload_done.delay(useruppath, userupdir, userUploadStatus.id)
+        #stat = upload_done.delay(useruppath, userupdir, userUploadStatus.id)
+        stat = upload_done.delay(user_id=request.user.id, upload_status_id=userUploadStatus.id, uploaded_file_path=useruppath)
 
-        time.sleep(1) #give celery 1 second to accept the task
+        time.sleep(3) #give celery 3 second to accept the task
         res = AsyncResult(stat.task_id).state
         if res == "PENDING":
             userUploadStatus.step = "pending"
@@ -448,7 +451,7 @@ def upload_status_view(request):
 
 @login_required
 def upload_clearpending_view(request):
-    to_clear = Upload.objects.filter(step__icontains="pending").delete()
+    to_clear = Upload.objects.filter(user=request.user, step__icontains="pending").delete()
 
     uploads = Upload.objects.filter(user=request.user)
 
