@@ -20,6 +20,15 @@
 #set -x
 #set -e
 
+##########################################################
+#            THIS IS FUCKING IMPORTANT                   #
+LANG="en_US.UTF-8"
+export LANG
+# increment counter below when you made a wrong setting
+# here. you can thank me later.
+# TOTAL WASTED DEBUG HOURS: 18
+#########################################################
+
 DEFAULT_PID_FILE="/home/http/webapps/yourlib/celery/celeryd@%n.pid"
 DEFAULT_LOG_FILE="/home/http/webapps/yourlib/celery/celeryd@%n.log"
 DEFAULT_LOG_LEVEL="INFO"

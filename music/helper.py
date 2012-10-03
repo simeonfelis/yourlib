@@ -416,18 +416,6 @@ def add_song(dirname, files, user, force=False):
     for filename in files:
         path = os.path.join(dirname, filename)
 
-        try:
-            # To bulletproof the os.walk() call, str is used for paths.
-            # But we need unicode for the db. If conversion fails, the file
-            # path has some funny encoding which I can't understand.
-            # replacing won't help(?), as we need an exact file path
-            # path = path.decode('utf-8', "replace")
-            path = path.decode('utf-8')
-        except UnicodeDecodeError:
-            print("add_song: Ignoring UnicodeDecodeError on", path)
-            processed += 1
-            continue
-
         if not os.path.isfile(path):
             processed += 1
             continue

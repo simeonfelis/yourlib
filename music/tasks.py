@@ -121,38 +121,35 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
     collection = Collection.objects.get(user=user)
 
     try:
-        userdir = os.path.join(settings.MUSIC_PATH, user.username).encode('utf-8')
-        # on filenames with bad encoded characters, os.walk will fail when using 
-        # unicode: os.walk(u'foo').
-        # http://stackoverflow.com/questions/1766669/python-unicodedecodeerror
-        # 
+        userdir = os.path.join(settings.MUSIC_PATH, user.username)
 
         #############    rescan preparations   ###################
         # estimating total effort: count users songs on filesystem and in db
         amount = 1  # less accurate, but avoid division by 0
         for root, dirs, files in os.walk(userdir):
-            for filename in files:
-                amount += 1
+            amount += len(files)
 
         songs = Song.objects.filter(user=user)
 
-        amount += len(songs) # absolute amount
-        processed = 0        # absolute progress
-        so_far = 0           # progress in percent
+        amount += songs.count() # absolute amount
+        processed = 0           # absolute progress
+        so_far = 0              # progress in percent
         print ("rescan_task: user", user, "dir", userdir, "absolute amount", amount)
 
         ##############     check orphans     ##################
         for s in songs:
             if not os.path.isfile(s.path_orig):
-                dbgprint("Deleting orphan entry", s.path_orig)
+                print("Deleting orphan entry", s.path_orig)
                 s.delete()
+
             processed += 1
-            if so_far > 0 and so_far % 2 == 0:
+            if so_far > 0 and so_far % 1 == 0:
                 collection.scan_status = str(so_far)
                 try:
                     collection.save()
                 except:
                     pass
+        print ("rescan_task: user", user, "dir", userdir, "deleting orphans done")
 
         #############   check entrys in db if files have changed     ##############
         for root, dirs, files in os.walk(userdir):
