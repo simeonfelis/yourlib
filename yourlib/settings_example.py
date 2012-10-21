@@ -19,12 +19,11 @@ ADMINS = (
 )
 
 
-FILE_UPLOAD_HANDLERS = (
-        # replace standard upload handler
-        "music.views.ProgressBarUploadHandler",
-       # "django.core.files.uploadhandler.MemoryFileUploadHandler", # without this, files are put on disk directly
-       # "django.core.files.uploadhandler.TemporaryFileUploadHandler",
-        )
+#FILE_UPLOAD_HANDLERS = (
+#        # replace standard upload handler
+#        "django.core.files.uploadhandler.MemoryFileUploadHandler", # without this, files are put on disk directly
+#        "django.core.files.uploadhandler.TemporaryFileUploadHandler",
+#        )
 MANAGERS = ADMINS
 
 DATABASES = {
@@ -154,6 +153,8 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
     'music',
     'djcelery',
+    'django_extensions',
+    'south',
 )
 
 # A sample logging configuration. The only tangible logging

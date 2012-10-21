@@ -1,3 +1,4 @@
+{% load music_extras %}
 {% spaceless %}
 {% if column == "artist" %}
     {% for artist in artists %}
@@ -20,7 +21,7 @@
 {% if column == "title" %}
     {% for title in songs %}
         <li class="title btn ui-state-default btn_browse_title" data-title_id="{{ title.id }}">
-            {{ title.track }} - {{ title }}
+            {{ title.track }} - {{ title }} <span style="font-size: small">({{ title.length|formatSeconds }})</span>
         </li>
     {% endfor %}
 {% endif %}

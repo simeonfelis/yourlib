@@ -1,26 +1,152 @@
 function Playlist() {
-    
-    this.views = [];
-    
+
+    // init (constructor) at end of function
+
+    this.highlight = function() {
+        $(this).addClass("ui-state-hover");
+    }
+    this.unlight = function() {
+        $(this).removeClass("ui-state-hover");
+    }
+
     this.bind = function () {
 
-        this.update_viewport();
+        console.log("============ Playlist bind =============");
 
-        $(".btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
-        $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
+        // make sure to bind only once
+        $("#context_playlist_container .song_item").off("mouseenter", this.highlight);
+        $("#context_playlist_container .song_item").off("mouseleave", this.unlight);
 
+        $("#context_playlist_container .song_item").on("mouseenter", this.highlight);
+        $("#context_playlist_container .song_item").on("mouseleave", this.unlight);
 
-        //console.log("MAKING PLAYLIST SORTABLE"); //.not(".song_item_heading")  //
-        $(".sortable").sortable( {
-            items: "li:not(.song_item_heading):not(.song_info)",
-            start: function(event, ui) {
-                $(ui.helper).addClass("ui-state-active");
-            },
-            stop: this.reorder,
-            //activeClass: "ui-state-active",
-            delay: 100,
-        });
+        $("#context_playlist_container .btn_playlist_item_remove").on("click", this.remove_item);
+
+        var is_shared = false;
+        if ($("#shared_playlist").length > 0) {
+            is_shared = true;
+        }
+
+        if (!is_shared) {
+            // TODO: btn delete
+
+            // btn share
+            $(".btn_playlist_share").on("click", this.share);
+
+            // Dragndrop sorting
+            $("#context_playlist_container .sortable").sortable( {
+                items: "li:not(.song_item_heading):not(.song_info)",
+                start: function(event, ui) {
+                    $(ui.helper).addClass("ui-state-active");
+                },
+                stop: this.reorder,
+                //activeClass: "ui-state-active",
+                delay: 100,
+            });
+        }
         $(".sortable").disableSelection();
+    }
+
+    this.username_validation = function() {
+        console.log("username validation started");
+        var username = $("#dialog-playlist-share-username").val();
+
+        var data = {
+            'username'            : username,
+        };
+
+        var url = base_url + "username_validation/";
+
+        $.ajax({
+            type:     "GET",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                // we are in context window again. sigh.
+
+                // get DOM object of Share btn in dialog. Sorry for this mess.
+                var $dia = $("#dialog-playlist-share").parent();
+                var $tmp = $dia.find("button span:contains('Share')");
+                var $share_btn = $tmp.parent();
+
+                var exists = $.parseJSON( data );
+
+                if (exists["exists"] == true) {
+                    $share_btn.show();
+                }
+                else {
+                    $share_btn.hide();
+                }
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                console.log("ERROR VALIDATING USERNAME");
+                $share_btn.hide();
+            },
+            complete:    function(jqXHR, textStatus) {
+            },
+            datatype: "json"
+        });
+
+    }
+    this.share = function(event, ui, playlist_id, username) {
+        if (playlist_id) {
+
+                var data = {
+                    'username'            : username,
+                };
+
+                var url = "share/";
+
+                $.ajax({
+                    type:     "POST",
+                    url:      url,
+                    data:     data,
+                    success:  function(data, status, jqXHR) {
+                        // we are in context window again. sigh.
+                        console.log("Sharing succes?");
+
+                    },
+                    error:    function(jqXHR, status, error) {
+                        // we are in context window again. sigh.
+                        console.log("SHARE PLAYLIST ERROR");
+                    },
+                    complete:    function(jqXHR, textStatus) {
+                    },
+                    datatype: "html"
+                });
+
+                return false; // Don't do anything else
+        }
+        else {
+            // bind dialog events
+            $("#dialog-playlist-share-username").off("keyup", this.username_validation);
+            $("#dialog-playlist-share-username").on("keyup", playlist.username_validation);
+
+            // show dialog
+            $this = $(this);
+            playlist_id = $(this).attr("data-playlist_id");
+            //playlist_id = $( "#dialog-playlist-share" ).find(".playlist_name").html($(this).attr("data-playlist_name"));
+            $( "#dialog-playlist-share" ).dialog({
+                resizable: true,
+                height:300,
+                width:400,
+                modal: true,
+                buttons: {
+                    "Cancel": function(event) {
+                        $( this ).dialog( "close" );
+                    },
+                    "Share": function(event) {
+                        username = $("#dialog-playlist-share-username").val();
+                        $( this ).dialog( "close" );
+                        playlist.share(null, null, playlist_id, username);
+                    }
+                }
+            });
+            // TODO: hide share button on default
+            $share_btn = $("#dialog-playlist-share button span:contains('Share')");
+            $share_btn.hide();
+        }
     }
 
     this.reorder = function (event, ui) {
@@ -38,17 +164,48 @@ function Playlist() {
         }
 
         var data = {
-            'playlist_id'        : playlist_id,
             'item_id'            : item_id,
             'item_previous_id'   : prev_item_id,
         };
 
+        var url = "reorder/";
+
+        $(".overlay").show();
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                // we are in context window again. sigh.
+
+                playlist.new_context = $(data).find("#context_playlist");
+
+                //$("#context_playlist").fadeOut("fast", function() {
+                    $("#context_playlist").replaceWith(playlist.new_context).fadeIn("fast");
+                    playlist.bind();
+                    playlist.update_viewport();
+                //});
+
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                console.log("PLAYLIST ITEM REMOVED ERROR");
+                //$( "#player1_song_info_artist" ).html(status + ": " + error);
+            },
+            complete:    function(jqXHR, textStatus) {
+                $(".overlay").hide();
+            },
+            datatype: "html"
+        });
+
+        return false; // Don't do anything else
         // update playlist content. TODO: should be done with only one request!
-        $( "#context_playlist_container" ).load("playlist/reorder/", data, function() {
-            highlight_playing("playlist.reorder()", "#context_playlist");
-            playlist.bind();
-        })
-        .error(function() {alert("error ordering playlist item");});
+        //$( "#context_playlist_container" ).load("reorder/", data, function() {
+        //    highlight_playing("playlist.reorder()", "#context_playlist");
+        //    playlist.bind();
+        //})
+        //.error(function() {alert("error ordering playlist item");});
     }
 
     this.item_play = function () {
@@ -59,29 +216,72 @@ function Playlist() {
             'item_id'            : $(this).attr("data-item_id"),
             'source'             : 'playlist',
         };
-        $.post("play/", data, function(song_info) {
-            player1.play_song(song_info);
+
+       var url = "play/";
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                // we are in context window again. sigh.
+                song_info = data;
+                player1.play_song(song_info);
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                $( "#player1_song_info_artist" ).html(status + ": " + error);
+            },
+            complete: function(jqXHR, textStatus) {
+            },
+            datatype: "html"
         });
+
         return false; // Don't do anything else
     }
 
-    this.item_remove = function() {
-        /* will be called on clicks on items delete btn in playlists */
-        var playlist_id = $(this).closest(".song_item").attr("data-playlist_id");
+    this.remove_item = function() {
+        //var playlist_id = $(this).closest(".song_item").attr("data-playlist_id");
         var item_id     = $(this).closest(".song_item").attr("data-item_id");
 
-        var url = "playlist/remove/" + playlist_id + "/" + item_id;
+        data = {
+            "item_id": item_id,
+        }
 
-        // update playlist content. TODO: should be done with only one request!
-        $( "#context_playlist_container" ).load(url, {}, function() {
-            playlist.bind();
-            // update number of playlists
-            $( "#sidebar_playlists_content" ).load("sidebar/playlists/", function() {
-                highlight_playing("playlist.item_remove()", "#context_playlist");
-                sidebar.bind();
-            });
-        })
-        .error(function() {alert("error removing playlist item");});
+        var url = "remove_item/";
+
+        $(".overlay").show();
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                // we are in context window again. sigh.
+
+                playlist.new_context = $(data).find("#context_playlist");
+
+                //$("#context_playlist").fadeOut("fast", function() {
+                    $("#context_playlist").replaceWith(playlist.new_context).fadeIn("fast");
+                    playlist.bind();
+                    playlist.update_viewport();
+                //});
+
+                sidebar_data = $(data).find("#sidebar_playlists_content");
+                $("#sidebar_playlists_content").replaceWith(sidebar_data);
+                sidebar.bind_playlist_items();
+                sidebar.update_viewport();
+
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                console.log("PLAYLIST ITEM REMOVED ERROR");
+            },
+            complete: function(jqXHR, textStatus) {
+                $(".overlay").hide();
+            },
+            datatype: "html"
+        });
 
         return false; // Don't do anything else
     }
@@ -90,13 +290,53 @@ function Playlist() {
         /* will be called on clicks on delete btn of a playlist */
 
         if (confirmed === true) {
-            // TODO: confirmation dialog
-            var $data = {
-                'playlist_id' : $playlist.attr("data-playlist_id"),
-            };
+            var playlist_id = $playlist.attr("data-playlist_id")
+            var data = {};
+
+            var url = "delete/";
+
+            $.ajax({
+                type:     "POST",
+                url:      url,
+                data:     data,
+                success:  function(data, status, jqXHR) {
+                    // we are in context window again. sigh.
+
+                    playlist.new_context = $(data).find("#context_playlist");
+
+                    $("#context_playlist").fadeOut("fast", function() {
+                        $("#context_playlist").replaceWith(playlist.new_context).fadeIn("fast");
+                        playlist.bind();
+                        playlist.update_viewport();
+
+                        playlist_id = $(playlist.new_context).attr("data-playlist_id");
+                        var stateObj = null; var title = "";
+                        var url = base_url + "playlist/" + playlist_id + "/";
+                        history.pushState(stateObj, title, url);
+
+                    });
+
+                    sidebar_data = $(data).find("#sidebar_playlists_content");
+                    $("#sidebar_playlists_content").replaceWith(sidebar_data);
+                    sidebar.bind_playlist_items();
+                    sidebar.update_viewport();
+
+                },
+                error:    function(jqXHR, status, error) {
+                    // we are in context window again. sigh.
+                    console.log("PLAYLIST DELETED ERROR");
+                },
+                complete: function(jqXHR, textStatus) {
+                    $(".overlay").hide();
+                },
+                datatype: "html"
+            });
+
+            return false; // Don't do anything else
+
 
             /* get new view for context */
-            $( "#context_content" ).load("playlist/delete/", $data, function() {
+            $( "#context_content" ).load(base_url + "playlist/" + playlist_id + "/delete/", $data, function() {
 
                 /* update playlists in sidebar */
                 $( "#sidebar_playlists_content" ).load("sidebar/playlists/", function() {
@@ -142,23 +382,39 @@ function Playlist() {
             alert(msg);
         });
     }
+
     this.append = function(playlist_id, item_id, source) {
-        /* $(this) is expected to be a collection song item */
         var data = {
-            "playlist_id" : playlist_id,
-            "id" :          item_id,
+            "item_id" :          item_id,
             "source" :      source,
         };
 
-        /* update number of playlist items in sidebar */
-        // TODO: increase *only* number of playlist items in sidebar
-        $( "#sidebar_playlists_content" ).load("playlist/append/", data, function() {
-            highlight_playing("playlist.append()", "#context_playlist");
-            sidebar.bind_playlists();
+       var url = base_url + "playlist/" + playlist_id + "/append/";
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                console.log("playlist item appended");
+                // we are in context window again. sigh.
+                var selector = "#sidebar [data-playlist_id=" + data["playlist_id"] + "] .count";
+                var $sidebar_playlist_count = $(selector);
+                $sidebar_playlist_count.html(data["count"]);
+            },
+            error:    function(jqXHR, status, error) {
+                console.log("playlist item append error");
+                // we are in context window again. sigh.
+            },
+            datatype: "json"
         });
+
+        return false; // Don't do anything else
     }
-    this.create = function() {
+    this.create = function(event) {
         /* will be called on submit of create playlist field forms */
+        event.preventDefault();
+
         var name = $.trim( $( "#playlist_create_name" ).val() );
 
         if ( !(name.length > 0) ) {
@@ -166,127 +422,102 @@ function Playlist() {
             return false;
         }
 
-        var $data = {
+        var data = {
             'playlist_name': name,
         };
-        $( "#sidebar_playlists_content" ).load("playlist/create/", $data, function() {
+
+        var url = $(this).attr("action");
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                // we are in context window again. sigh.
+
+                newData = $(data).find("#sidebar_playlists_content");
+                $("#sidebar_playlists_content").replaceWith(newData);
+                sidebar.bind_playlist_items();
+                sidebar.update_viewport();
+
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                console.log("ERROR CREATING PLAYLIST");
+            },
+            complete:    function(jqXHR, textStatus) {
+            },
+            datatype: "html"
+        });
+
+/*        $( "#sidebar_playlists_content" ).load("playlist/create/", $data, function() {
             $( "#playlist_create_name" ).val("");
             sidebar.bind();
         })
         .error(function() {alert("Error creating playlist");});
+        */
 
         return false; // Don't do anything else
     }
 
-    this.exhibit = function(playlist_id, exhibit_finished_cb) {
+    this.exhibit = function(playlist_id, url, exhibit_finished_cb) {
         console.log("PLAYLIST EXHIBIT CALLED FOR PL " + playlist_id);
 
         this.exhibit_finished = exhibit_finished_cb;
+            var data = {};
 
-        //this.active = "#context_playlist_id_" + playlist_id;
-        this.active_id = playlist_id;
-        //this.active_sidebar = "#sidebar_playlist_" + playlist_id;
+            this.active_id = playlist_id;
 
-        //is_loaded = $(this.active).length > 0;
+            $.ajax({
+                type:     "GET",
+                url:      url,
+                data:     data,
+                success:  function(data, status, jqXHR) {
+                    // we are in context window again. sigh.
 
-        // fetch playlist
-        $.post("playlist/", {"playlist_id": playlist.active_id}, function(data) {
+                    // store fetched data
+                    playlist.view = $(data).find("#context_playlist");
 
-            // store fetched data
-            playlist.view = $(data).find("#context_playlist");
+                    // highlight current in sidebar
+                    $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+                    $(playlist.active_sidebar).addClass("currently_shown");
 
-            // fade out whatever is just viewed
-            $("#context_content").children().fadeOut("slow");
-            // as there is usually more than one child in context_content,
-            // wait until all fadeOuts are finished 
-            $("#context_content").children().promise().done(function() {
+                    // fade out whatever is just viewed
+                    $("#context_content").children().fadeOut("slow");
+                    // as there is usually more than one child in context_content,
+                    // wait until all fadeOuts are finished 
+                    $("#context_content").children().promise().done(function() {
 
-                // remove eventually displayed playlist
-                $("#context_playlist").remove();
+                        // remove eventually displayed playlist
+                        $("#context_playlist").remove();
 
-                // highlight current in sidebar
-                $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-                $(playlist.active_sidebar).addClass("currently_shown");
-
-                // insert
-                $("#context_content").append($(playlist.view).fadeIn("slow", function() {
-                    // the exhibit process is finished here
-                    playlist.exhibit_finished();
-                }));
-
-                // before fadeIn finishes, update the inserted effects
-                playlist.update_viewport();
-                highlight_playing("playlist.exhibit()", "#context_playlist");
-                playlist.bind();
-            })
-        });
-/*
-        if (is_loaded) {
-            $("#context_content").children().fadeOut("slow", function() {
-                $(playlist.active).fadeIn("slow", function() {playlist.exhibit_finished();});
-                playlist.update_viewport();
-            });
-        }
-        else {
-            $.post("playlist/", {"playlist_id": playlist.active_id}, function(data) {
-                $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-                $(playlist.active_sidebar).addClass("currently_shown");
-
-                playlist.views["id_" + playlist.active_id] = $(data).find("#context_playlist");
-
-                $("#context_content").children(":first").fadeOut("slow");
-
-                setTimeout(function() {
-                    $("#context_content").append(
-                        $(playlist.views["id_" + playlist.active_id]).fadeIn("slow", function(){
+                        // insert
+                        $("#context_content").append($(playlist.view).fadeIn("slow", function() {
+                            // the exhibit process is finished here
                             playlist.exhibit_finished();
-                        })
-                    );
-                }, 600);
 
-                /*setTimeout(function() {
-                    $("#context_content").append(
-                        $(playlist.views["id_" + playlist.active_id])
-                        .fadeIn("slow", function() {
-                            playlist.exhibit_finished();
-                        }
-                    )});
-                    
-                    playlist.update_viewport();
-                    playlist.bind();
-                }); //*
+                        }));
+                        // new playlist is now in DOM. update layout before fadeIn is finished
+                        playlist.update_viewport();
+                        highlight_playing("playlist.exhibit()", "#context_playlist");
+                        playlist.bind();
+                    })
+                },
+                error:    function(jqXHR, status, error) {
+                    // we are in context window again. sigh.
+                    console.log("ERROR SHOWING PLAYLIST");
+                },
+                complete:    function(jqXHR, textStatus) {
+                },
+                datatype: "html"
             });
-        }
-        */
-/*
-        spinner_start($(this));
-
-        $.post("playlist/",  {'playlist_id': playlist_id}, function(data) {
-            playlist.exhibit(data);
-            playlist.bind(); // for drag n drop
-            spinner_stop("#sidebar");
-            $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-            $("#sidebar_playlist_" + playlist.id).addClass("currently_shown");
-        });
-
-
-
-        if (data) {
-            playlist.content = data;
-        }
-        if ($("#context_container").find("#context_content").length > 0) {
-            $("#context_content").fadeOut(200, function() {
-                $("#context_container").append($(playlist.content).fadeIn(500));
-                $(this).remove();
-                playlist.bind(); // for drag n drop
-            });
-        }
-        else {
-            $("#context_container").append($(playlist.content).fadeIn(500));
-        }
-        */
     }
+
     this.update_viewport = function() {
+
+        console.log("============ Playlist update_viewport =============");
+
+
         if ($.find("#context_playlist_container").length == 0) {
             // nothing to update
             return;
@@ -304,5 +535,11 @@ function Playlist() {
         $(".song_items .album" ).width(width*0.24);
         $(".song_items .genre" ).width(width*0.24);
     }
+
+    console.log("============ Playlist init =============");
+
+    this.bind();
+    this.update_viewport();
+
 }
 

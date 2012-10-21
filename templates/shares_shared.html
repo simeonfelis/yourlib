@@ -1,0 +1,22 @@
+{% for sp in shared_playlists %}
+<li>Playlist <em>{{ sp.playlist.name }}</em>
+    <span class="btn btn_playlist_unshare"
+            data-share_id="{{ sp.id }}",
+            data-share_playlist_id="{{ sp.playlist.id }}">
+        stop sharing this playlist
+    </span>
+
+    <ul>
+        {% for subscription in sp.shareplaylistsubscription_set.all %}
+        <li>
+            User {{ subscription.subscriber }} accepted: {{ subscription.subscriber_accpted }}
+                 <span class="btn btn_playlist_desubscribe"
+                        data-subscriber_id="{{ subscription.subscriber.id }}"
+                        data-share_playlist_id="{{ sp.playlist.id }}">
+                    stop sharing to this user
+                </span>
+         </li>
+        {% endfor %}
+    </ul>
+</li>
+{% endfor %}

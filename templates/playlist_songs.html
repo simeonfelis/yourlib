@@ -1,7 +1,7 @@
 <div id="context_playlist_songs_container"><!-- required anchor -->
     <div id="songs">
 
-        {% if playlist.items.all|length > 0 %}
+        {% if playlist.items.count > 0 %}
         <ul class="song_items sortable ui-helper-clearfix" id="playlist_content_{{ playlist.id }}">
 
 <li class="song_item_heading ui-widget-header">

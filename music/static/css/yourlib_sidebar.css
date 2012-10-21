@@ -1,0 +1,108 @@
+.sidebar {
+    width: 300px;
+    margin: 5px;
+    position: fixed;
+    left: 0px;
+    top: 55px;
+    white-space: nowrap;
+}
+
+.sidebar h1 {
+    font-size: 1.1em;
+    font-weight: normal;
+    margin: 0 0 0 0;
+    padding: 0px;
+}
+
+.sidebar h2 {
+    font-size: 1.0em;
+    font-weight: normal;
+    margin: 0 0 0 0;
+    padding: 0 0 0 15px;
+}
+
+.sidebar a {
+    width: 100%;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar a .name  {
+    float: left;
+    width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar a .count {
+    font-size: small;
+    margin-right: 5px;
+    margin-left: 5px;
+    float: right;
+}
+
+#sidebar_navi {
+    overflow: auto;
+    overflow-x: hidden;
+    height: 100%;
+}
+
+asdf {
+    font-size: 1.2em;
+    font-style: normal;
+    font-weight: normal;
+    margin: 2px 0 2px 0;
+
+}
+
+.sidebar .currently_shown {
+    font-weight: bold;
+}
+
+#player1_container {
+    position: relative;
+}
+#player1_temp {
+    position: relative;
+}
+#player1_info_container {
+    position: relative;
+}
+
+.player_song_info {
+    padding: 2px 0 2px 0;
+    width: 100%;
+    /*height: 1em;*/
+}
+
+.player_song_info div {
+    /*width: 3px;
+    float: left;*/
+    width: 100%;
+    white-space: nowrap;
+    font-size: 0.8em;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+/*
+.player_song_info .artist {
+    width: auto;
+    max-width: 125px;
+}
+
+.player_song_info .title {
+    width: auto;
+    max-width: 125px;
+}*/
+
+.player_song_info .btn {
+    width: auto;
+    position: absolute;
+    right: 0;
+    top: 0;
+/*    float: right;
+    width: auto;
+    max-width: 40px;*/
+}
+

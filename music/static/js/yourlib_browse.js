@@ -1,64 +1,91 @@
 
 function Browse() {
 
-    this.bindTitlePagination = function() {
+    this.bind = function(selector) {
+        console.log("============ Browse bind =============");
+
+        // bind all existing column elements
+        this.bindColumnElements( $("#context_browse_artist_column .btn") );
+        this.bindColumnElements( $("#context_browse_album_column .btn") );
+        this.bindColumnElements( $("#context_browse_genre_column .btn") );
+        this.bindColumnElements( $(".btn_browse_title") );
+
+        this.bind_title_pagination();
+        this.bind_artist_pagination();
+        this.bind_album_pagination();
+    }
+
+    this.bind_title_pagination = function () {
         this.titlePagination = new Pagination({
             scrollTarget : '#context_browse_title_container',
             appendTarget : "#context_browse_title_column",
-            contentUrl   : "collection/browse/more/title/",
+            contentUrl   : base_url + "collection/browse/title/",
             contentData  : function() {return $(".btn_browse_title").length;},
             beforeLoad   : function() {$('#loading_browse_title').fadeIn();},
-            afterLoad    : function(newData) {$('#loading_browse_title').fadeOut(); browse.bindColumnElements(newData)},
+            afterLoad    : function(newData) {
+                if ($(newData).length > 0) {
+                    $('#loading_browse_title').fadeOut();
+                    browse.bindColumnElements(newData);
+                    browse.update_viewport();
+                }
+                else {
+                    $('#loading_browse_title').html("No more data");
+                    $('#loading_browse_title').fadeOut();
+                }
+            },
             errorLoad    : function() {alert("Pagination load error title");},
             enabled      : true
         });
     }
 
-    this.bindArtistPagination = function() {
+    this.bind_artist_pagination = function () {
         this.artistPagination = new Pagination({
             scrollTarget : '#context_browse_artist_container',
             appendTarget : "#context_browse_artist_column",
-            contentUrl   : "collection/browse/more/artist/",
+            contentUrl   : base_url + "collection/browse/artist/",
             contentData  : function() {return $(".btn_browse_artist").length;},
             beforeLoad   : function() {$('#loading_browse_artist').fadeIn();},
-            afterLoad    : function(newData) {$('#loading_browse_artist').fadeOut(); browse.bindColumnElements(newData)},
+            afterLoad    : function(newData) {
+                if ($(newData).length > 0) {
+                    $('#loading_browse_artist').fadeOut();
+                    browse.bindColumnElements(newData);
+                    browse.update_viewport();
+                }
+                else {
+                    $('#loading_browse_artist').html("No more data");
+                    $('#loading_browse_artist').fadeOut();
+                }
+            },
             errorLoad    : function() {alert("Pagination load error for artist");},
             enabled      : true
         });
     }
 
-    this.bindAlbumPagination = function() {
+    this.bind_album_pagination = function () {
         this.albumPagination = new Pagination({
             scrollTarget : '#context_browse_album_container',
             appendTarget : "#context_browse_album_column",
-            contentUrl   : "collection/browse/more/album/",
+            contentUrl   : base_url + "collection/browse/album/",
             contentData  : function() {return $(".btn_browse_album").length;},
             beforeLoad   : function() {$('#loading_browse_album').fadeIn();},
-            afterLoad    : function(newData) {$('#loading_browse_album').fadeOut(); browse.bindColumnElements(newData)},
+            afterLoad    : function(newData) {
+                if ($(newData).length > 0) {
+                    $('#loading_browse_album').fadeOut();
+                    browse.bindColumnElements(newData);
+                    browse.update_viewport();
+                }
+                else {
+                    $('#loading_browse_album').html("No more data");
+                    $('#loading_browse_album').fadeOut();
+                }
+            },
             errorLoad    : function() {alert("Pagination load error for album");},
             enabled      : true
         });
     }
 
-    this.bind = function(selector) {
-        // must be called only once the browse view is created!
-
-        // this.update_viewport();  // make this explicitly only when needed!
-
-        // bind all existing column elements
-        this.bindColumnElements( $("#context_browse_artist_column .btn, #context_browse_album_column .btn, #context_browse_genre_column .btn, .btn_browse_title"));
-
-        // bind paginaging effect. rebind them when columns were replaced
-        this.bindTitlePagination();
-        this.bindAlbumPagination();
-        this.bindArtistPagination();
-
-    }
-
     this.bindColumnElements = function(columnElements) {
         // will bind effects only for items in columnElements
-
-        highlight_playing("browse.bindColumnElements()", "#context_browse");
 
         $( columnElements )
         .on("click", function(e) {
@@ -282,7 +309,7 @@ function Browse() {
             'items' : item_ids,
         }
 
-        $.post('collection/browse/' + column_from + '/', data, browse.on_column_received);
+        $.post(base_url + 'collection/browse/' + column_from + '/', data, browse.on_column_received);
     }
 
     this.exhibit = function(exhibit_finished_cb) {
@@ -303,27 +330,50 @@ function Browse() {
             });
         }
         else {
-            $.post("collection/browse/", {}, function(data) {
-                $("#sidebar").find(".currently_shown").removeClass("currently_shown");
-                $("#btn_sidebar_browse").addClass("currently_shown");
 
-                browse.view = $(data).find("#context_browse");
+            var data = {};
 
-                $("#context_content").children(":first").fadeOut("slow");
-                $("#context_content").children(":first").promise().done(function() {
-                    $("#context_content").append($(browse.view).fadeIn("slow", function() {
-                        // the exhibit process is finished here
-                        browse.exhibit_finished();
-                    }));
-                    highlight_playing("browse.exhibit()", "#context_browse");
-                    browse.update_viewport();
-                    browse.bind();
-                });
+            var url = base_url + "collection/browse/";
+
+            $.ajax({
+                type:     "GET",
+                url:      url,
+                data:     data,
+                success:  function(data, status, jqXHR) {
+                    // we are in context window again. sigh.
+
+                    $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+                    $("#btn_sidebar_browse").addClass("currently_shown");
+
+                    browse.view = $(data).find("#context_browse");
+
+                    $("#context_content").children().fadeOut("slow");
+                    $("#context_content").children().promise().done(function() {
+                        $("#context_content").append($(browse.view).fadeIn("slow", function() {
+                            // the exhibit process is finished here
+                            browse.exhibit_finished();
+                        }));
+                        highlight_playing("browse.exhibit()", "#context_browse");
+                        browse.update_viewport();
+                        browse.bind();
+                    });
+
+                },
+                error:    function(jqXHR, status, error) {
+                    // we are in context window again. sigh.
+                    console.log("ERROR SHOWING COLLECTION");
+                },
+                complete:    function(jqXHR, textStatus) {
+                },
+                datatype: "html"
             });
         }
     }
 
     this.update_viewport = function() {
+
+        console.log("============ Browse update_viewport =============");
+
         if ($.find("#context_browse_container").length == 0) {
             // nothing to update
             return;
@@ -337,4 +387,10 @@ function Browse() {
         $(".browse_column").width( width );
 
     }
+
+    console.log("============ Browse init =============");
+
+    this.bind();
+    this.update_viewport();
+
 }

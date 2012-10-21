@@ -27,7 +27,10 @@
 
         <li class="song_info mime">{{ i.song.mime|cut:"audio/" }}</li>
 
-        <li class="btn btn_playlist_item_remove func ui-state-default ui-corner-all" title="remove"><span class="ui-icon ui-icon-trash"></span></li>
+        {% if shared_by %}
+        {% else %}
+            <li class="btn btn_playlist_item_remove func ui-state-default ui-corner-all" title="remove"><span class="ui-icon ui-icon-trash"></span></li>
+        {% endif %}
     </ul>
 </li>
 {% endfor %}

@@ -1,0 +1,32 @@
+{% extends "home.html" %}
+
+{% block context_content %}
+
+<div id="context_content">
+    <div id="context_shares">
+
+        <div id="context_header" class="ui-widget-header ui-corner-tl ui-corner-tr">
+            <div>All about Shares related to and from you</div>
+        </div>
+
+        <div id="context_shares_container" class="ui-widget-content ui-corner-all">
+            <h1>Shared Playlists</h1>
+            <p>You share the following playlists:</p>
+
+            <ul>
+                {% include "shares_shared.html" %}
+            </ul>
+
+            <h1>Subscribed Playlists</h1>
+            <p>You subscribed to the following playlists:</p>
+
+            <ul>
+                {% include "shares_subscribed.html" %}
+            </ul>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

@@ -2,13 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Song(models.Model):
-    class Meta:
-        ordering = ['track', 'title', 'path_orig']
-
-    def __unicode__(self):
-        return self.title # TODO: include artist name
-
-    title   = models.CharField(max_length=256)
+    title   = models.CharField(db_index=True, max_length=256)
     length  = models.IntegerField()
     track   = models.IntegerField(blank=True, null=True)
     year    = models.IntegerField(blank=True, null=True)
@@ -17,60 +11,79 @@ class Song(models.Model):
     artist  = models.ForeignKey('Artist', blank=True, null=True)
     mime    = models.CharField(max_length=32)
 
-    path_orig = models.FilePathField(unique=True, max_length=2048)
+    path_orig = models.FilePathField(db_index=True, unique=True, max_length=2048)
     time_changed = models.DateTimeField()
     time_added   = models.DateTimeField()
     user = models.ForeignKey(User)
 
+    class Meta:
+        ordering = ['track', 'title', 'path_orig']
+
+    def __unicode__(self):
+        if self.artist != None:
+            return "%s - %s" % (self.artist.name, self.title)
+        else:
+            return "Unknonw Artist - %s" % (self.title)
+
+
 class Genre(models.Model):
+    name = models.CharField(db_index=True, max_length=256, unique=True)
+
     class Meta:
         ordering = ['name']
 
     def __unicode__(self):
         return self.name
 
-    name = models.CharField(max_length=256, unique=True)
 
 class Artist(models.Model):
+    name = models.CharField(db_index=True, max_length=256, unique=True)
+
     class Meta:
         ordering = ['name']
 
     def __unicode__(self):
         return self.name
 
-    name = models.CharField(max_length=256, unique=True)
 
 class Album(models.Model):
+    name = models.CharField(db_index=True, max_length=256, unique=True)
+
     class Meta:
         ordering = ['name']
 
     def __unicode__(self):
         return self.name
 
-    name = models.CharField(max_length=256, unique=True)
 
+# TODO: deprecated: model Collection
 class Collection(models.Model):
     user        = models.ForeignKey(User)
     scan_status = models.CharField(max_length=32)
 
 class PlaylistItem(models.Model):
-    class Meta:
-        ordering = ['position']
-    def __unicode__(self):
-        return str(self.position) + ". " + self.song.artist + " - " + self.song.title
-
     song = models.ForeignKey(Song)
     position = models.IntegerField()
 
-class Playlist(models.Model):
+    class Meta:
+        ordering = ['position']
 
     def __unicode__(self):
-        return self.name
+        return "%d. %s - %s" %(self.position, self.song.artist, self.song.title)
 
+
+class Playlist(models.Model):
     name = models.CharField(max_length=256)
     items = models.ManyToManyField(PlaylistItem)
     user = models.ForeignKey(User)
     current_position = models.IntegerField()
+
+    class Meta:
+        ordering = ["name"]
+
+    def __unicode__(self):
+        return self.name
+
 
 class MusicSession(models.Model):
     user = models.ForeignKey(User)
@@ -97,6 +110,22 @@ class Download(models.Model):
     step_status = models.IntegerField()
     user        = models.ForeignKey(User)
     path        = models.FilePathField()
+
+class SharePlaylist(models.Model):
+    playlist     = models.ForeignKey("PlayList")
+    subscribers  = models.ManyToManyField(User, through="SharePlaylistSubscription")
+
+    def __unicode__(self):
+        #return "TODO"
+        return "Playlist '%s' from %s to %d users" % (self.playlist.name, self.playlist.user.username, self.subscribers.all().count())
+
+class SharePlaylistSubscription(models.Model):
+    share = models.ForeignKey("SharePlaylist")
+    subscriber = models.ForeignKey(User)
+    subscriber_accpted = models.BooleanField(default=False)
+
+    def __unicode__(self):
+        return "Playlist %s from %s to %s" %(self.share.playlist.name, self.share.playlist.user.username, self.subscriber.username)
 
 from music import settings as app_settings
 import os

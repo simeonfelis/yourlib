@@ -1,22 +1,25 @@
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404, HttpResponseNotFound
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.utils import simplejson
 from django.db.models import Q
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.core.urlresolvers import reverse
+from django.core.exceptions import ValidationError, PermissionDenied
 from celery.result import AsyncResult
 
-from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download
+from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download, SharePlaylist, SharePlaylistSubscription
 from music.forms import UploadForm
 #from music.helper import dbgprint, UserStatus, user_status_defaults
 from music import helper
 from music import settings
 
 import os, time
+from Image import init
 
 INITIAL_ITEMS_LOAD_COUNT = 50
 SUBSEQUENT_ITEMS_LOAD_COUNT = 100
@@ -24,23 +27,22 @@ SUBSEQUENT_ITEMS_LOAD_COUNT = 100
 @login_required
 def home_view(request):
 
+    # Init user folder if not existent
     if not os.path.isdir(os.path.join(settings.MUSIC_PATH, request.user.username)):
         os.makedirs(os.path.join(settings.MUSIC_PATH, request.user.username))
+
     playlists = Playlist.objects.filter(user=request.user)
     # create playlists if not existent for user
     if 0 == len(playlists):
-        helper.dbgprint("Creating default playlist for user ", request.user)
+        print("Creating default playlist for user ", request.user)
         pl = Playlist(name="default", user=request.user, current_position=0)
         pl.save()
         playlists = Playlist.objects.filter(user=request.user)
 
-    # current status
     try:
         music_session = MusicSession.objects.get(user=request.user)
-        user_status = helper.UserStatus(request)
     except MusicSession.DoesNotExist:
-
-        helper.dbgprint("Creating music session for user ", request.user)
+        # create music session with status information if not yet exists
         music_session = MusicSession(
             status = helper.user_status_defaults,
             user=request.user,
@@ -50,75 +52,180 @@ def home_view(request):
         )
         music_session.save()
 
-    if music_session.currently_playing == "playlist":
-        cur_pos = music_session.current_playlist.current_position
+    user_status = helper.UserStatus(request)
 
-        current_item = music_session.current_playlist.items.get(position=cur_pos)
+    current_view = user_status.get("current_view", "collection")
+
+    if "playlist" == current_view:
+        current_view_playlist = user_status.get("current_view_playlist", 0)
+        try:
+            # make sure the playlist exists
+            pl = Playlist.objects.get(id=current_view_playlist, user=request.user)
+        except Playlist.DoesNotExist:
+            # get any random one
+            pl = Playlist.objects.get(request.user)
+
+        playlist_id = pl.id
+
+        return HttpResponseRedirect(reverse("playlist", kwargs={"playlist_id": playlist_id}))
+        #cur_pos = music_session.current_playlist.current_position
+
+        #current_item = music_session.current_playlist.items.get(position=cur_pos)
 
         # the following is needed to prefill player data
-        current_song = current_item.song
-        current_item_id = current_item.id
-        current_song_id = current_song.id
-        current_playlist_id = music_session.current_playlist.id
+        #current_song = current_item.song
+        #current_item_id = current_item.id
+        #current_song_id = current_song.id
+        #current_playlist_id = music_session.current_playlist.id
 
-    elif music_session.currently_playing == "collection":
-        current_song = music_session.current_song
-        current_song_id = current_song.id
-        current_playlist_id = 0
-        current_item_id = 0
+    else: #elif "collection" == current_view:
+        return HttpResponseRedirect(reverse("collection"))
+        #current_song = music_session.current_song
+        #current_song_id = current_song.id
+        #current_playlist_id = 0
+        #current_item_id = 0
 
-    # create collection if not existent
-    try:
-        collection = Collection.objects.get(user=request.user)
-    except Collection.DoesNotExist:
-        collection = Collection(user=request.user, scan_status="idle")
-        collection.save()
+# TODO: deprecated
+#    songs = helper.search(request)
+#    songs_count = songs.count()
+#    if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
+#        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+#
+#    subscribed_playlists = SharePlaylist.objects.filter(subscribers=request.user)
+#
+#    return render_to_response(
+#            'home.html',
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
 
-    songs = helper.search(request)
-    songs_count = songs.count()
-    if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
-        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
-
-    return render_to_response(
-            'home.html',
-            locals(),
-            context_instance=RequestContext(request),
-            )
 ##################### collection ##########################
 
 @login_required
 def collection_view(request):
+    global INITIAL_ITEMS_LOAD_COUNT
+    global SUBSEQUENT_ITEMS_LOAD_COUNT
+
     user_status = helper.UserStatus(request)
 
     songs = helper.search(request)
-    songs_count = songs.count()
 
-    if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
+    load_full_page = False
+    if request.method == "POST":
+        load_full_page = True
+    else:
+        if not "so_far" in request.GET.keys():
+            load_full_page = True
+
+    if load_full_page:
+        if request.method == "POST":
+            user_status.set("current_view", "collection")
+
+        search_terms = user_status.get("collection_search_terms", "")
+
+        songs_count = songs.count() # .count() instead of len(), because of slicing!
         songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+
+        # sidebar data
+        sidebar = {
+            "playlists": Playlist.objects.filter(user=request.user),
+            "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+        }
+
+        return render_to_response(
+                "context_collection.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+    else:
+        # pagination
+        so_far = int(request.GET.get("so_far", "0"))
+        want   = int(request.GET.get("want", "%s" % SUBSEQUENT_ITEMS_LOAD_COUNT))
+        songs = songs[so_far : so_far + want]
+
+        return render_to_response(
+                "collection_songs_li.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+
+
+
+@login_required
+def collection_search_view(request):
+
+    global INITIAL_ITEMS_LOAD_COUNT
+
+    search_terms = request.POST.get("search_terms", "")
+    user_status = helper.UserStatus(request)
+
+    if request.method == "POST":
+        user_status.set("collection_search_terms", search_terms)
+
+    else:
+        search_terms = user_status.get("collection_search_terms", "")
+
+    songs = helper.search(request)
+
+    songs_count = songs.count() # use .count() instead of len() because of slicing!
+
+    songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
+
     return render_to_response(
-            "context_collection.html",
+            'context_collection.html',
             locals(),
             context_instance=RequestContext(request),
             )
 
 @login_required
-def collection_songs_view(request):
+def collection_play_view(request):
+    if request.method == "POST":
 
-    so_far = int(request.POST.get("so_far", 0))
+        try:
+            song_id = int(request.POST.get("song_id", "0"))
+        except ValueError:
+            song_id = 0
 
-    songs = helper.search(request)
-    songs_count = songs.count()
+        user_status = helper.UserStatus(request)
+        user_status.set("current_source", "collection")
+        user_status.set("current_song_id", song_id)
 
-    if songs_count > so_far+SUBSEQUENT_ITEMS_LOAD_COUNT:
-        songs = songs[so_far:so_far+SUBSEQUENT_ITEMS_LOAD_COUNT]
-    else:
-        songs = songs[so_far:]
+        return HttpResponseRedirect(reverse("play", kwargs={"play_id": repr(song_id)}))
 
-    return render_to_response(
-            "collection_songs_li.html",
-            locals(),
-            context_instance=RequestContext(request),
-            )
+    # GET requests: not supported
+    return HttpResponse("Only POST requests allowed")
+
+@login_required
+def collection_settings_view(request):
+    # TODO: collection_settings_view
+    pass
+
+
+# TODO: collection_songs_view deprecated
+#@login_required
+#def collection_songs_view(request):
+#
+#    so_far = int(request.POST.get("so_far", 0))
+#
+#    songs = helper.search(request)
+#    songs_count = songs.count()
+#
+#    if songs_count > so_far+SUBSEQUENT_ITEMS_LOAD_COUNT:
+#        songs = songs[so_far:so_far+SUBSEQUENT_ITEMS_LOAD_COUNT]
+#    else:
+#        songs = songs[so_far:]
+#
+#    return render_to_response(
+#            "collection_songs_li.html",
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
 
 
 @login_required
@@ -130,24 +237,26 @@ def collection_browse_view(request):
     user_status.set("browse_selected_artists", [])
 
     songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
-    if songs.count() > INITIAL_ITEMS_LOAD_COUNT:
-        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+    songs   = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
     genres  = Genre.objects.filter(song__user=request.user).distinct().order_by("name", "name")
-    if genres.count() > INITIAL_ITEMS_LOAD_COUNT:
-        genres = genres[:INITIAL_ITEMS_LOAD_COUNT]
+    genres  = genres[:INITIAL_ITEMS_LOAD_COUNT]
 
     artists = Artist.objects.filter(song__user=request.user).distinct().order_by("name")
-    if artists.count() > INITIAL_ITEMS_LOAD_COUNT:
-        artists = artists[:INITIAL_ITEMS_LOAD_COUNT]
+    artists = artists[:INITIAL_ITEMS_LOAD_COUNT]
 
     albums  = Album.objects.filter(song__user=request.user).distinct().order_by("name")
-    if albums.count() > INITIAL_ITEMS_LOAD_COUNT:
-        albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
+    albums  = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
 
     columns = helper.DEFAULT_BROWSE_COLUMN_ORDER
 
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
+
     return render_to_response(
             "context_browse.html",
             locals(),
@@ -155,66 +264,74 @@ def collection_browse_view(request):
             )
 
 @login_required
-def collection_browse_column_view(request, column_from):
+def collection_browse_column_view(request, column):
     """
     Works in static column order only.
 
-    If column_from is artist, returns list of albums and songs.
-    If column_from is album, returns list of songs.
+    If column is artist, returns list of albums and songs.
+    If column is album, returns list of songs.
 
-    The returned lists are filtered by the selection of the items in column_from. The item ids
+    The returned lists are filtered by the selection of the items in column. The item IDs
     have to be transmitted in the POST request in "items[]". The selection will be stored
     in the user_status.
     """
 
-    # Get the selected items
-    if 'items[]' in request.POST:
-        items = request.POST.getlist('items[]')
-    else:
-        items = None
-
+    global SUBSEQUENT_ITEMS_LOAD_COUNT
 
     user_status = helper.UserStatus(request)
-    if "artist" == column_from:
-        # store selected items
-        user_status.set("browse_selected_artists", items)
+    load_full_page = False
 
-        # Set the columns to be rendered by templates
-        columns = ["album", "title"]
-        albums, songs = helper.browse_column_album(request)
-        if albums.count() > INITIAL_ITEMS_LOAD_COUNT:
+    if request.method == "POST":
+        if not "so_far" in request.POST.keys():
+            load_full_page = True
+    else:
+        if not "so_far" in request.GET.keys():
+            load_full_page = True
+
+
+    if load_full_page:
+
+        # consider 'column' as 'column_from'. This is more logical and easier to read (and used in templates)
+        column_from = column
+
+        if request.method == "POST":
+            items = request.POST.getlist('items[]', None)
+        else:
+            items = request.GET.getlist('items[]', None)
+
+
+        if "artist" == column_from:
+            # store selected items
+            user_status.set("browse_selected_artists", items)
+
+            # Set the columns to be rendered by templates
+            columns = ["album", "title"]
+            albums, songs = helper.browse_column_album(request)
             albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
-    elif "album" == column_from:
-        # store selected items
-        user_status.set("browse_selected_albums", items)
+        elif "album" == column_from:
+            # store selected items
+            user_status.set("browse_selected_albums", items)
 
-        # Set the columns to be rendered by templates
-        columns = ["title"]
-        songs = helper.browse_column_title(request)
+            # Set the columns to be rendered by templates
+            columns = ["title"]
+            songs = helper.browse_column_title(request)
 
-    else:
-        return HttpResponse("Unsupported column: " + column_from)
+        else:
+            return HttpResponse("Unsupported column: " + column_from)
 
-    if songs.count() > INITIAL_ITEMS_LOAD_COUNT:
         songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
-    return render_to_response(
-            "context_browse.html",
-            locals(),
-            context_instance=RequestContext(request),
-            )
+        return render_to_response(
+                "context_browse.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+    # pagination
+    so_far = int(request.GET.get("so_far", "0"))
+    want   = int(request.GET.get("want", "%s" % SUBSEQUENT_ITEMS_LOAD_COUNT))
 
-
-@login_required
-def collection_browse_more_view(request, column):
-    """
-    Returns more items for `column` based on selection.
-    Selection should be stored in user_settings previously.
-    If nothing is selected, returns all items of list.
-    """
-
-    so_far = int(request.POST.get("so_far"))
+    # column is the column which wants more items
 
     if "artist" == column:
         items = Artist.objects.filter(song__user = request.user).distinct()
@@ -224,15 +341,7 @@ def collection_browse_more_view(request, column):
         items = helper.browse_column_title(request)
 
     items_count = items.count()
-
-    if items_count > so_far+SUBSEQUENT_ITEMS_LOAD_COUNT:
-        items = items[so_far:so_far+SUBSEQUENT_ITEMS_LOAD_COUNT]
-    else:
-        items = items[so_far:]
-
-    if len(items) == 0:
-        return HttpResponse("nomoreresults")
-
+    items = items[so_far : so_far + want]
 
     if "artist" == column:
         artists = items
@@ -248,6 +357,50 @@ def collection_browse_more_view(request, column):
             context_instance=RequestContext(request),
             )
 
+
+# TODO: deprecated collection_browse_more_view
+#@login_required
+#def collection_browse_more_view(request, column):
+#    """
+#    Returns more items for `column` based on selection.
+#    Selection should be stored in user_settings previously.
+#    If nothing is selected, returns all items of list.
+#    """
+#
+#    so_far = int(request.POST.get("so_far"))
+#
+#    if "artist" == column:
+#        items = Artist.objects.filter(song__user = request.user).distinct()
+#    elif "album" == column:
+#        items, dump = helper.browse_column_album(request)
+#    elif "title" == column:
+#        items = helper.browse_column_title(request)
+#
+#    items_count = items.count()
+#
+#    if items_count > so_far+SUBSEQUENT_ITEMS_LOAD_COUNT:
+#        items = items[so_far:so_far+SUBSEQUENT_ITEMS_LOAD_COUNT]
+#    else:
+#        items = items[so_far:]
+#
+#    if len(items) == 0:
+#        return HttpResponse("nomoreresults")
+#
+#
+#    if "artist" == column:
+#        artists = items
+#    elif "album" == column:
+#        albums = items
+#    elif "title" == column:
+#        songs = items
+#
+#
+#    return render_to_response(
+#            "browse_column_li.html",
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
+
 def show_context_download(request):
     downloads = Download.objects.get(user=request.user)
     return render_to_response(
@@ -256,6 +409,7 @@ def show_context_download(request):
             context_instance=RequestContext(request),
             )
 
+# TODO: deprecated?
 #def show_context_upload(request):
 #    uploads = Upload.objects.filter(user=request.user)
 #
@@ -295,18 +449,71 @@ def show_context_download(request):
 #            context_instance=RequestContext(request),
 #            )
 
-def show_context_playlist(request):
+# TODO: show_context_playlist deprecated?
+#def show_context_playlist(request):
+#    if request.method == "POST":
+#        playlist_id = request.POST.get('playlist_id')
+#        playlist = Playlist.objects.get(id=playlist_id)
+#    else:
+#        playlist = Playlist.objects.get(user=request.user)
+#
+#    return render_to_response(
+#            "context_playlist_deprecated.html",
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
+
+@login_required
+def shares_view(request):
+    """
+    Shows overview of shares and subscriptions
+    """
     if request.method == "POST":
-        playlist_id = request.POST.get('playlist_id')
-        playlist = Playlist.objects.get(id=playlist_id)
-    else:
-        playlist = Playlist.objects.get(user=request.user)
+        pass
+
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
+
+    #shares content
+    shared_playlists = SharePlaylist.objects.filter(playlist__user=request.user)
+    subscribed_playlists = SharePlaylist.objects.filter(subscribers=request.user)
+
+    return render_to_response(
+            "context_shares.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+@login_required
+def shares_playlist_view(request, playlist_id):
+
+    if request.method == "POST":
+        pass
+
+    playlist = Playlist.objects.get(id=playlist_id)
+
+    # check if visitor is really allowed to see the playlist
+    subscribed_playlists = SharePlaylist.objects.filter(subscribers=request.user)
+    if not subscribed_playlists.filter(playlist=playlist).count():
+        raise PermissionDenied
+
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": subscribed_playlists,
+    }
+
+    shared_by = playlist.user
 
     return render_to_response(
             "context_playlist.html",
             locals(),
             context_instance=RequestContext(request),
             )
+
 
 @login_required
 def sidebar_show_view(request, context):
@@ -390,6 +597,9 @@ def upload_file_view(request):
                     upfile.name + "_" + str(ii)
                     )
             ii += 1
+
+        # django docs say: don't do that! furthermore the file is still open!
+        # but handling chunks can take ages on large uploads (like 2Gig)
         import shutil
         shutil.move(upfile.file.name, useruppath)
 #
@@ -461,43 +671,31 @@ def upload_clearpending_view(request):
             context_instance=RequestContext(request),
             )
 
-@login_required
-def collection_search_view(request):
-
-    if request.method == "POST":
-
-        user_status = helper.UserStatus(request)
-
-        if 'terms' in request.POST:
-            terms = request.POST.get('terms', '')
-
-            user_status.set("search_terms", terms)
-
-            songs = helper.search(request)
-
-            songs_count = songs.count()
-            if len(songs) > INITIAL_ITEMS_LOAD_COUNT:
-                songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
-
-            return render_to_response(
-                    'collection_songs.html',
-                    locals(),
-                    context_instance=RequestContext(request),
-                    )
-
-    # return nothing on GET requests
-    return HttpResponse("")
-
 #############################      playlist stuff     ##################################
 
 @login_required
-def playlist_view(request):
+def playlist_view(request, playlist_id):
+
+    try:
+        playlist_id = int(playlist_id)
+    except ValueError:
+        playlist_id = 0
+
     if request.method == "POST":
-        playlist_id = request.POST.get('playlist_id')
-        playlist = Playlist.objects.get(id=playlist_id)
-    else:
-        # get first playlist of the user the db gives us
-        playlist = Playlist.objects.get(user=request.user)
+        user_status = helper.UserStatus(request)
+        user_status.set("current_view", "playlist")
+        user_status.set("current_view_playlist", playlist_id)
+
+    playlist = Playlist.objects.get(id=playlist_id)
+
+    if playlist.user != request.user:
+        raise PermissionDenied
+
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
 
     return render_to_response(
             "context_playlist.html",
@@ -505,44 +703,69 @@ def playlist_view(request):
             context_instance=RequestContext(request),
             )
 
-@login_required
-def sidebar_playlists_view(request):
-    """
-    return list of all playlists
-    """
-    playlists = Playlist.objects.filter(user=request.user)
-    return render_to_response(
-            'sidebar_playlists.html',
-            locals(),
-            context_instance=RequestContext(request),
-            )
+# TODO: sidebar_playlists_view deprecated?
+#@login_required
+#def sidebar_playlists_view(request):
+#    """
+#    return list of all playlists
+#    """
+#    playlists = Playlist.objects.filter(user=request.user)
+#    return render_to_response(
+#            'sidebar_playlists.html',
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
+
+# TODO: playlists_view deprecated?
+#@login_required
+#def playlists_view(request):
+#    playlists = Playlist.objects.filter(user=request.user)
+#
+#    return render_to_response(
+#            'context_playlists.html',
+#            locals(),
+#            context_instance=RequestContext(request),
+#            )
 
 @login_required
-@transaction.autocommit
 def playlist_create_view(request):
+
     if request.method == "POST":
         name = request.POST.get('playlist_name')
         if not len(name) > 0:
             raise Exception("playlist name invalid: " + str(name))
-        playlist = Playlist(name=name, user=request.user, current_position=0)
-        playlist.save()
-        playlists = Playlist.objects.filter(user=request.user)
+        # check if same name exists for user
+        try:
+            playlist = Playlist.objects.get(user=request.user, name=name)
+        except Playlist.DoesNotExist:
+
+            playlist = Playlist(name=name, user=request.user, current_position=0)
+            playlist.save()
+
+        # sidebar data
+        sidebar = {
+            "playlists": Playlist.objects.filter(user=request.user),
+            "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+        }
+
+        #return HttpResponseRedirect(reverse("playlist", kwargs={"playlist_id": playlist.id}))
 
         return render_to_response(
-                "sidebar_playlists.html",
+                "context_playlist.html",
                 locals(),
                 context_instance=RequestContext(request),
                 )
 
-    return HttpResponse("")
+    return HttpResponse("Only POST request allowed")
 
 @login_required
-@transaction.autocommit
-def playlist_delete_view(request):
+def playlist_delete_view(request, playlist_id):
     if request.method == "POST":
 
-        playlist_id = request.POST.get('playlist_id')
         playlist = Playlist.objects.get(id=playlist_id)
+
+        if playlist.user != request.user:
+            raise PermissionDenied
 
         if playlist.name == "default":
             return HttpResponse("You can't delete the default playlist. it should stay.") # TODO: make a nice message
@@ -552,19 +775,24 @@ def playlist_delete_view(request):
         # return the first playlist of user
         [playlist] = Playlist.objects.filter(user=request.user)[0:1]
 
+        # sidebar data
+        sidebar = {
+            "playlists": Playlist.objects.filter(user=request.user),
+            "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+        }
+
         return render_to_response(
                 "context_playlist.html",
                 locals(),
                 context_instance=RequestContext(request),
                 )
 
-    return HttpResponse("")
+    return HttpResponse("Only POST requests allowd")
 
 @login_required
-def playlist_append_view(request):
+def playlist_append_view(request, playlist_id):
     if request.method == "POST":
-        playlist_id  = request.POST.get("playlist_id")
-        item_id      = request.POST.get("id")
+        item_id      = request.POST.get("item_id", "0")
         source       = request.POST.get("source")
 
         playlist = Playlist.objects.get(id=playlist_id)
@@ -592,28 +820,38 @@ def playlist_append_view(request):
             playlist.items.add(item)
             playlist.save()
 
-        playlists = Playlist.objects.filter(user=request.user)
+        #playlists = Playlist.objects.filter(user=request.user)
 
-        return render_to_response(
-                'sidebar_playlists.html',
-                locals(),
-                context_instance=RequestContext(request),
-                )
+        playlist_info = {
+            "playlist_id": playlist.id,
+            "count": playlist.items.all().count(),
+        }
+
+        response = HttpResponse(simplejson.dumps(playlist_info), mimetype='application/json')
+
+        return response
+
+        #return render_to_response(
+        #        'sidebar_playlists.html',
+        #        locals(),
+        #        context_instance=RequestContext(request),
+        #        )
 
     # Do not change anything on GET requests
     playlists = Playlist.objects.filter(user=request.user)
     return render_to_response(
-            'playlists.html',
+            'context_playlist.html',
             locals(),
             context_instance=RequestContext(request),
             )
 
 @login_required
-def playlist_remove_item_view(request, playlist_id, item_id):
+def playlist_remove_item_view(request, playlist_id):
 
     playlist = Playlist.objects.get(id=playlist_id, user=request.user)
 
     if request.method == "POST":
+        item_id = request.POST.get("item_id", "0")
         item = PlaylistItem.objects.get(id=item_id)
         position = item.position
         item.delete()
@@ -622,32 +860,40 @@ def playlist_remove_item_view(request, playlist_id, item_id):
         for item in playlist.items.all().filter(position__gt=position):
             item.position = item.position-1
             item.save()
-        playlist = Playlist.objects.get(id=playlist_id)
 
+        # refetch playlist
+        playlist = Playlist.objects.get(id=playlist_id, user=request.user)
 
     # Do not change anything on GET requests
+
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
+
     return render_to_response(
-            'playlist_songs.html',
+            'context_playlist.html',
             locals(),
             context_instance=RequestContext(request),
             )
 
 @login_required
 @transaction.autocommit
-def playlist_reorder_view(request):
+def playlist_reorder_view(request, playlist_id):
     # reorder algorithm was a saturday afternoon work. althoug sometimes slow,
     # the power of python made it beautiful. read it carefully, as it respects
     # the case if an item was moved to the very top (item_previous_id = "0") by
     # its cool queries (Q). also, item_moved_position is the original value,
     # but item_moved.position is going to be the new value
 
+    playlist = Playlist.objects.get(user=request.user, id=playlist_id)
+
     if request.method == "POST":
 
-        playlist_id         = request.POST.get('playlist_id')
-        item_id             = request.POST.get('item_id')
-        item_previous_id    = request.POST.get('item_previous_id')
+        item_id             = request.POST.get("item_id", "0")
+        item_previous_id    = request.POST.get("item_previous_id", "0")
 
-        playlist            = Playlist.objects.get(user=request.user, id=playlist_id)
         item_moved          = PlaylistItem.objects.get(id=item_id)
         item_moved_position = item_moved.position
 
@@ -694,12 +940,111 @@ def playlist_reorder_view(request):
             playlist.current_position = item_moved.position  # set new position
             playlist.save()
 
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
+
 
     return render_to_response(
-            'playlist_songs.html',
+            'context_playlist.html',
             locals(),
             context_instance=RequestContext(request),
             )
+
+@login_required
+def playlist_share_view(request, playlist_id):
+
+    if request.method == "POST":
+        username = request.POST.get("username", "")
+
+        if request.user.username == username:
+            return HttpResponse("Don' share playlists to yourself")
+
+        try:
+            subscriber = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return HttpResponseNotFound("User not found")
+
+        playlist = Playlist.objects.get(id=playlist_id)
+
+        if playlist.user != request.user:
+            raise PermissionDenied
+
+        # check if playlist is already shared
+        try:
+
+            share_playlist = SharePlaylist.objects.get(playlist=playlist)
+
+            if subscriber in share_playlist.subscribers.all():
+                return HttpResponse("User already subscribed")
+
+        except SharePlaylist.DoesNotExist:
+            share_playlist = SharePlaylist(playlist = playlist)
+            share_playlist.save()
+
+        # create share relation information
+        subscription = SharePlaylistSubscription(
+            share = share_playlist,
+            subscriber = subscriber,
+        )
+        subscription.save()
+
+    return HttpResponseRedirect(reverse("shares"))
+
+
+
+@login_required
+def playlist_unshare_view(request, playlist_id):
+
+    if request.method == "POST":
+        unshare_playlist = request.POST.get("unshare_playlist", False)
+
+        playlist = Playlist.objects.get(id=playlist_id)
+
+        share_playlist = SharePlaylist.objects.get(playlist=playlist, playlist__user=request.user)
+
+        if unshare_playlist:
+            share_playlist.subscribers.clear()
+
+        else:
+            subscriber_id = request.POST.get("subscriber_id", "0")
+
+            subscription = SharePlaylistSubscription.objects.get(
+                share = share_playlist,
+                subscriber__id = subscriber_id
+            )
+
+            subscription.delete()
+
+        # delete share when no subscribers left
+        if not share_playlist.subscribers.all().count():
+            share_playlist.delete()
+
+        return HttpResponse("success")
+
+
+def playlist_play_view(request, playlist_id):
+
+    if request.method == "POST":
+
+        try:
+            item_id = int(request.POST.get("item_id", "0"))
+            playlist_id = int(playlist_id)
+        except ValueError:
+            item_id = 0
+            playlist_id = 0
+
+        user_status = helper.UserStatus(request)
+        user_status.set("current_source", "playlist")
+        user_status.set("current_playlist_id", playlist_id)
+        user_status.set("current_item_id", item_id)
+
+        return HttpResponseRedirect(reverse("play", kwargs={"play_id": repr(item_id)}))
+
+    else:
+        return HttpResponse("GET request not support")
 
 def playlist_download(request):
 
@@ -728,55 +1073,116 @@ def play_song_view(request, song_id):
     return response
 
 @login_required
-def play_view(request):
-    """
-    administrate song request. returns urls for audio player <source> tag and song info
-    """
-    song = None
-
+def play_view(request, play_id):
     if request.method == "POST":
+        pass
+    else:
+
         user_status = helper.UserStatus(request)
+        source = user_status.get("current_source", "collection")
 
-        #ms = MusicSession.objects.get(user=request.user)
-        source = request.POST.get('source')
-        if "playlist" == source:
-            playlist_id = request.POST.get("playlist_id")
-            item_id     = request.POST.get("item_id")
-
-            user_status.set("playing_source", "playlist")
-            user_status.set("playing_playlist_id", playlist_id)
-            user_status.set("playing_playlist_item_id", playlist_id)
-
-            playlist = Playlist.objects.get(id=playlist_id)
-            item     = PlaylistItem.objects.get(id=item_id)
-            playlist.current_position = item.position
-            playlist.save()
-
-            song = item.song
-
-            return song_info_response(song, playlist_id=playlist.id, item_id=item.id, source=source)
-
-        elif "browse" == source:
-            song_id = request.POST.get("song_id")
-
-            user_status.set("playing_song_id", song_id)
-            user_status.set("playing_source", "browse")
-
-            song = Song.objects.get(id=song_id)
-
-            return song_info_response(song, source=source)
-
-        else:
-            song_id = request.POST.get('song_id')
-
-            user_status.set("playing_source", "collection")
-            user_status.set("playing_song_id", song_id)
-
-            song = Song.objects.get(id=song_id)
+        if "collection" == source:
+            song_id = play_id
+            try:
+                song = Song.objects.get(id=song_id, user=request.user)
+            except Song.DoesNotExist:
+                raise PermissionDenied
 
             return song_info_response(song, source="collection")
 
-    return HttpResponse("Only POST request implemented so far")
+        elif "playlist" == source:
+            item_id = play_id
+            playlist_id = user_status.get("current_playlist_id", 0)
+            playlist = Playlist.objects.get(id=playlist_id)
+            if request.user != playlist.user:
+                # check if visitor is allowed to see the playlist
+                subscribed_playlists = SharePlaylist.objects.filter(subscribers=request.user)
+                if not subscribed_playlists.filter(playlist=playlist).count():
+                    raise PermissionDenied
+
+            song = playlist.items.get(id=item_id).song
+
+            item = PlaylistItem.objects.get(id=item_id)
+
+            return song_info_response(song, playlist_id=playlist.id, item_id=item.id, source=source)
+
+
+# TODO: play_view deprecated
+#@login_required
+#def play_view(request):
+#    """
+#    administrate song request. returns urls for audio player <source> tag and song info
+#    """
+#
+#    song = None
+#
+#    if request.method == "POST":
+#        user_status = helper.UserStatus(request)
+#
+#        source = request.POST.get('source')
+#        if "shared_playlist" == source:
+#            playlist_id = request.POST.get("playlist_id")
+#            item_id     = request.POST.get("item_id")
+#
+#            playlist = Playlist.objects.get(id=playlist_id)
+#            item     = PlaylistItem.objects.get(id=item_id)
+#
+#            # check if visitor is allowed to see the playlist
+#            subscribed_playlists = SharePlaylist.objects.filter(subscribers=request.user)
+#            if not subscribed_playlists.filter(playlist=playlist).count():
+#                raise PermissionDenied
+#
+#            user_status.set("playing_source", "playlist")
+#            user_status.set("playing_playlist_id", playlist_id)
+#            user_status.set("playing_playlist_item_id", item_id)
+#
+#            song = item.song
+#
+#            return song_info_response(song, playlist_id=playlist.id, item_id=item.id, source=source)
+#
+#
+#        elif "playlist" == source:
+#            playlist_id = request.POST.get("playlist_id")
+#            item_id     = request.POST.get("item_id")
+#
+#            playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+#            item     = PlaylistItem.objects.get(id=item_id)
+#
+#            # check if visitor is allowed to see the playlist
+#            subscribed_playlists = SharePlaylist.objects.filter(subscribers=request.user)
+#            if not subscribed_playlists.filter(playlist=playlist).count():
+#                raise PermissionDenied
+#
+#            user_status.set("playing_source", "playlist")
+#            user_status.set("playing_playlist_id", playlist_id)
+#            user_status.set("playing_playlist_item_id", item_id)
+#
+#            playlist.current_position = item.position
+#            playlist.save()
+#
+#            song = item.song
+#
+#            return song_info_response(song, playlist_id=playlist.id, item_id=item.id, source=source)
+#
+#        elif "browse" == source:
+#            song_id = request.POST.get("song_id")
+#            song = Song.objects.get(id=song_id, user=request.user)
+#
+#            user_status.set("playing_song_id", song_id)
+#            user_status.set("playing_source", "browse")
+#
+#            return song_info_response(song, source=source)
+#
+#        else:
+#            song_id = request.POST.get('song_id')
+#            song = Song.objects.get(id=song_id, user=request.user)
+#
+#            user_status.set("playing_source", "collection")
+#            user_status.set("playing_song_id", song_id)
+#
+#            return song_info_response(song, source="collection")
+#
+#    return HttpResponse("Only POST request implemented so far")
 
 @login_required
 def play_next_view(request):
@@ -872,7 +1278,7 @@ def rescan_view(request):
 def song_info_response(song, playlist_id=None, item_id=None, source=""):
 
     if song == None:
-        return HttpResponse("")
+        return HttpResponse("No song")
 
     if playlist_id and item_id:
         pass
@@ -901,12 +1307,13 @@ def song_info_response(song, playlist_id=None, item_id=None, source=""):
     song_info = {
             'playlist_id': playlist_id,
             'item_id':     item_id,
-
             'song_id':     song.id,
             'title':       song.title,
             'artist':      artist,
             'album':       album,
             'genre':       genre,
+            'year':        song.year,
+            'length':      song.length,
             'track':       song.track,
             'mime':        song.mime,
             'source':      source,
@@ -1079,3 +1486,24 @@ def filter_songs(request, terms, artists=None, albums=None):
         songs = []
 
     return songs
+
+@login_required
+def username_validation_view(request):
+
+    result = False
+
+    if request.method == "GET":
+        username = request.GET.get("username", "")
+        try:
+            User.objects.get(username=username)
+            result = True
+        except User.DoesNotExist:
+            pass
+
+    result = {
+        "exists": result
+    }
+
+    response = HttpResponse(simplejson.dumps(result), mimetype='application/json')
+    return HttpResponse(response)
+

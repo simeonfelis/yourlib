@@ -14,8 +14,16 @@ STACKTRACE = None
 DEFAULT_BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
 
 user_status_defaults = simplejson.dumps({
-    "search_terms": "",
     "current_view": "collection",
+    "current_view_playlist": 0,
+
+    "current_source": "collection",
+    "current_song_id": 0,
+    "current_playlist_id": 0,
+    "current_item_id": 0,
+
+    "collection_search_terms": "",
+
     "browse_column_order": DEFAULT_BROWSE_COLUMN_ORDER,
     "browse_selected_albums": [],
     "browse_selected_artists": [],
@@ -117,8 +125,8 @@ def browse_column_title(request):
 
 def search(request, browse=False):
     """
-    Returns songs based on search terms in user_status. search_terms will be split 
-    on " " in terms and terms are treated with AND
+    Returns song query based on search terms in user_status. search_terms will be split 
+    on " " in single terms. terms are treated with AND
 
     The following fields will be search:
     song.artist, song.title, song.album, song.mime, song.genre
@@ -127,7 +135,8 @@ def search(request, browse=False):
     """
 
     user_status = UserStatus(request)
-    terms = user_status.get("search_terms", "").strip()
+    if not browse:
+        terms = user_status.get("collection_search_terms", "").strip()
 
     songs = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
 
@@ -234,11 +243,13 @@ def get_tags(path):
 
     if "performer" in tags.keys():
         try:
-            albumartist = tags['performer'][0]
+            perfomrer = tags['performer'][0]
         except:
-            albumartist = None
+            performer = None
+    else:
+        performer = None
 
-    elif "albumartist" in tags.keys():
+    if "albumartist" in tags.keys():
         try:
             albumartist = tags['performer'][0]
         except:
@@ -287,6 +298,7 @@ def get_tags(path):
     tags = {
             'artist': artist,
             'albumartist': albumartist,
+            'perfomer': performer,
             'album' : album,
             'track': track,
             'title': title,

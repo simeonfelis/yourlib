@@ -87,6 +87,113 @@ function highlight_playing(by_who, target) {
     //}
 }
 
+function ShareView() {
+
+    // init (constructor) at end of function
+
+    this.bind = function() {
+        $(".btn_playlist_desubscribe").on("click", this.playlist_unshare);
+        $(".btn_playlist_unshare").on("click", this.playlist_unshare);
+    }
+
+    this.playlist_unshare = function() {
+
+        playlist_id = $(this).attr("data-share_playlist_id");
+        share_id = $(this).attr("data-share_id");
+        subscriber_id = $(this).attr("data-subscriber_id");
+
+        if (undefined === subscriber_id && undefined != share_id) {
+            var data = {
+                'unshare_playlist'        : true,
+            };
+        }
+        else {
+            var data = {
+                'subscriber_id'           : subscriber_id,
+            };
+        }
+
+        var url = base_url + "playlist/" + playlist_id + "/unshare/";
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                // we are in context window again. sigh.
+                console.log("UNSHARE PLAYLIST");
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                console.log("UNSHARE PLAYLIST ERROR");
+            },
+            complete:    function(jqXHR, textStatus) {
+            },
+            datatype: "html"
+        });
+
+        return false; // Don't do anything else
+    }
+
+    this.exhibit = function(url, exhibit_finished_cb) {
+
+        this.exhibit_finished = exhibit_finished_cb;
+
+        is_loaded = $("#context_shares").length > 0;
+
+        if (is_loaded) {
+            $("#context_content").children().fadeOut("fast");
+            $("#context_content").children().promise().done(function() {
+                $("#context_shares").fadeIn("fast", function() {
+                    share_view.exhibit_finished();
+                });
+                //share_view.update_viewport();
+                //highlight_playing("share.exhibit()", "#context_shares");
+            });
+        }
+        else {
+
+            var data = {};
+
+            $.ajax({
+                type:     "GET",
+                url:      url,
+                data:     data,
+                success:  function(data, status, jqXHR) {
+                    // we are in context window again. sigh.
+
+                    $("#sidebar").find(".currently_shown").removeClass("currently_shown");
+                    $("#sidebar_show_shares").addClass("currently_shown");
+
+                    share_view.view = $(data).find("#context_shares");
+
+                    $("#context_content").children().fadeOut("slow");
+                    $("#context_content").children().promise().done(function() {
+                        $("#context_content").append($(share_view.view).fadeIn("slow", function() {
+                            share_view.exhibit_finished();
+                        }));
+                        //share_view.update_viewport();
+                        //highlight_playing("share_view.exhibit()", "#context_shares");
+                        share_view.bind();
+                    });
+
+
+                },
+                error:    function(jqXHR, status, error) {
+                    // we are in context window again. sigh.
+                    console.log("ERROR SHOWING SHARES");
+                },
+                complete:    function(jqXHR, textStatus) {
+                },
+                datatype: "html"
+            });
+        }
+    }
+
+    console.log("============ ShareView init =============");
+    this.bind();
+
+}
 
 function Download() {
     this.bind = function() {
@@ -94,19 +201,23 @@ function Download() {
 }
 
 function Pagination(options) {
-    //console.log("PAGINATION INITIALIZED");
+    // scroll pagination options, events and functionality are bound to the
+    // options.scrollTarget DOM element. If this DOM element is destroyed
+    // it must be bound again.
+    //
+    // Following must be provided:
+    //
+    // options.scrollTarget;  // the dom which listen to scroll events
+    // options.appendTarget;  // the dom where to append data to
+    // options.contentUrl;    // where to load data from
+    // options.contentData;   // how many are already loaded (make this a function)
+    // options.beforeLoad;    // execute this before load
+    // options.afterLoad;     // exectute after succesful load
+    // options.errorLoad;     // execute this on load errors
+    // options.enabled;       // doh.
 
-    // this is somehow useless
-    this.scrollTarget = options.scrollTarget;  // the dom which listen to scroll events
-    this.appendTarget = options.appendTarget;  // the dom where to append data to
-    this.contentUrl   = options.contentUrl;    // where to load data from
-    this.contentData  = options.contentData;   // data to send to server within load request
-    this.beforeLoad   = options.beforeLoad;    // execute this before load
-    this.afterLoad    = options.afterLoad;     // exectute after succesful load
-    this.errorLoad    = options.errorLoad;     // execute this on load errors
-    this.enabled      = options.enabled;       // doh.
+    // init (constructor) at end of function
 
-    // some functions have to be defined on top
     this.loadContent = function(paginator) {
         var tmp = this;
         // I really don't know the context of this or $(this) here.
@@ -114,18 +225,14 @@ function Pagination(options) {
         // Pagination() object.
         $this = $(paginator.scrollTarget);
 
-        console.log("PAGINATOR LOAD: SO_FAR:" + paginator.contentData())
-
-        $(paginator.appendTarget).children().attr('rel', 'loaded');
-
         $.ajax({
-            type:     "POST",
+            type:     "GET",
             url:      paginator.contentUrl,
             data:     {"so_far" : paginator.contentData},
             success:  function(data) {
                 // we are in context window again. sigh.
                 paginator = $($this).data("pagination");
-                if (data == "nomoreresults") {
+                if (data == "nomoreresults" || data == "") {
                     paginator.enabled = false;
                 }
                 else {
@@ -149,19 +256,21 @@ function Pagination(options) {
         })
     }
 
-    // extend options
+    console.log("============ Paginator init =============");
+
+    // internal options
     options.loadContent     = this.loadContent;
     options.loading         = false;
 
     // save options into dom element
-    $(this.scrollTarget).data("pagination", options);
+    $(options.scrollTarget).data("pagination", options);
 
     // bind scroll event
-    $(this.scrollTarget).scroll(function(event){
+    $(options.scrollTarget).scroll(function(event){
         //console.log("PAGINATION SCROLL EVENT");
         // context: window. `this` is window, `$(this)` is dom element that was scrolled (scrollTarget)
         // I hate javascript.
-        var pagination = $(this).data("pagination"); // get pagination object
+        var pagination = $(this).data("pagination"); // get pagination data
         if (pagination.enabled && !pagination.loading) {
             // determine scroll position
             var scrolled           = $(pagination.scrollTarget).scrollTop();
@@ -171,14 +280,17 @@ function Pagination(options) {
 
             if (mayLoadContent) {
                 pagination.loading = true;               // block further loading until this one is done
-                $(this).data("pagination", pagination);
+                $(this).data("pagination", pagination);  // store pagination data
                 pagination.beforeLoad();
                 $(pagination.appendTarget).children().attr("rel", "loaded"); // mark already loaded data
                 pagination.loadContent(pagination);
             }
         }
+        else if (!pagination.enabled) {
+            pagination.afterLoad("");
+        }
         else if (pagination.loading) {
-            console.log("PAGINATION BLOCK BECAUSE OF ONGOING LOAD (scrolling to fast?)");
+            //console.log("PAGINATION BLOCK BECAUSE OF ONGOING LOAD (scrolling to fast?)");
         }
     });
 }
@@ -208,6 +320,7 @@ function yourlib_resize_cb() {
       collection.update_viewport();
       playlist.update_viewport();
       upload.update_viewport();
+      sidebar.update_viewport();
 }
 
 $(document).ready(function () {
@@ -253,6 +366,10 @@ $(document).ready(function () {
     /*
      * Global variables. They are available without the window namespace, too.
      */
+
+    window.context_content = new ContextContent(); // must be first
+    context_content.update_viewport();
+
     window.player1     = new Player();
     window.yourlib     = new Yourlib();
     window.collection  = new Collection();
@@ -260,14 +377,9 @@ $(document).ready(function () {
     window.playlist    = new Playlist();
     window.upload      = new Upload();
     window.download    = new Download();
+    window.share_view  = new ShareView();
     window.sidebar     = new Sidebar(); // must be last?
-    window.context_content = new ContextContent();
 
-    context_content.update_viewport(); // must be first
-    browse.bind();
-    collection.bind();
-    playlist.bind();
-    sidebar.bind();
 
     /*
      * Event delegation. They will work globally on dynamic content, too.
@@ -288,23 +400,27 @@ $(document).ready(function () {
     /* player */
     $(document).on("click",  "#btn_player1_next",         player1.next);
 
-    /* sidebar */
+    /* sidebar
     $(document).on("click",  "#btn_context_collection",   sidebar.show_collection);
     $(document).on("click",  "#btn_sidebar_browse",       sidebar.show_browse);
     $(document).on("click",  ".btn_sidebar_playlist",     sidebar.show_playlist);
     $(document).on("click",  "#btn_sidebar_upload",       sidebar.show_upload);
+    $(document).on("click",  "#btn_sidebar_shares",       sidebar.show_shares);
+    $(document).on("click",  ".btn_sidebar_shares_playlist",       sidebar.show_shares_playlist);
     //$(document).on("click",  "#btn_context_download",     sidebar.show_download);
-    $(document).on("submit", "#playlist_create",          playlist.create);
+
+    */
+    //$(document).on("submit", "#playlist_create",          playlist.create);
 
     /* playlist */
     $(document).on("click",  ".btn_playlist_item_play",   playlist.item_play);
-    $(document).on("click",  ".btn_playlist_item_remove", playlist.item_remove);
+    //$(document).on("click",  ".btn_playlist_item_remove", playlist.item_remove);
     $(document).on("click",  ".btn_playlist_delete",      playlist.delete_list);
     $(document).on("click",  ".btn_playlist_download",    playlist.download);
 
     /* collection */
     //$(document).on("click",   "#btn_collection_toggle_filter", collection.toggle_filter);
-    $(document).on("submit",  "#context_collection_search", collection.search);
+    //$(document).on("submit",  "#context_collection_search", collection.search);
     //$(document).on("click",   "#get_more_results",          collection.get_more_results);
     //$(document).on("appear",  "#get_more_results",          collection.get_more_results, {one: false});
     //$(document).on("click",   ".btn_filter_genre",          collection.filter_genre);
@@ -314,17 +430,19 @@ $(document).ready(function () {
 
     /* collection & playlist */
     //$(document).on("click",      ".song_item",  collection.song_play);
-    $(document).on("mouseenter", ".song_item", function(){$(this).addClass("ui-state-hover")});
-    $(document).on("mouseleave", ".song_item", function(){$(this).removeClass("ui-state-hover")});
+    //$(document).on("mouseenter", ".song_item", function(){$(this).addClass("ui-state-hover")});
+    //$(document).on("mouseleave", ".song_item", function(){$(this).removeClass("ui-state-hover")});
 
     /* some global ui theming */
-    $(".btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
-    $(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
+    //$(".btn").on("mouseenter", function(){$(this).addClass("ui-state-hover")});
+    //$(".btn").on("mouseleave", function(){$(this).removeClass("ui-state-hover")});
 
     /* check document state, maybe there are ongoing actions in progress */
     if ( $( "#rescan_status" ).html() != "" ) {
         yourlib.check_scan_status();
     }
+    
+    //$("a").button();
 
 });
 

@@ -2,6 +2,7 @@
 <html>
     <head>
         <script type="text/javascript"> var csrf_token = "{{ csrf_token }}" </script>
+        <script type="text/javascript"> var base_url = "{% url home %}"</script>
 
         <script type="text/javascript" src="{{ STATIC_URL }}js/jquery-1.7.2.min.js"></script>
         <script type="text/javascript" src="{{ STATIC_URL }}js/jquery.appear-1.1.1.min.js"></script>
@@ -20,6 +21,7 @@
         <script type="text/javascript" src="{{ STATIC_URL }}js/yourlib_yourlib.js"></script>
         <script type="text/javascript" src="{{ STATIC_URL }}js/yourlib.js"></script>
         <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/yourlib.css"></link>
+        <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/yourlib_sidebar.css"></link>
 
         {% block head_title %}{% endblock %}
     </head>
@@ -29,6 +31,19 @@
 
         {# pre-defined dialogs, not visible hopefully #}
         <div class="hiddenInViewSource" style="padding:20px;">
+            <div class="overlay"></div>
+
+            <div id="dialog-playlist-share" title="Share Playlist">
+                <p class="validateTips">Enter username</p>
+                <form>
+                <fieldset>
+                    <label for="username">User</label>
+                    <input type="text" name="username" id="dialog-playlist-share-username" class="text ui-widget-content ui-corner-all" />
+                </fieldset>
+                </form>
+                <p class="validateTips">If the username exists, you will be provided with a 'Share' button.</p>
+            </div>
+
 
             <div class="hiddenInViewSource" id="dialog-confirm" title="Cancel Rescan?">
                 <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>

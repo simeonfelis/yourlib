@@ -301,7 +301,7 @@ def upload_done(user_id, upload_status_id, uploaded_file_path):
             step_status = 1
         processed += 1
 
-        if (old_status < step_status) and ((step_status % 3) == 0):
+        if (old_status < step_status) and ((step_status % 2) == 0):
             dbgprint("Structuring:", step_status, "%")
             old_status = step_status
             upload_status.step_status = step_status

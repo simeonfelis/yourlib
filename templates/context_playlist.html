@@ -1,0 +1,39 @@
+{% extends "home.html" %}
+
+{% block context_content %}
+<div id="context_content">
+    <div id="context_playlist"  data-playlist_id="{{ playlist.id }}">
+
+
+        <div id="context_header" class="ui-widget-content ui-corner-all ui-widget-header">
+            <div class="name">Playlist {{ playlist.name }}</div>
+            {% if shared_by %}
+                <div  id="shared_playlist" class="ui-widget-content ui-state-highlight ui-corner-all" style="float: right">
+                    <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+                    Shared to you by {{ shared_by.username }}
+                </div>
+            {% else %}
+            <div class="btn_playlist_share btn  ui-state-default ui-corner-all"
+                    data-playlist_name="{{ playlist.name }}"
+                    data-playlist_id="{{ playlist.id }}"
+                    title="Share playlist '{{ playlist.name }}'"
+                    style="padding: 6px; margin: 0 4px 0 4px;">
+                <span class="ui-icon ui-icon-person"></span>
+            </div>
+            <div class="btn_playlist_delete ui-state-default ui-corner-all btn"
+                    data-playlist_name="{{ playlist.name }}"
+                    data-playlist_id="{{ playlist.id }}"
+                    title="Delete playlist {{ playlist.name }}"
+                    style="padding: 6px; margin: 0 4px 0 4px;">
+                <span class="ui-icon ui-icon-trash"></span>
+            </div>
+            {% endif %}
+            {#<div class="btn_playlist_download btn ui-state-default ui-corner-all" data-playlist_id="{{ playlist.id }}">download</div>#}
+        </div>
+
+        <div id="context_playlist_container">
+            {% include "playlist_songs.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -22,7 +22,7 @@ function Player() {
         //    var $song_url='http://localhost:8080' + song_info.dbg_file_path;
         //}
         //else {
-            var $song_url='play/song/' + song_info.song_id;
+            var $song_url=base_url + "play/" + song_info.song_id; // song_base_url is defined in header (base.html)
         //}
 
         /* rebuild player (maybe firefox issue on invalid sources?) */

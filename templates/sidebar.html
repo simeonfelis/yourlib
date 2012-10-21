@@ -1,0 +1,32 @@
+<div class="sidebar ui-widget-content ui-corner-all" id="sidebar">
+
+    {% include "yourlib_player1.html" %}
+
+    <div style="height:3px; width:100%; background-color:#5f5f5f;"></div>
+
+    <div id="sidebar_navi">
+
+        <div id="sidebar_collection">
+            <h1><a href="{% url collection %}" id="sidebar_show_collection" >Collection</a></h1>
+                <h2><a href="{% url collection_browse %}"  id="sidebar_show_collection_browse">Browse</a></h2>
+        </div>
+        <div id="sidebar_playlists">
+            <h1>Playlists</h1>
+                <div id="sidebar_playlists_content">
+                    {% include "sidebar_playlists.html" %}
+                </div>
+                <h2>
+                    <span style="float: left;">New:</span>
+                    <span>
+                        <form id="playlist_create" action="{% url playlist_create %}" method="post">
+                            <input id="playlist_create_name" name="playlist_name" type="text" size="10" maxlength="32">
+                        </form>
+                    </span>
+                </h2>
+        </div>
+        <div id="sidebar_shares">
+            <h1><a href="{% url shares %}"  id="sidebar_show_shares">Shares</a></h1>
+                {% include "sidebar_shares.html" %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,4 @@
+    {% for sp in subscribed_playlists%}
+    <li>Playlist <em>{{ sp.playlist.name }}</em> from user {{ sp.playlist.user.username }} with {{ sp.playlist.items.count }} items
+    </li>
+    {% endfor %}

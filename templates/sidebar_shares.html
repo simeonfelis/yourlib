@@ -1,0 +1,8 @@
+{% for sp in sidebar.subscribed_playlists %}
+<h2>
+    <a href="{% url shares_playlist sp.playlist.id %}" data-playlist_id="{{ sp.playlist.id }}" class="btn_sidebar_show_playlist">
+        <span class="name" title="{{ sp.playlist.name }} by {{ sp.playlist.user.username }}">{{ sp.playlist.name }} by {{ sp.playlist.user.username }}</span>
+        <span class="count" title="Items in playlist">{{ sp.playlist.items.count }}</span>
+    </a>
+</h2>
+{% endfor %}

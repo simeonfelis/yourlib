@@ -1,8 +1,8 @@
-<div id="sidebar_playlists" class="playlists">
-    {% for playlist in playlists %}
-    <h2 id="sidebar_playlist_{{ playlist.id }}" class="btn_sidebar_playlist btn ui-state-default ui-helper-clearfix" data-playlist_id="{{ playlist.id }}">
-        <span class="name">{{ playlist.name }}</span> <span class="count" title="Items in playlist">{{ playlist.items.all|length }}</span>
-    </h2>
-    {% endfor %}
-</div>
-
+{% for playlist in sidebar.playlists %}
+<h2>
+    <a href="{% url playlist playlist.id %}" data-playlist_id="{{ playlist.id }}" class="btn_sidebar_show_playlist">
+        <span class="name" title="{{ playlist.name }}">{{ playlist.name }}</span>
+        <span class="count" title="Items in playlist">{{ playlist.items.all|length }}</span>
+    </a>
+</h2>
+{% endfor %}
