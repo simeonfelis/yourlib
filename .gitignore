@@ -1,4 +1,9 @@
 *.pyc
 *.log
 *.sqlite
+.project
+.pydevproject
+*.out
 false
+tags
+static
