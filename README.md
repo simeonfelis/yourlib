@@ -120,7 +120,16 @@ The directory ``/path/to/music`` will be watched by pyinotify for changes. If a 
 changed the library is automatically updated.
 
 Furthermore you need an upload directory for temporary upload stuff. One is for tmp files
-the other one for evaluted files.
+the other one for evaluted files. Use an actual file system, not tmpfs. And don't use ``/path/to/music/``,
+otherwise the message queue will burst because of all the inotify events.
+
+If you have a decent amount of songs (>8000), you will have to tune inotify:
+
+    echo 1048576 > /proc/sys/fs/inotify/max_user_watches
+
+Remember to make this setting somehow persistent across reboots. On older kernels this setting
+might be burried somewhere in ``/sys/``.
+
 
 
 Startup:
