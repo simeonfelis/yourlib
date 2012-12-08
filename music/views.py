@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from celery.result import AsyncResult
 
 from music.models import Song, Artist, Album, Genre, Playlist, PlaylistItem, MusicSession, Collection, Upload, Download, SharePlaylist, SharePlaylistSubscription
-from music.forms import UploadForm
+from music.forms import UploadForm, BrowseSettingsColumnsForm
 #from music.helper import dbgprint, UserStatus, user_status_defaults
 from music import helper
 from music import settings
@@ -21,8 +21,8 @@ from music import settings
 import os, time
 from Image import init
 
-INITIAL_ITEMS_LOAD_COUNT = 50
-SUBSEQUENT_ITEMS_LOAD_COUNT = 100
+INITIAL_ITEMS_LOAD_COUNT = 200
+SUBSEQUENT_ITEMS_LOAD_COUNT = 200
 
 @login_required
 def home_view(request):
@@ -249,7 +249,7 @@ def collection_browse_view(request):
     albums  = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
 
-    columns = helper.DEFAULT_BROWSE_COLUMN_ORDER
+    columns_display = user_status.get("browse_column_display", helper.DEFAULT_BROWSE_COLUMNS_AVAILABLE)
 
     # sidebar data
     sidebar = {
@@ -263,70 +263,207 @@ def collection_browse_view(request):
             context_instance=RequestContext(request),
             )
 
+
 @login_required
-def collection_browse_column_view(request, column):
-    """
-    Works in static column order only.
-
-    If column is artist, returns list of albums and songs.
-    If column is album, returns list of songs.
-
-    The returned lists are filtered by the selection of the items in column. The item IDs
-    have to be transmitted in the POST request in "items[]". The selection will be stored
-    in the user_status.
-    """
-
-    global SUBSEQUENT_ITEMS_LOAD_COUNT
+def settings_collection_browse_view(request):
 
     user_status = helper.UserStatus(request)
-    load_full_page = False
+    columns = user_status.get("browse_column_display", helper.DEFAULT_BROWSE_COLUMNS_AVAILABLE)
 
     if request.method == "POST":
-        if not "so_far" in request.POST.keys():
-            load_full_page = True
+        column_form = BrowseSettingsColumnsForm(request.POST, prefix="column_selection")
+        if column_form.is_valid():
+            column_form.save(user_status)
+
     else:
-        if not "so_far" in request.GET.keys():
-            load_full_page = True
+        column_form = BrowseSettingsColumnsForm(columns=columns, prefix="column_selection")
+
+    return render_to_response(
+            "settings_collection_browse.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
 
 
-    if load_full_page:
+@login_required
+def collection_browse_column_view(request, column):
+#    On POST requests expects to set filter and returns full page
+#    On GET requests containing parameter so_far, it will provide column
+#    entries for pagination
+#    Depending on column, returns subsequent column based on ordering in user_status
+#
+#    E.g. column order is: [genre, artist, album]:
+#    If column is genre: returns list of artists, albums and songs.
+#    If column is album: returns list of songs.
+#
+#    The returned lists are filtered by the selection of the items in column.
+#    The item IDs have to be transmitted in the POST request in "items[]". The
+#    selection will be stored in the user_status.
 
-        # consider 'column' as 'column_from'. This is more logical and easier to read (and used in templates)
-        column_from = column
 
-        if request.method == "POST":
-            items = request.POST.getlist('items[]', None)
-        else:
-            items = request.GET.getlist('items[]', None)
+    user_status = helper.UserStatus(request)
+
+    # consider 'column' as 'column_from'. This is more logical and easier to read (and used in templates)
+    column_from = column
+
+    # get IDs from selected column entries. They will be used as filter
+    if request.method == "POST":
+        items = request.POST.getlist('items[]', None)
+    else:
+        items = request.GET.getlist('items[]', None)
+
+    # sanity check
+    if not column_from in ["genre", "artist", "album"]:
+        ret = HttpResponse("Unsupported column: '%s'" % column_from)
+        ret.status_code = 400
+        return ret
+
+    # store filter
+    user_status.set("browse_selected_%s" % column_from, items)
+
+    # determine order number of column_from
+    columns_display = user_status.get("browse_column_display", helper.DEFAULT_BROWSE_COLUMNS_AVAILABLE)
+    column_from_order = 0 # avoid exception because of undefined variable
+    for column_settings in columns_display:
+        if column_settings["name"] == column_from:
+            column_from_order = column_settings["order"]
+
+    # Determine columns to render. Unset filter of later columns. Remember
+    # filter of previous columns.
+    # Create a list with correct order.
+    columns_filter = []
+    last_order = 1000
+    for column_settings in columns_display:
+
+        if column_settings["show"]:
+
+            current_order  = column_settings["order"]
+            name           = column_settings["name"]
+
+            # clear selection of subsequent columns
+            if current_order > column_from_order:
+                user_status.set("browse_selected_%s" % name, [])
+                selected = []
+            else:
+                selected = user_status.get("browse_selected_%s" % name, [])
+
+            # fetch model references. Will be useful later
+            if   name == "artist": model = Artist
+            elif name == "album":  model = Album
+            elif name == "genre":  model = Genre
+
+            filter_item = {
+                "name": name,           # the column name
+                "selected": selected,
+                "model": model,
+            }
+
+            if last_order < current_order:
+                columns_filter.append(filter_item)
+            else:
+                columns_filter.insert(0, filter_item )
+
+            last_order = current_order
+
+    # create queries
+    queries_song = []
+    for ii, col_filter in enumerate(columns_filter):
+        if col_filter["name"] == "genre":
+            # get only selected genre entries
+            queries_genre = [Q(pk=pk) for pk in col_filter["selected"]]
+            [queries_song.append(Q(genre__pk=pk)) for pk in col_filter["selected"]]
+
+            # refine genre column entries based on selection in previous columns
+            for jj in range(ii):
+                if   columns_filter[jj]["name"] == "artist": [ queries_genre.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+                elif columns_filter[jj]["name"] == "album":  [ queries_genre.append(Q(song__album__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+
+        elif col_filter["name"] == "artist":
+            # get only selected artist entries
+            queries_artist = [Q(pk=pk) for pk in col_filter["selected"]]
+            [queries_song.append(Q(artist__pk=pk)) for pk in col_filter["selected"]]
+
+            # refine artist column entries based on selection in previous columns
+            for jj in range(ii):
+                if   columns_filter[jj]["name"] == "genre":  [ queries_artist.append(Q(song__genre__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+                elif columns_filter[jj]["name"] == "album":  [ queries_artist.append(Q(song__album__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+
+        elif col_filter["name"] == "album":
+            # get only selected album entries
+            queries_album = [Q(pk=pk) for pk in col_filter["selected"]]
+            [queries_song.append(Q(album__pk=pk)) for pk in col_filter["selected"]]
 
 
-        if "artist" == column_from:
-            # store selected items
-            user_status.set("browse_selected_artists", items)
+            # refine album column entries based on selection in previous columns
+            for jj in range(ii):
+                if   columns_filter[jj]["name"] == "genre":  [ queries_album.append(Q(song__genre__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+                elif columns_filter[jj]["name"] == "artist": [ queries_album.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
 
-            # Set the columns to be rendered by templates
-            columns = ["album", "title"]
-            albums, songs = helper.browse_column_album(request)
-            albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
 
-        elif "album" == column_from:
-            # store selected items
-            user_status.set("browse_selected_albums", items)
+#        if "genre" == column_from:
+#            user_status.set("browse_selected_genres", items)
+#
+#        elif "artist" == column_from:
+#            # store selected items
+#            user_status.set("browse_selected_artists", items)
+#
+#            # Set the columns to be rendered by templates
+#            #columns = ["album", "title"]
+#            #albums, songs = helper.browse_column_album(request)
+#            #albums = albums[:INITIAL_ITEMS_LOAD_COUNT]
+#
+#        elif "album" == column_from:
+#            # store selected items
+#            user_status.set("browse_selected_albums", items)
+#
+#            # Set the columns to be rendered by templates
+#            #columns = ["title"]
+#            #songs = helper.browse_column_title(request)
+#
+#        else:
+#            return HttpResponse("Unsupported column: " + column_from)
 
-            # Set the columns to be rendered by templates
-            columns = ["title"]
-            songs = helper.browse_column_title(request)
+#        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
 
-        else:
-            return HttpResponse("Unsupported column: " + column_from)
+    if len(queries_song):
+        q_song = queries_song.pop()
+        for q in queries_song:
+            q_song |= q
+        songs = Song.objects.filter(user=request.user).filter(q_song).distinct()
+    else:
+        songs = Song.objects.filter(user=request.user).distinct()
 
-        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+    # Build OR queries from all queries
+    if len(queries_genre):
+        q_genre = queries_genre.pop()
+        for q in queries_genre:
+            q_genre |= q
+        genres = Genre.objects.filter(q_genre).filter(song__user=request.user).distinct()
+    else:
+        genres = Genre.objects.filter(song__user=request.user).distinct()
 
-        return render_to_response(
-                "context_browse.html",
-                locals(),
-                context_instance=RequestContext(request),
-                )
+    if len(queries_artist):
+        q_artist = queries_artist.pop()
+        for q in queries_artist:
+            q_artist |= q
+        artists = Artist.objects.filter(q_artist).filter(song__user=request.user).distinct()
+    else:
+        artists = Artist.objects.filter(song__user=request.user).distinct()
+
+    if len(queries_album):
+        q_album = queries_album.pop()
+        for q in queries_album:
+            q_album |= q
+        albums = Album.objects.filter(q_album).filter(song__user=request.user).distinct()
+    else:
+        albums = Album.objects.filter(song__user=request.user).distinct()
+
+
+    return render_to_response(
+            "context_browse.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
     # pagination
     so_far = int(request.GET.get("so_far", "0"))
     want   = int(request.GET.get("want", "%s" % SUBSEQUENT_ITEMS_LOAD_COUNT))
@@ -349,6 +486,11 @@ def collection_browse_column_view(request, column):
         albums = items
     elif "title" == column:
         songs = items
+        return render_to_response(
+                "collection_songs_li.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
 
 
     return render_to_response(
@@ -546,15 +688,22 @@ def sidebar_show_view(request, context):
 #############################      upload     ##################################
 
 @login_required
-def upload_show_view(request):
+def upload_view(request):
 
     user_status = helper.UserStatus(request)
-    user_status.set("current_context", "upload")
+    #user_status.set("current_context", "upload")
 
 
     uploads = Upload.objects.filter(user=request.user)
 
     form = UploadForm(request.POST)
+
+    # sidebar data
+    sidebar = {
+        "playlists": Playlist.objects.filter(user=request.user),
+        "subscribed_playlists": SharePlaylist.objects.filter(subscribers=request.user),
+    }
+
     return render_to_response(
             "context_upload.html",
             locals(),

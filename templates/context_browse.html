@@ -1,23 +1,41 @@
 {% extends "home.html" %}
 
 {% block context_content %}
-<div id="context_content">
-    <div id="context_browse">
+<div id="context_content" class="context_content">
+    <div id="context_browse" class="context_content">
 
         <div id="context_header" class="ui-widget-header ui-corner-tl ui-corner-tr">
-
+            <div id="btn_browse_settings" class="ui-state-default ui-corner-all btn" title="Browse settings" style="padding: 6px; margin: 0 4px 0 4px;">
+                <span class="ui-icon ui-icon-wrench"></span>
+            </div>
         </div>
 
         <div id="context_browse_container" class="ui-widget-content ui-corner-all">
 
-            {% if column_from %}
-                <!-- I keep my javascript code stupid. I need to tell here what column has requested the data -->
-                <div style="visibility: hidden;" id="column_from">{{ column_from }}</div>
-            {% endif %}
+            <div id="context_browse_columns" class="ui-clearfix">
+                {% if column_from %}
+                    <!-- I keep my javascript code stupid. I need to tell here what column has requested the data -->
+                    <div style="visibility: hidden;" id="column_from">{{ column_from }}</div>
+                {% endif %}
 
-            {% for column in columns %}
-                {% include "browse_column.html"%}
-            {% endfor %}
+                {% for column_row in columns_display|dictsort:"order" %}
+                    {% if column_row.show %}
+                        {% with column=column_row.name %}
+                            {% include "browse_column.html"%}
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="devider"></div>
+
+            <div id="context_browse_title_container" class="ui-helper-clearfix">
+                {% with column="title" %}
+                    {% include "browse_column_title.html" %}
+                {% endwith %}
+                </ul>
+            </div>
+
         </div>
     </div>
 </div>

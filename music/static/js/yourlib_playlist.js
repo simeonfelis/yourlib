@@ -129,8 +129,8 @@ function Playlist() {
             //playlist_id = $( "#dialog-playlist-share" ).find(".playlist_name").html($(this).attr("data-playlist_name"));
             $( "#dialog-playlist-share" ).dialog({
                 resizable: true,
-                height:300,
-                width:400,
+                height:400,
+                width:500,
                 modal: true,
                 buttons: {
                     "Cancel": function(event) {

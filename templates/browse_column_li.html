@@ -1,5 +1,12 @@
-{% load music_extras %}
-{% spaceless %}
+{% load music_extras %}{% spaceless %}
+{% if column == "genre" %}
+    {% for genre in genres %}
+        <li class="genre btn ui-state-default btn_browse_genre" data-genre_id="{{ genre.id }}">
+            <span class="name">{{ genre }}</span>
+            <span class="count">{{ genre.song_set.count }}</span>
+        </li>
+    {% endfor %}
+{% endif %}
 {% if column == "artist" %}
     {% for artist in artists %}
         <li class="artist btn ui-state-default btn_browse_artist" data-artist_id="{{ artist.id }}">
@@ -21,7 +28,9 @@
 {% if column == "title" %}
     {% for title in songs %}
         <li class="title btn ui-state-default btn_browse_title" data-title_id="{{ title.id }}">
-            {{ title.track }} - {{ title }} <span style="font-size: small">({{ title.length|formatSeconds }})</span>
+            <span class="track">{{ title.track }}</span>
+            <span class="name">{{ title }}</span>
+            <span class="length">{{ title.length|formatSeconds }}</span>
         </li>
     {% endfor %}
 {% endif %}

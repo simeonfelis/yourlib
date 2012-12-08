@@ -23,7 +23,9 @@ urlpatterns = patterns('music.views',
 #    url(r'^collection/settings/$', 'collection_settings_view', name="collection_settings"),
 #
     url(r'^collection/browse/$',                         'collection_browse_view', name="collection_browse"),
+    url(r'^collection/browse/play/$',                    'collection_play_view', name="collection_browse_play"),
     url(r'^collection/browse/(?P<column>\w+)/$',         'collection_browse_column_view'),
+    url(r'^settings/collection/browse/$',                'settings_collection_browse_view', name="settings_collection_browse"),
 #    url(r'^collection/browse/more/(?P<column>\w+)/$', 'collection_browse_more_view'),
 #
 #    url(r'^playlists/$',                                 'playlists_view', name="playlists"), # playlists overview
@@ -50,6 +52,7 @@ urlpatterns = patterns('music.views',
 
 
 #    url(r'^rescan$', 'rescan_view'),
+    url(r'^upload/$', "upload_view", name="upload"),
 #    url(r'^upload/file/$', 'upload_file_view'),
 #    url(r'^upload/show/$', 'upload_show_view'),
 #    url(r'^upload/status/$', 'upload_file_view'),
@@ -57,6 +60,6 @@ urlpatterns = patterns('music.views',
 #
 #    #url(r'^filter/set/(?P<what>\w+)/$', 'filter_set_view'),
 #
-#    url(r'^accounts/login/.*$', 'login_view', name="login_view"),
-#    url(r'^accounts/logout/.*$', 'logout_view', name="logout_view"),
+    url(r'^accounts/login/.*$', 'login_view', name="login_view"),
+    url(r'^accounts/logout/.*$', 'logout_view', name="logout_view"),
 )

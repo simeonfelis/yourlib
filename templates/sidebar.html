@@ -7,9 +7,10 @@
     <div id="sidebar_navi">
 
         <div id="sidebar_collection">
-            <h1><a href="{% url collection %}" id="sidebar_show_collection" >Collection</a></h1>
-                <h2><a href="{% url collection_browse %}"  id="sidebar_show_collection_browse">Browse</a></h2>
+            <h1><a href="{% url collection %}" id="sidebar_show_collection" title="Plain view to search your collection" >Collection</a></h1>
+                <h2><a href="{% url collection_browse %}"  id="sidebar_show_collection_browse" title="Browse your collection with filters">Browse</a></h2>
         </div>
+
         <div id="sidebar_playlists">
             <h1>Playlists</h1>
                 <div id="sidebar_playlists_content">
@@ -19,11 +20,16 @@
                     <span style="float: left;">New:</span>
                     <span>
                         <form id="playlist_create" action="{% url playlist_create %}" method="post">
-                            <input id="playlist_create_name" name="playlist_name" type="text" size="10" maxlength="32">
+                            <input id="playlist_create_name" name="playlist_name" type="text" size="10" maxlength="32" title="Type name of new Playlist and hit enter">
                         </form>
                     </span>
                 </h2>
         </div>
+
+        <div id="sidebar_upload">
+            <h1><a href="{% url upload %}">Upload</a></h1>
+        </div>
+
         <div id="sidebar_shares">
             <h1><a href="{% url shares %}"  id="sidebar_show_shares">Shares</a></h1>
                 {% include "sidebar_shares.html" %}

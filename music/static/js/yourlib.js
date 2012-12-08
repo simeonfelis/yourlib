@@ -1,5 +1,15 @@
 /* yourlib common stuff, find context specific stuff in subsequent yourlib_<files>.js  */
 
+// thanks to http://stackoverflow.com/questions/141805
+// provide .trim() to strings. This will strip any whitespaces on beginning and end of strings.
+if(typeof(String.prototype.trim) === "undefined")
+{
+    String.prototype.trim = function() 
+    {
+        return String(this).replace(/^\s+|\s+$/g, '');
+    };
+}
+
 function spinner_start(elem) {
     $(elem).append("<img class='spinner'  height='15' width='15' src='/static/css/spinner.gif' />");
 }
@@ -232,7 +242,7 @@ function Pagination(options) {
             success:  function(data) {
                 // we are in context window again. sigh.
                 paginator = $($this).data("pagination");
-                if (data == "nomoreresults" || data == "") {
+                if (data.trim() == "nomoreresults" || data.trim() == "") {
                     paginator.enabled = false;
                 }
                 else {
@@ -243,12 +253,12 @@ function Pagination(options) {
                 paginator.loading = false;
                 $($this).data("pagination", paginator);
             },
-            error:    function(data) {
+            error:    function(jqXHR, status, error) {
                 // we are in context window again. sigh.
                 paginator = $($this).data("pagination");
 
                 //console.log("PAGINATION LOAD ERROR");
-                paginator.errorLoad(data);
+                paginator.errorLoad(jqXHR, status, error);
                 paginator.loading = false;
                 $($this).data("pagination", paginator);
             },

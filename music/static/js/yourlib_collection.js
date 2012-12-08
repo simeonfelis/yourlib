@@ -32,7 +32,7 @@ function Collection() {
             contentData  : function() {return $(".song_item").length;},
             beforeLoad   : this.paginationStart,
             afterLoad    : this.paginationDone,
-            errorLoad    : function() {alert("Pagination for collection songs: load error");},
+            errorLoad    : this.paginationError,
             enabled      : true
         });
 
@@ -83,53 +83,13 @@ function Collection() {
         $('#loading_collection').fadeIn();
     }
 
-/* deprecated?
-    this.bind_filter_artists = function(by_who) {
-        if (by_who) {
-            console.log("bind_filter_artists by", by_who);
-        }
-        else {
-            console.log("bind_filter_artists by unknown");
-        }
-        $("#selectionArtist").bind("change", function(){
-            var artists = new Array();
-            $(this).find("option:selected").each(function(){
-                artists.push($(this).attr("value"));
-            });
-            console.log("triggered post for filter selectionArtist");
-            $.post("filter/artists/", {'artists[]': artists}, function(data){
-                console.log("made post for filter selectionArtist");
-                var songs = $(data).find("#songs");
-                var albums = $(data).find("#selectionAlbum");
-                $("#songs").remove();
-                $("#context_collection_songs_container").append(songs);
-                $("#selectionAlbum").remove();
-                $("#context_collection_filter_albums").append(albums);
-                //collection.bind_filter_artists("after post filter artists");
-            });
-        });
-        $("#selectionAlbum").bind("change", function(){
-            var albums = new Array();
-            $(this).find("option:selected").each(function(){
-                albums.push($(this).attr("value"));
-            });
-            if ( albums.length > 0 ) {
-                // query filter
-                $( "#context_collection_songs_container" ).load("filter/albums/", {'albums[]':albums}, function() {
-                    //alert("query albums");
-                    collection.bind_filter();
-                })
-            }
+    this.paginationError = function(jqXHR, status, error) {
+        $('#loading_collection').html(status + " " + error);
+        $('#loading_collection').fadeIn("fast", function() {
+            $(this).fadeOut("slow");
         });
     }
 
-    this.filter_genre = function() {
-        var genre_id = $(this).attr("data-genre_id");
-        $("#collection_browser_songs_container").load("filter/set/genre/", {'genre_id': genre_id}, function() {
-            console.log("genre filter set");
-        });
-    }
-*/
     this.song_play = function() {
         var $data = {
             'song_id': $(this).attr("data-song_id"),

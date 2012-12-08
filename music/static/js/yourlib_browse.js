@@ -1,18 +1,28 @@
 
 function Browse() {
 
-    this.bind = function(selector) {
+    this.bind = function() {
         console.log("============ Browse bind =============");
 
+        //this.layout = $('#context_browse_container').layout({ applyDefaultStyles: true });
+        //this.layout.allowOverflow("south");
+        //this.layout.allowOverflow("center");
+
         // bind all existing column elements
-        this.bindColumnElements( $("#context_browse_artist_column .btn") );
-        this.bindColumnElements( $("#context_browse_album_column .btn") );
-        this.bindColumnElements( $("#context_browse_genre_column .btn") );
-        this.bindColumnElements( $(".btn_browse_title") );
+        this.bind_column_elements( $("#context_browse_artist_column .btn") );
+        this.bind_column_elements( $("#context_browse_album_column .btn") );
+        this.bind_column_elements( $("#context_browse_genre_column .btn") );
+        this.bind_title_elements( $("#context_browse .song_item") );
 
         this.bind_title_pagination();
         this.bind_artist_pagination();
         this.bind_album_pagination();
+
+        // settings button
+        $("#btn_browse_settings")
+        .off("click", this.on_settings_clicked)
+        .on("click", this.on_settings_clicked);
+
     }
 
     this.bind_title_pagination = function () {
@@ -20,12 +30,12 @@ function Browse() {
             scrollTarget : '#context_browse_title_container',
             appendTarget : "#context_browse_title_column",
             contentUrl   : base_url + "collection/browse/title/",
-            contentData  : function() {return $(".btn_browse_title").length;},
+            contentData  : function() {return $("#context_browse .song_item").length;},
             beforeLoad   : function() {$('#loading_browse_title').fadeIn();},
             afterLoad    : function(newData) {
                 if ($(newData).length > 0) {
                     $('#loading_browse_title').fadeOut();
-                    browse.bindColumnElements(newData);
+                    browse.bind_title_elements(newData);
                     browse.update_viewport();
                 }
                 else {
@@ -36,6 +46,8 @@ function Browse() {
             errorLoad    : function() {alert("Pagination load error title");},
             enabled      : true
         });
+        // Don't show on default
+        $('#loading_browse_title').fadeOut();
     }
 
     this.bind_artist_pagination = function () {
@@ -48,7 +60,7 @@ function Browse() {
             afterLoad    : function(newData) {
                 if ($(newData).length > 0) {
                     $('#loading_browse_artist').fadeOut();
-                    browse.bindColumnElements(newData);
+                    browse.bind_column_elements(newData);
                     browse.update_viewport();
                 }
                 else {
@@ -59,6 +71,8 @@ function Browse() {
             errorLoad    : function() {alert("Pagination load error for artist");},
             enabled      : true
         });
+        // Don't show on default
+        $('#loading_browse_artist').fadeOut();
     }
 
     this.bind_album_pagination = function () {
@@ -71,7 +85,7 @@ function Browse() {
             afterLoad    : function(newData) {
                 if ($(newData).length > 0) {
                     $('#loading_browse_album').fadeOut();
-                    browse.bindColumnElements(newData);
+                    browse.bind_column_elements(newData);
                     browse.update_viewport();
                 }
                 else {
@@ -82,9 +96,77 @@ function Browse() {
             errorLoad    : function() {alert("Pagination load error for album");},
             enabled      : true
         });
+        $('#loading_browse_album').fadeOut();
     }
 
-    this.bindColumnElements = function(columnElements) {
+    this.song_play = function(e) {
+
+        e.preventDefault();
+
+        var url = "play/";
+
+        var data = {
+            'song_id': $(this).attr("data-song_id"),
+            'source' : 'browse',
+        };
+
+        $.ajax({
+            type:     "POST",
+            url:      url,
+            data:     data,
+            success:  function(data, status, jqXHR) {
+                player1.play_song(data);
+            },
+            error:    function(jqXHR, status, error) {
+                // we are in context window again. sigh.
+                console.log("ERROR PLAYING FROM BROWSE VIEW " + error);
+            },
+            complete:    function(jqXHR, textStatus) {
+            },
+        });
+
+        return false; 
+    }
+
+    this.highlight = function() {
+        $(this).addClass("ui-state-hover");
+    }
+    this.unlight = function() {
+        $(this).removeClass("ui-state-hover");
+    }
+
+    this.bind_title_elements = function(titleElements) {
+
+        $( titleElements )
+        .off("click", this.song_play)
+        .on("click", this.song_play)
+        .draggable({
+            items: "li:not(.song_item_heading, :not(.song_info))",
+            helper: function(event) {
+                artist = $(this).find(".artist").html();
+                title = $(this).find(".title").html();
+                song_id = $(this).attr("data-song_id");
+
+                helper = $("<div class='ui-widget-content ui-state-focus ui-corner-all'></div>");
+                helper.html(artist + " - " + title);
+
+                helper.attr("data-song_id", song_id);
+                helper.attr("data-source", "collection");
+                return $( helper );
+            },
+            appendTo: "body",
+            containment: "document",
+            revert: "invalid",
+            delay: 100,
+        })
+        .disableSelection()
+        .off("mouseenter", this.highlight)
+        .off("mouseleave", this.unlight)
+        .on("mouseenter",  this.highlight)
+        .on("mouseleave",  this.unlight);
+    }
+
+    this.bind_column_elements = function(columnElements) {
         // will bind effects only for items in columnElements
 
         $( columnElements )
@@ -92,62 +174,47 @@ function Browse() {
 
             var column = $(this).parent().find(".ui-widget-header").html();
 
-            console.log("bindColumnElements: item clicked in column " + column);
+            console.log("bind_column_elements: item clicked in column " + column);
 
-            if ("title" == column) {
-                // treat click on song titles different
+            // mark/unmark for selection
+            if (!e.ctrlKey) {
+                was_selected = $(this).hasClass("selected");
+                amount = $(this).parent().find(".selected").length
 
-                var $data = {
-                    'song_id': $(this).attr("data-title_id"),
-                    'source' : 'browse',
-                };
-                $.post("play/", $data, function(song_info) {
-                    player1.play_song(song_info);
-                });
-                return false; 
+                // remove other selections in column
+                $(this).parent().find(".selected").removeClass("selected");
 
-            }
-            else {
-                // mark/unmark for selection
-                if (!e.ctrlKey) {
-                    was_selected = $(this).hasClass("selected");
-                    amount = $(this).parent().find(".selected").length
-
-                    // remove other selections in column
-                    $(this).parent().find(".selected").removeClass("selected");
-
-                    if (!was_selected) {
-                        // if it was not selected, make it the new selected item
-                        $(this).addClass("selected");
-                    }
-                    else {
-                        // if it was selected, keep it selected, but only if multiple
-                        // items were selected
-                        if (amount > 1) {
-                            $(this).addClass("selected");
-                        }
-                    }
+                if (!was_selected) {
+                    // if it was not selected, make it the new selected item
+                    $(this).addClass("selected");
                 }
                 else {
-                    $(this).toggleClass("selected");
-                    // toggle selection
-                    //if ($(this).hasClass("selected")) {
-                    //    $(this).removeClass("selected")
-                    //}
-                    //else{
-                    //    $(this).addClass("selected")
-                    //}
+                    // if it was selected, keep it selected, but only if multiple
+                    // items were selected
+                    if (amount > 1) {
+                        $(this).addClass("selected");
+                    }
                 }
-
-                // prevent ongoing timeouts
-                if ($(this).hasClass("pre-selected") || $(this).hasClass("pre-unselected")) {
-                    clearTimeout($(this).data("delay"));
-                    $(this).removeClass("pre-selected");
-                    $(this).removeClass("pre-unselected");
-                }
-
-                browse.on_column_item_clicked(column);
             }
+            else {
+                $(this).toggleClass("selected");
+                // toggle selection
+                //if ($(this).hasClass("selected")) {
+                //    $(this).removeClass("selected")
+                //}
+                //else{
+                //    $(this).addClass("selected")
+                //}
+            }
+
+            // prevent ongoing timeouts
+            if ($(this).hasClass("pre-selected") || $(this).hasClass("pre-unselected")) {
+                clearTimeout($(this).data("delay"));
+                $(this).removeClass("pre-selected");
+                $(this).removeClass("pre-unselected");
+            }
+
+            browse.on_column_item_clicked(column);
 
         })
         .draggable({
@@ -252,8 +319,21 @@ function Browse() {
         var $artist_container = $(data).find("#context_browse_artist_container");
 
         // the server tells me which column was clicked to receive this
-        // data. This information is in a hidden element. Currently not used.
+        // data. This information is in a hidden element. Currently not used/required.
         var column_from = $(data).find("#column_from").html();
+
+        if ($artist_container.length > 0) {
+            // replace old artist column
+            if ($("#context_container").find("#context_browse_artist_container").length > 0) {
+                $("#context_browse_artist_container").replaceWith($artist_container);
+
+                // bind effects only for items in this column
+                browse.bind_column_elements( $("#context_browse_artist_column .btn") );
+
+                // we removed the scrolled window. rebind scroll pagination!
+                browse.bind_artist_pagination();
+            }
+        }
 
         if ($album_container.length > 0) {
             // replace old album column
@@ -261,10 +341,10 @@ function Browse() {
                 $("#context_browse_album_container").replaceWith($album_container);
 
                 // bind effects only for items in this column
-                browse.bindColumnElements( $("#context_browse_album_column .btn") );
+                browse.bind_column_elements( $("#context_browse_album_column .btn") );
 
                 // we removed the scrolled window. rebind scroll pagination!
-                browse.bindAlbumPagination();
+                browse.bind_album_pagination();
             }
         }
 
@@ -274,10 +354,10 @@ function Browse() {
                 $("#context_browse_title_container").replaceWith($title_container);
 
                 // bind effects only for items in this column
-                browse.bindColumnElements( $("#context_browse_title_column .btn") );
+                browse.bind_column_elements( $("#context_browse_title_column .btn") );
 
                 // we removed the scrolled window. rebind scroll pagination!
-                browse.bindTitlePagination();
+                browse.bind_title_pagination();
             }
         }
 
@@ -296,7 +376,7 @@ function Browse() {
         // if a song title was clicked, play it.
         if ("title" == column_from) {
             return;
-        } 
+        }
 
         // if something else was clicked, select it
         var selected = $("#context_browse_" + column_from + "_column .selected").get();
@@ -310,6 +390,55 @@ function Browse() {
         }
 
         $.post(base_url + 'collection/browse/' + column_from + '/', data, browse.on_column_received);
+    }
+
+    this.on_settings_clicked = function() {
+        //$( "#dialog-confirm-playlist-delete" ).find(".playlist_name").html($(this).attr("data-playlist_name"));
+
+            var data = {};
+
+            var url = base_url + "settings/collection/browse/";
+
+            $.ajax({
+                type:     "GET",
+                url:      url,
+                data:     data,
+                success:  function(data, status, jqXHR) {
+                    // we are in context window again. sigh.
+                    $form = $(data).find("#dialog-browse-settings-colums-data");
+
+                    // remove evtually existing form
+                    $("#dialog-browse-settings-colums-data").remove();
+                    $("#dialog-browse-settings-colums-container").append($form).fadeIn("slow");
+
+                    // show dialog
+                    $( "#dialog-browse-settings" ).dialog({
+                        resizable: true,
+                        height:500,
+                        width:600,
+                        modal: true,
+                        buttons: {
+                            "Save": function() {
+                                $( this ).dialog( "close" );
+                            },
+                            "Cancel": function() {
+
+                                //browse.save_settings($playlist=$this, confirmed=true);
+
+                                $( this ).dialog( "close" );
+                            }
+                        }
+                    });
+
+                },
+                error:    function(jqXHR, status, error) {
+                    // we are in context window again. sigh.
+                    console.log("ERROR FETCHING BROSESE SETTINGS");
+                },
+                complete:    function(jqXHR, textStatus) {
+                },
+                datatype: "html"
+            });
     }
 
     this.exhibit = function(exhibit_finished_cb) {
@@ -379,12 +508,18 @@ function Browse() {
             return;
         }
 
-        var height = context_content.height - $("#context_header").height() - 1;
-        $("#context_browse_artist_container").height( height );
-        $("#context_browse_album_container").height( height );
-        $("#context_browse_title_container").height( height );
-        var width = context_content.width*0.32 - 1;
+        var height = context_content.height - $("#context_header").height();
+        $("#context_browse_columns").height(height/2 - 2);
+        $("#context_browse_artist_container").height( height/2 -2 );
+        $("#context_browse_album_container").height( height/2 - 2 );
+        $("#context_browse_genre_container").height( height/2 - 2);
+        $("#context_browse_title_container").height( height/2 - 2);
+        var width = context_content.width*0.33 - 3;
         $(".browse_column").width( width );
+        //$("#context_browse_artist_column .count").width(20); -> css
+        $("#context_browse_artist_column .name").width(width-40); // scroll bar and count
+        $("#context_browse_album_column .name").width(width-40); // scroll bar and count
+        $("#context_browse_title_column .name").width(width-70); // scroll bar, track number and length and padding
 
     }
 

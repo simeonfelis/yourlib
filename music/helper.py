@@ -11,22 +11,27 @@ from music.models import Song, Artist, Album, Genre, MusicSession
 
 STACKTRACE = None
 
-DEFAULT_BROWSE_COLUMN_ORDER = ['artist', 'album', 'title']
+DEFAULT_BROWSE_COLUMNS_AVAILABLE = [
+            {"order": "0", "name":"genre",  "show": True},
+            {"order": "1", "name":"artist", "show": True},
+            {"order": "2", "name":"album",  "show": True},
+]
 
 user_status_defaults = simplejson.dumps({
-    "current_view": "collection",
-    "current_view_playlist": 0,
+    "current_view":             "collection",
+    "current_view_playlist":    0,
 
-    "current_source": "collection",
-    "current_song_id": 0,
-    "current_playlist_id": 0,
-    "current_item_id": 0,
+    "current_source":           "collection",
+    "current_song_id":          0,
+    "current_playlist_id":      0,
+    "current_item_id":          0,
 
-    "collection_search_terms": "",
+    "collection_search_terms":  "",
 
-    "browse_column_order": DEFAULT_BROWSE_COLUMN_ORDER,
-    "browse_selected_albums": [],
-    "browse_selected_artists": [],
+    "browse_column_display":    DEFAULT_BROWSE_COLUMNS_AVAILABLE,
+    "browse_selected_albums":   [],
+    "browse_selected_artists":  [],
+    "browse_selected_genres":   [],
 })
 
 
@@ -34,28 +39,33 @@ class UserStatus():
 
     def __init__(self, request):
         self.music_session = MusicSession.objects.get(user=request.user)
-        self.vals = simplejson.loads(self.music_session.status)  # initial population
 
     def get(self, key, default=None):
 
-        self.vals = simplejson.loads(self.music_session.status)
+        try:
+            vals = simplejson.loads(self.music_session.status)
+        except ValueError:
+            vals = dict()
 
-        if key in self.vals:
-            return self.vals[key]
+        if key in vals:
+            return vals[key]
         else:
-            self.vals[key] = default
-            self.music_session.status = simplejson.dumps(self.vals)
-            self.music_session.save()
+            if default != None:
+                vals[key] = default
+                self.music_session.status = simplejson.dumps(vals)
+                self.music_session.save()
 
             return default
 
     def set(self, key, value):
-        tmp = simplejson.loads(self.music_session.status)
+        try:
+            tmp = simplejson.loads(self.music_session.status)
+        except ValueError:
+            tmp = dict()
 
         tmp[key] = value
         self.music_session.status = simplejson.dumps(tmp)
         self.music_session.save()
-        self.vals = tmp
 
 def browse_column_album(request):
     """

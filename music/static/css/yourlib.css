@@ -65,8 +65,7 @@ body {
 
 
 #context_container {
-    /*width: 1000px;*/
-    /*height: 550px;*/
+    height: 100%;
     margin: 5px;
     position: absolute;
     left: 310px;
@@ -90,6 +89,12 @@ body {
     float: right;
     margin: 0 0 0 0;
     padding: 0 0 0 0;
+}
+
+#context_browse .devider {
+    height: 5px;
+    width: 100%;
+    background-color: red;
 }
 
 /*
@@ -153,7 +158,7 @@ body {
 */
 #context_collection_container {
     /*background-color: #00ffff;*/
-    /*width: 100%;*/
+    width: 100%;
     /*height: 500px;*/
     overflow: auto;
     overflow-x: hidden;
@@ -188,22 +193,48 @@ body {
 }
 
 #context_browse_container .browse_column {
-/*    height: 90%;
-    margin-bottom: 10px;
-    width: 33%;*/
     overflow: auto;
     overflow-x: hidden;
-
     float: left;
     margin: 0;
 }
+
+#context_browse_title_container {
+    overflow: auto;
+    overflow-x: hidden;
+}
+
 
 .browse_column .selected {
     font-weight: bold;
 }
 
 .browse_column .name  { float: left; }
-.browse_column .count { float: right; font-size: smaller; margin-right: 15px; }
+.browse_column .count {
+    float: right;
+    font-size: x-small;
+    margin-right: 15px;
+    padding: 5px 1px 0 1px;
+    width: 20px;
+    text-align: right;
+}
+.browse_column .title {
+    float: left;
+}
+.browse_column .track {
+    width: 20px;
+    float: left;
+    text-align: right;
+    padding: 0 2px 0 0;
+}
+.browse_column .length {
+    width: 30px;
+    font-size: x-small;
+    text-align: right;
+    margin-right: 15px;
+    float: right;
+    padding: 5 1px 0 1px;
+}
 
 .browse_column li {
     overflow: hidden;
@@ -217,8 +248,9 @@ body {
     white-space: nowrap;
 }
 
-#context_content {
+.context_content {
     background-color: black;
+    height: 100%;
 }
 
 #context_playlist_container {
