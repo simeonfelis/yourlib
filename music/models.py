@@ -74,6 +74,7 @@ class Collection(models.Model):
 class PlaylistItem(models.Model):
     song = models.ForeignKey(Song)
     position = models.IntegerField()
+    playlist = models.ForeignKey("Playlist")
 
     class Meta:
         ordering = ['position']
@@ -84,7 +85,9 @@ class PlaylistItem(models.Model):
 
 class Playlist(models.Model):
     name            = models.CharField(max_length=256)
-    items           = models.ManyToManyField(PlaylistItem)
+    items           = models.ManyToManyField(PlaylistItem,
+                                             related_name="itemsdepr"
+                                             )  # THIS MUST DEPRECATE!
     user            = models.ForeignKey(User)
     current_position = models.IntegerField()
     created         = models.DateTimeField(
@@ -102,6 +105,9 @@ class Playlist(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    def items_count(self):
+        return self.items.all().count()
 
 
 class MusicSession(models.Model):
@@ -154,6 +160,9 @@ class SharePlaylist(models.Model):
     def __unicode__(self):
         #return "TODO"
         return "Playlist '%s' from %s to %d users" % (self.playlist.name, self.playlist.user.username, self.subscribers.all().count())
+
+    def subscribers_count(self):
+        return self.subscribers.all().count()
 
 class SharePlaylistSubscription(models.Model):
     created         = models.DateTimeField(
