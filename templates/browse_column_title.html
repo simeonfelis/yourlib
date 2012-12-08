@@ -1,0 +1,11 @@
+{% spaceless %}
+{#<div id="context_browse_title_container" class="browse_column_title">#}
+    <div id="browse_{{ column }}_filter" class="browse_column_title">
+        <ul id="context_browse_title_column" class="song_items">
+            <li class="ui-widget-header", style="line-height: 1.5em; text-align: center;">{{ column }}</li>
+            {% include 'collection_songs_li.html' %}
+        </ul>
+        <div id="loading_browse_title">Loading...</div>
+    </div>
+{#</div>#}
+{% endspaceless %}

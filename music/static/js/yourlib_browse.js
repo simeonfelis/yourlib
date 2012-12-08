@@ -29,7 +29,7 @@ function Browse() {
         this.titlePagination = new Pagination({
             scrollTarget : '#context_browse_title_container',
             appendTarget : "#context_browse_title_column",
-            contentUrl   : base_url + "collection/browse/title/",
+            contentUrl   : base_url + "collection/browse/title/more/",
             contentData  : function() {return $("#context_browse .song_item").length;},
             beforeLoad   : function() {$('#loading_browse_title').fadeIn();},
             afterLoad    : function(newData) {
@@ -50,11 +50,27 @@ function Browse() {
         $('#loading_browse_title').fadeOut();
     }
 
+    this.bind_genre_pagination = function () {
+        this.genrePagination = new Pagination({
+            scrollTarget : '#context_browse_genre_container',
+            appendTarget : '#context_browse_genre_column',
+            contentUrl   : base_url + "collection/browse/genre/more/",
+            contentData  : function() {return $(".btn_browse_genre").length;},
+            beforeLoad   : function() {$('#loading_browse_artist').fadeIn();},
+            afterLoad    : function(newData) {
+                console.log("TODO");
+            },
+            errorLoad    : function() {alert("Pagination load error for genre");},
+            enabled      : true
+        });
+        // Don't show on default
+        $('#loading_browse_genre').fadeOut();
+    }
     this.bind_artist_pagination = function () {
         this.artistPagination = new Pagination({
             scrollTarget : '#context_browse_artist_container',
             appendTarget : "#context_browse_artist_column",
-            contentUrl   : base_url + "collection/browse/artist/",
+            contentUrl   : base_url + "collection/browse/artist/more/",
             contentData  : function() {return $(".btn_browse_artist").length;},
             beforeLoad   : function() {$('#loading_browse_artist').fadeIn();},
             afterLoad    : function(newData) {
@@ -79,7 +95,7 @@ function Browse() {
         this.albumPagination = new Pagination({
             scrollTarget : '#context_browse_album_container',
             appendTarget : "#context_browse_album_column",
-            contentUrl   : base_url + "collection/browse/album/",
+            contentUrl   : base_url + "collection/browse/album/more/",
             contentData  : function() {return $(".btn_browse_album").length;},
             beforeLoad   : function() {$('#loading_browse_album').fadeIn();},
             afterLoad    : function(newData) {

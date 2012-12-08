@@ -1,0 +1,15 @@
+{% extends "home.html" %}
+
+
+{% block context_content %}
+
+<div id="dialog-browse-settings-colums-data">
+    <p>Select colums to display</p>
+
+    <form action="{% url settings_collection_browse %}" method="post">
+        {% csrf_token %}
+        {{ column_form.as_table }}
+        <input type="submit" value="Set columns" />
+    </form>
+</div>
+{% endblock %}

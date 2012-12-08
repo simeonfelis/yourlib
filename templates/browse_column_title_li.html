@@ -1,0 +1,16 @@
+{% load music_extras %}{% spaceless %}
+{% if column == "title" %}
+    {% for title in songs %}
+        <li class="title btn ui-state-default btn_browse_title" data-title_id="{{ title.id }}">
+            <ul>
+                <li class="track">{{ title.track }}</li>
+                <li claass="album">{{title.album }}</li>
+                <li class="artist">{{ title.artist }}</li>
+                <li class="name">{{ title.name }}</li>
+                <li class="year">{{ title.year}}</li>
+                <li class="length">{{ title.length|formatSeconds }}</li>
+            </ul>
+        </li>
+    {% endfor %}
+{% endif %}
+{% endspaceless %}

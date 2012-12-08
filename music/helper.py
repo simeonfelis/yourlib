@@ -29,9 +29,9 @@ user_status_defaults = simplejson.dumps({
     "collection_search_terms":  "",
 
     "browse_column_display":    DEFAULT_BROWSE_COLUMNS_AVAILABLE,
-    "browse_selected_albums":   [],
-    "browse_selected_artists":  [],
-    "browse_selected_genres":   [],
+    "browse_selected_album":   [],
+    "browse_selected_artist":  [],
+    "browse_selected_genre":   [],
 })
 
 
@@ -493,3 +493,98 @@ def add_song(dirname, files, user, force=False):
         processed += 1
 
     return processed
+
+
+def get_column_order(column_name, user_columns):
+    # return order number of column_name in user_status
+    # user_columns must be something like DEFAULT_BROWSE_COLUMNS_AVAILABLE
+
+    column_order = 0 # avoid exception because of undefined variable
+    for column_settings in user_columns:
+        if column_settings["name"] == column_name:
+            column_order = column_settings["order"]
+
+    return column_order
+
+
+def get_columns_to_render(column_begin_order, user_status, unset_following=False):
+    # Determine columns to render. Remember filter of previous columns.
+    # Create a list with correct order.
+    # unset_following: Unset filter of later columns.
+    # column_begin_order: order number of column to start with
+    #
+    # returns: [{'name': "a column name", 'selected', [pk, pk, pk]}, {....}, ...]
+
+    global DEFAULT_BROWSE_COLUMNS_AVAILABLE
+
+    user_columns = user_status.get("browse_column_display", DEFAULT_BROWSE_COLUMNS_AVAILABLE)
+
+    columns_filter = []
+    last_order = 1000
+    for column_settings in user_columns:
+
+        if column_settings["show"]:
+
+            current_order  = column_settings["order"]
+            name           = column_settings["name"]
+
+            # clear selection of subsequent columns
+            if current_order > column_begin_order:
+                selected = []
+                if unset_following:
+                    user_status.set("browse_selected_%s" % name, [])
+            else:
+                selected = user_status.get("browse_selected_%s" % name, [])
+
+            filter_item = {
+                "name": name,           # the column name
+                "selected": selected,
+            }
+
+            if last_order < current_order:
+                columns_filter.append(filter_item)
+            else:
+                columns_filter.insert(0, filter_item )
+
+            last_order = current_order
+
+    return columns_filter
+
+
+def prepare_browse_queries(columns_filter):
+    # create queries
+    queries_song = []
+    for ii, col_filter in enumerate(columns_filter):
+        if col_filter["name"] == "genre":
+            # get only selected genre entries
+            queries_genre = [Q(pk=pk) for pk in col_filter["selected"]]
+            [queries_song.append(Q(genre__pk=pk)) for pk in col_filter["selected"]]
+
+            # refine genre column entries based on selection in previous columns
+            for jj in range(ii):
+                if   columns_filter[jj]["name"] == "artist": [ queries_genre.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+                elif columns_filter[jj]["name"] == "album":  [ queries_genre.append(Q(song__album__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+
+        elif col_filter["name"] == "artist":
+            # get only selected artist entries
+            queries_artist = [Q(pk=pk) for pk in col_filter["selected"]]
+            [queries_song.append(Q(artist__pk=pk)) for pk in col_filter["selected"]]
+
+            # refine artist column entries based on selection in previous columns
+            for jj in range(ii):
+                if   columns_filter[jj]["name"] == "genre":  [ queries_artist.append(Q(song__genre__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+                elif columns_filter[jj]["name"] == "album":  [ queries_artist.append(Q(song__album__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+
+        elif col_filter["name"] == "album":
+            # get only selected album entries
+            queries_album = [Q(pk=pk) for pk in col_filter["selected"]]
+            [queries_song.append(Q(album__pk=pk)) for pk in col_filter["selected"]]
+
+
+            # refine album column entries based on selection in previous columns
+            for jj in range(ii):
+                if   columns_filter[jj]["name"] == "genre":  [ queries_album.append(Q(song__genre__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+                elif columns_filter[jj]["name"] == "artist": [ queries_album.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+
+
+    return {'genre': queries_genre, 'artist': queries_artist, 'album': queries_album, 'song': queries_song}

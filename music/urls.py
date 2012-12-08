@@ -25,6 +25,7 @@ urlpatterns = patterns('music.views',
     url(r'^collection/browse/$',                         'collection_browse_view', name="collection_browse"),
     url(r'^collection/browse/play/$',                    'collection_play_view', name="collection_browse_play"),
     url(r'^collection/browse/(?P<column>\w+)/$',         'collection_browse_column_view'),
+    url(r'^collection/browse/(?P<column>\w+)/more/$',    'collection_browse_column_more_view'),
     url(r'^settings/collection/browse/$',                'settings_collection_browse_view', name="settings_collection_browse"),
 #    url(r'^collection/browse/more/(?P<column>\w+)/$', 'collection_browse_more_view'),
 #

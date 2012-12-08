@@ -21,8 +21,8 @@ from music import settings
 import os, time
 from Image import init
 
-INITIAL_ITEMS_LOAD_COUNT = 200
-SUBSEQUENT_ITEMS_LOAD_COUNT = 200
+INITIAL_ITEMS_LOAD_COUNT = 25 #200
+SUBSEQUENT_ITEMS_LOAD_COUNT = 25 # 200
 
 @login_required
 def home_view(request):
@@ -233,8 +233,9 @@ def collection_browse_view(request):
 
     # reset selections
     user_status = helper.UserStatus(request)
-    user_status.set("browse_selected_albums", [])
-    user_status.set("browse_selected_artists", [])
+    user_status.set("browse_selected_genre", [])
+    user_status.set("browse_selected_album", [])
+    user_status.set("browse_selected_artist", [])
 
     songs   = Song.objects.select_related().filter(user=request.user).order_by("artist__name", "album__name", "track")
     songs   = songs[:INITIAL_ITEMS_LOAD_COUNT]
@@ -286,6 +287,89 @@ def settings_collection_browse_view(request):
 
 
 @login_required
+def collection_browse_column_more_view(request, column):
+
+    # sanity check
+    if not column in ["genre", "artist", "album"]:
+        ret = HttpResponse("Unsupported column: '%s'" % column)
+        ret.status_code = 400
+        return ret
+
+    so_far = int(request.GET.get("so_far", "0"))
+    want   = int(request.GET.get("want", "%s" % SUBSEQUENT_ITEMS_LOAD_COUNT))
+
+    user_status = helper.UserStatus(request)
+
+    # determine order number of column
+    columns_display = user_status.get("browse_column_display", helper.DEFAULT_BROWSE_COLUMNS_AVAILABLE)
+    column_from_order = helper.get_column_order(column, columns_display)
+
+    # Determine columns to render. Keep filter of later columns. Remember
+    # filter of previous columns.
+    # Create a list with correct order.
+    columns_filter = helper.get_columns_to_render(column_from_order, user_status, unset_following=False)
+
+
+    # create queries
+    queries = helper.prepare_browse_queries(columns_filter)
+
+    if column == "song":
+        queries_song   = queries["song"]
+        if len(queries_song):
+            q_song = queries_song.pop()
+            for q in queries_song:
+                q_song |= q
+            songs = Song.objects.filter(user=request.user).filter(q_song).distinct()
+        else:
+            songs = Song.objects.filter(user=request.user).distinct()
+        songs = songs[so_far : so_far + want]
+        return render_to_response(
+                "browse_column_title_li.html",
+                locals(),
+                context_instance=RequestContext(request),
+                )
+
+    elif column == "genre":
+        queries_genre  = queries["genre"]
+        if len(queries_genre):
+            q_genre = queries_genre.pop()
+            for q in queries_genre:
+                q_genre |= q
+            genres = Genre.objects.filter(q_genre).filter(song__user=request.user).distinct()
+        else:
+            genres = Genre.objects.filter(song__user=request.user).distinct()
+        genres = genres[so_far : so_far + want]
+
+    elif column == "artist":
+        queries_artist = queries["artist"]
+        if len(queries_artist):
+            q_artist = queries_artist.pop()
+            for q in queries_artist:
+                q_artist |= q
+            artists = Artist.objects.filter(q_artist).filter(song__user=request.user).distinct()
+        else:
+            artists = Artist.objects.filter(song__user=request.user).distinct()
+        artists = artists[so_far : so_far + want]
+
+    elif column == "album":
+        queries_album  = queries["album"]
+        if len(queries_album):
+            q_album = queries_album.pop()
+            for q in queries_album:
+                q_album |= q
+            albums = Album.objects.filter(q_album).filter(song__user=request.user).distinct()
+        else:
+            albums = Album.objects.filter(song__user=request.user).distinct()
+        albums = albums[so_far : so_far + want]
+
+    return render_to_response(
+            "browse_column_li.html",
+            locals(),
+            context_instance=RequestContext(request),
+            )
+
+
+@login_required
 def collection_browse_column_view(request, column):
 #    On POST requests expects to set filter and returns full page
 #    On GET requests containing parameter so_far, it will provide column
@@ -323,81 +407,86 @@ def collection_browse_column_view(request, column):
 
     # determine order number of column_from
     columns_display = user_status.get("browse_column_display", helper.DEFAULT_BROWSE_COLUMNS_AVAILABLE)
-    column_from_order = 0 # avoid exception because of undefined variable
-    for column_settings in columns_display:
-        if column_settings["name"] == column_from:
-            column_from_order = column_settings["order"]
+    column_from_order = helper.get_column_order(column_from, columns_display)
 
     # Determine columns to render. Unset filter of later columns. Remember
     # filter of previous columns.
     # Create a list with correct order.
-    columns_filter = []
-    last_order = 1000
-    for column_settings in columns_display:
+    columns_filter = helper.get_columns_to_render(column_from_order, user_status, True)
 
-        if column_settings["show"]:
-
-            current_order  = column_settings["order"]
-            name           = column_settings["name"]
-
-            # clear selection of subsequent columns
-            if current_order > column_from_order:
-                user_status.set("browse_selected_%s" % name, [])
-                selected = []
-            else:
-                selected = user_status.get("browse_selected_%s" % name, [])
-
-            # fetch model references. Will be useful later
-            if   name == "artist": model = Artist
-            elif name == "album":  model = Album
-            elif name == "genre":  model = Genre
-
-            filter_item = {
-                "name": name,           # the column name
-                "selected": selected,
-                "model": model,
-            }
-
-            if last_order < current_order:
-                columns_filter.append(filter_item)
-            else:
-                columns_filter.insert(0, filter_item )
-
-            last_order = current_order
 
     # create queries
-    queries_song = []
-    for ii, col_filter in enumerate(columns_filter):
-        if col_filter["name"] == "genre":
-            # get only selected genre entries
-            queries_genre = [Q(pk=pk) for pk in col_filter["selected"]]
-            [queries_song.append(Q(genre__pk=pk)) for pk in col_filter["selected"]]
+    queries = helper.prepare_browse_queries(columns_filter)
+    queries_song   = queries["song"]
+    queries_genre  = queries["genre"]
+    queries_artist = queries["artist"]
+    queries_album  = queries["album"]
 
-            # refine genre column entries based on selection in previous columns
-            for jj in range(ii):
-                if   columns_filter[jj]["name"] == "artist": [ queries_genre.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
-                elif columns_filter[jj]["name"] == "album":  [ queries_genre.append(Q(song__album__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+    if len(queries_song):
+        q_song = queries_song.pop()
+        for q in queries_song:
+            q_song |= q
+        songs = Song.objects.filter(user=request.user).filter(q_song).distinct()
+    else:
+        songs = Song.objects.filter(user=request.user).distinct()
 
-        elif col_filter["name"] == "artist":
-            # get only selected artist entries
-            queries_artist = [Q(pk=pk) for pk in col_filter["selected"]]
-            [queries_song.append(Q(artist__pk=pk)) for pk in col_filter["selected"]]
+    # Build OR queries from all queries
+    if len(queries_genre):
+        q_genre = queries_genre.pop()
+        for q in queries_genre:
+            q_genre |= q
+        genres = Genre.objects.filter(q_genre).filter(song__user=request.user).distinct()
+    else:
+        genres = Genre.objects.filter(song__user=request.user).distinct()
 
-            # refine artist column entries based on selection in previous columns
-            for jj in range(ii):
-                if   columns_filter[jj]["name"] == "genre":  [ queries_artist.append(Q(song__genre__pk=pk)) for pk in columns_filter[jj]["selected"] ]
-                elif columns_filter[jj]["name"] == "album":  [ queries_artist.append(Q(song__album__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+    if len(queries_artist):
+        q_artist = queries_artist.pop()
+        for q in queries_artist:
+            q_artist |= q
+        artists = Artist.objects.filter(q_artist).filter(song__user=request.user).distinct()
+    else:
+        artists = Artist.objects.filter(song__user=request.user).distinct()
 
-        elif col_filter["name"] == "album":
-            # get only selected album entries
-            queries_album = [Q(pk=pk) for pk in col_filter["selected"]]
-            [queries_song.append(Q(album__pk=pk)) for pk in col_filter["selected"]]
+    if len(queries_album):
+        q_album = queries_album.pop()
+        for q in queries_album:
+            q_album |= q
+        albums = Album.objects.filter(q_album).filter(song__user=request.user).distinct()
+    else:
+        albums = Album.objects.filter(song__user=request.user).distinct()
 
-
-            # refine album column entries based on selection in previous columns
-            for jj in range(ii):
-                if   columns_filter[jj]["name"] == "genre":  [ queries_album.append(Q(song__genre__pk=pk))  for pk in columns_filter[jj]["selected"] ]
-                elif columns_filter[jj]["name"] == "artist": [ queries_album.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+#    queries_song = []
+#    for ii, col_filter in enumerate(columns_filter):
+#        if col_filter["name"] == "genre":
+#            # get only selected genre entries
+#            queries_genre = [Q(pk=pk) for pk in col_filter["selected"]]
+#            [queries_song.append(Q(genre__pk=pk)) for pk in col_filter["selected"]]
+#
+#            # refine genre column entries based on selection in previous columns
+#            for jj in range(ii):
+#                if   columns_filter[jj]["name"] == "artist": [ queries_genre.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+#                elif columns_filter[jj]["name"] == "album":  [ queries_genre.append(Q(song__album__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+#
+#        elif col_filter["name"] == "artist":
+#            # get only selected artist entries
+#            queries_artist = [Q(pk=pk) for pk in col_filter["selected"]]
+#            [queries_song.append(Q(artist__pk=pk)) for pk in col_filter["selected"]]
+#
+#            # refine artist column entries based on selection in previous columns
+#            for jj in range(ii):
+#                if   columns_filter[jj]["name"] == "genre":  [ queries_artist.append(Q(song__genre__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+#                elif columns_filter[jj]["name"] == "album":  [ queries_artist.append(Q(song__album__pk=pk)) for pk in columns_filter[jj]["selected"] ]
+#
+#        elif col_filter["name"] == "album":
+#            # get only selected album entries
+#            queries_album = [Q(pk=pk) for pk in col_filter["selected"]]
+#            [queries_song.append(Q(album__pk=pk)) for pk in col_filter["selected"]]
+#
+#
+#            # refine album column entries based on selection in previous columns
+#            for jj in range(ii):
+#                if   columns_filter[jj]["name"] == "genre":  [ queries_album.append(Q(song__genre__pk=pk))  for pk in columns_filter[jj]["selected"] ]
+#                elif columns_filter[jj]["name"] == "artist": [ queries_album.append(Q(song__artist__pk=pk)) for pk in columns_filter[jj]["selected"] ]
 
 
 #        if "genre" == column_from:
@@ -424,6 +513,7 @@ def collection_browse_column_view(request, column):
 #            return HttpResponse("Unsupported column: " + column_from)
 
 #        songs = songs[:INITIAL_ITEMS_LOAD_COUNT]
+
 
     if len(queries_song):
         q_song = queries_song.pop()
