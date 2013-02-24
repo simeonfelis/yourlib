@@ -1,15 +1,42 @@
 # Django settings for music project.
 import os
 
+
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # static and media files that nginx (or whatever) shall deliver, not wsgi
 BASE_SERVER   = os.path.join(os.path.expanduser('~'), 'tmp', 'yourlib')
 
 # task management
-import djcelery
-djcelery.setup_loader()
-BROKER_URL = 'amqp://guest:guest@localhost:5672/'
+try:
+    import djcelery
+    djcelery.setup_loader()
+    BROKER_URL = 'amqp://guest:guest@localhost:5672/'
+except ImportError:
+    print("Could not import django-celery (djcelery).")
+    print("Required to distribute long-running tasks.")
+    print("Look for 'django-celery' or something like that")
+
+try:
+    import pyinotify
+except ImportError:
+    print("Could not import pyinotify")
+    print("Required for file system watching")
+    print("Look for python2-pyinotify or something like that")
+
+try:
+    import mutagen as tagreader
+except ImportError:
+    print("Could not import mutagen")
+    print("Required for reading and writing tags in audio files")
+
+try:
+    import magic
+except ImportError:
+    print("Could not import magic")
+    print("Using pip for python2: '# pip install filemagic'")
+    print("Required for analyzing file mime types")
+
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -32,8 +59,8 @@ DATABASES = {
         'NAME':   'yourlib',                      # create that db on mysql or whatever you are using.
         'USER':   'postgres',                     # postgres: the unix account name that is used for.
         'PASSWORD': 'abcd',                       # My dev system won't expose postgres.
-        'HOST': '',                               # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                               # Set to empty string for default. Not used with sqlite3.
+        'HOST': 'localhost',                               # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '5432',                               # Set to empty string for default. Not used with sqlite3.
     }
 }
 
@@ -48,7 +75,7 @@ TIME_ZONE = 'Europe/Berlin'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'de-de'
 
 SITE_ID = 1
 
@@ -154,7 +181,7 @@ INSTALLED_APPS = (
     'music',
     'djcelery',
     'django_extensions',
-    'south',
+    #'south',
 )
 
 # A sample logging configuration. The only tangible logging
