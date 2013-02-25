@@ -1,5 +1,7 @@
 <div class="yourlib_header ui-widget-header">
-    <div class="btn ui-state-default" id="btn_rescan_library">rescan</div>
+    <div class="btn ui-state-default">
+        <a href="{% url collection_rescan %}" id="btn_rescan_library">rescan</a>
+    </div>
     <div id="rescan_status">{% if collection.scan_status != "idle" %}{{ collection.scan_status }}{% endif %}</div>
     <div style="position:absolute;width:100%;z-index:-1;" class="greeting">Hi {{ request.user.username }}</div>
     <div class="btn ui-state-default" id="logout">logout</div>

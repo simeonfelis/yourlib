@@ -7,7 +7,10 @@ function Yourlib() {
             window.location = "";
         });
     }
-    this.rescan = function() {
+    this.rescan = function(event) {
+        event.preventDefault();
+        var url = $(this).attr("href");
+        
         if ($( "#btn_rescan_library" ).html() == "Cancel") {
 
             $( "#dialog-confirm" ).dialog({
@@ -23,7 +26,7 @@ function Yourlib() {
 
                         $( "#rescan_status" ).html("Cancel requested...");
                         var data = {"csrfmiddlewaretoken": csrf_token, "cancel": true};
-                        $.post("rescan", data, function(rescan_status) {
+                        $.post(url, data, function(rescan_status) {
                             yourlib.check_scan_status();
                         })
                         .success()
@@ -43,7 +46,7 @@ function Yourlib() {
             $( "#rescan_status" ).html("Rescan requested. This might take a while....");
 
             var data = {"csrfmiddlewaretoken": csrf_token};
-            $.post("rescan", data, function(rescan_status) {
+            $.post(url, data, function(rescan_status) {
                 yourlib.check_scan_status();
             })
             .success()
@@ -56,7 +59,8 @@ function Yourlib() {
     }
 
     this.check_scan_status = function() {
-        $.get("rescan", function(rescan_status, status, xhr) {
+        url = $("#btn_rescan_library").attr("href")
+        $.get(url, function(rescan_status, status, xhr) {
             if (status != "success") {
                 yourlib.bind_check_scan_timeout(15000);
             }

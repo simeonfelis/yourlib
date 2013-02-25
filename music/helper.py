@@ -1,6 +1,7 @@
 import os, datetime
 import mutagen as tagreader
 
+from django.contrib.auth.models import User
 from django.utils.timezone import utc
 from django.utils import simplejson
 from django.conf import settings
@@ -18,6 +19,7 @@ DEFAULT_BROWSE_COLUMNS_AVAILABLE = [
 ]
 
 user_status_defaults = simplejson.dumps({
+    "rescan_status":            "idle",
     "current_view":             "collection",
     "current_view_playlist":    0,
 
@@ -36,9 +38,11 @@ user_status_defaults = simplejson.dumps({
 
 
 class UserStatus():
-
-    def __init__(self, request):
-        self.music_session = MusicSession.objects.get(user=request.user)
+    def __init__(self, user_or_request):
+        if type(user_or_request) == User:
+            self.music_session = MusicSession.objects.get(user=user_or_request)
+        else:
+            self.music_session = MusicSession.objects.get(user=user_or_request.user)
 
     def get(self, key, default=None):
 

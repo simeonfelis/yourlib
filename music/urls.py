@@ -22,6 +22,8 @@ urlpatterns = patterns('music.views',
 #    (r'^collection/more/$', 'collection_more_view'),
 #    url(r'^collection/settings/$', 'collection_settings_view', name="collection_settings"),
 #
+
+    url(r'^collection/rescan/$',                         'collection_rescan_view', name="collection_rescan"),
     url(r'^collection/browse/$',                         'collection_browse_view', name="collection_browse"),
     url(r'^collection/browse/play/$',                    'collection_play_view', name="collection_browse_play"),
     url(r'^collection/browse/(?P<column>\w+)/$',         'collection_browse_column_view'),
@@ -51,8 +53,6 @@ urlpatterns = patterns('music.views',
     url(r'^shares/playlist/(?P<playlist_id>\d+)/$', 'shares_playlist_view', name="shares_playlist"),
     url(r'^shares/playlist/(?P<playlist_id>\d+)/play/$', 'playlist_play_view'),
 
-
-#    url(r'^rescan$', 'rescan_view'),
     url(r'^upload/$', "upload_view", name="upload"),
 #    url(r'^upload/file/$', 'upload_file_view'),
 #    url(r'^upload/show/$', 'upload_show_view'),

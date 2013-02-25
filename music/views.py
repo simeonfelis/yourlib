@@ -1486,33 +1486,35 @@ def play_next_view(request):
 
 @login_required
 @transaction.autocommit
-def rescan_view(request):
+def collection_rescan_view(request):
     """
     on POST requests: starts rescan. If rescan in progress, return rescan status.
     on GET requests: return rescan status
     """
 
-    col = Collection.objects.get(user=request.user)
+    user_status = helper.UserStatus(request)
+
+    # TODO: deprecated code
+    #col = Collection.objects.get(user=request.user)
     if request.method == "POST":
         if request.POST.get("cancel", False):
-            col.scan_status = "idle"
-            col.save()
-            return HttpResponse(col.scan_status)
+            user_status.set("idle")
+            return HttpResponse(user_status.get("rescan_status"))
 
-    if col.scan_status == "idle" or col.scan_status == "error" or col.scan_status == "":
+    rescan_status = user_status.get("rescan_status", "idle")
+    if rescan_status == "idle" or rescan_status == "error" or rescan_status == "":
         if request.method == "POST":
-            col.scan_status = "started"
-            col.save()
+            user_status.set("rescan_status", "started")
+
             helper.dbgprint("rescan request accepted from user", request.user)
             from music.tasks import rescan_task
             stat = rescan_task.delay(request.user.id)
             return HttpResponse("started")
 
-    elif col.scan_status == "finished":
-        col.scan_status = "idle"
-        col.save()
+    elif rescan_status == "finished":
+        user_status.set("rescan_status", "idle")
 
-    return HttpResponse(col.scan_status)
+    return HttpResponse(user_status.get("rescan_status"))
 
 def song_info_response(song, playlist_id=None, item_id=None, source=""):
 

@@ -16,7 +16,7 @@ import celery.exceptions as CeleryExceptions
 from django.db import transaction
 
 from music.models import Song, Collection, User, Upload
-from music.helper import dbgprint, add_song, update_song, get_tags
+from music.helper import dbgprint, add_song, update_song, get_tags, UserStatus
 from music import settings
 
 class ProcessInotifyEvent(pyinotify.ProcessEvent):
@@ -118,7 +118,8 @@ def fswatch_file_removed(event):
 def rescan_task(user_id, max_retires=2, default_retry_delay=10):
 
     user = User.objects.get(id=user_id)
-    collection = Collection.objects.get(user=user)
+    #collection = Collection.objects.get(user=user)
+    user_status = helper.UserStatus(user)
 
     try:
         userdir = os.path.join(settings.MUSIC_PATH, user.username)
@@ -144,11 +145,8 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
 
             processed += 1
             if so_far > 0 and so_far % 1 == 0:
-                collection.scan_status = str(so_far)
-                try:
-                    collection.save()
-                except:
-                    pass
+                user_status.set("rescan_status", "%i" % so_far)
+
         print ("rescan_task: user", user, "dir", userdir, "deleting orphans done")
 
         #############   check entrys in db if files have changed     ##############
@@ -158,22 +156,15 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
 
             so_far = int((processed*100)/amount)
             if so_far > 0 and so_far % 2 == 0:
-                collection.scan_status = str(so_far)
-                try:
-                    collection.save()
-                except:
-                    # status is not _that_ important
-                    pass
+                user_status.set("rescan_status", "%i" % so_far)
 
-        collection.scan_status = "finished"
-        collection.save()
+        user_status.set("rescan_status", "finished")
 
     except CeleryExceptions.MaxRetriesExceededError:
         print("MaxRetriesExceededError in rescan by user", user)
         # as stated already, whorses will have their trinkets
         try:
-            collection.scan_status = "error"
-            collection.save()
+            user_status.set("rescan_status", "error")
         except:
             print("Giving up rescan for user", user)
             # ah, buckle off.
@@ -181,8 +172,7 @@ def rescan_task(user_id, max_retires=2, default_retry_delay=10):
         return
     except Exception, exc:
         print("Exception in rescan for", user, exc)
-        collection.scan_status = "error"
-        collection.save()
+        user_status.set("rescan_status", "error")
         raise rescan_task.retry(exc=exc, countdown=10)
 
 @task(ignore_result=True)
